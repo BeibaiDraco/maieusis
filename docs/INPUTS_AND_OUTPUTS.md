@@ -1,63 +1,102 @@
 # Inputs, outputs, and run layout
 
+[Documentation home](INDEX.md) · [Configuration](CONFIGURATION.md)
+
+Maieusis takes source literature, target-dataset context, research intent, and
+agent access. It returns visible question-development products and one planning
+dossier or honest non-proceed outcome for each attempted family. It does not
+return a scientific result.
+
 ## Required inputs
 
 ### Source papers
 
-Provide PDF files under the configured `paperbank.inbox_dir`. Keep only one
-version of each scientific work. Maieusis records content hashes and source
-identity; it does not grant rights to use or redistribute a paper.
+Place lawfully obtained PDFs under `paperbank.inbox_dir`. Keep one file per
+scientific work. Maieusis records file identity and source-addressable evidence;
+it does not grant rights to use or redistribute a paper.
 
-### Dataset context
+### Target-dataset context
 
-Provide a stable dataset ID/link, documentation and/or metadata, an inspection
-runtime, and at least one allowed inspection-resource description. A serious
-planning branch also needs a real read-only dataset root or representative
-sample and a source checkout the coding agent may inspect.
+Provide:
+
+- a stable dataset identifier;
+- a substantive official link, readable local documentation, or both;
+- a real read-only dataset directory or representative sample;
+- when needed, an inspection Python executable or command with the required
+  dataset libraries;
+- plain-language descriptions of the resources the planner may inspect; and
+- a Maieusis Git checkout with a valid `HEAD` for planner source-integrity
+  checks; a clean checkout is strongly recommended. Dataset loading code is a
+  separate read-only inspection resource when the planner needs it.
+
+The Question Scientist receives a coarse, source-backed DatasetNarrative.
+Exact units, joins, events, hierarchy, missingness, and estimability are checked
+later in isolated planning branches.
 
 ### Research intent
 
-Choose one:
+Choose one mode:
 
 - `open`: no required topic prior;
-- `topic_conditioned`: topic terms and optional description; or
-- `seed_question`: a starting question.
+- `topic_conditioned`: topic terms plus an optional description; or
+- `seed_question`: a starting question that may be clarified but must not be
+  silently replaced.
 
-Research intent shapes proposal framing. It does not certify feasibility and
-does not replace literature or dataset evidence.
+Research intent guides proposal framing. It is not scientific evidence or a
+feasibility decision.
 
-### Agent and model access
+### Agents and credentials
 
-Configure Codex or Claude Code as the planner host plus supported model APIs for
-generation, ownership, and independent review. Store credentials only outside
-YAML.
+Configure Codex or Claude Code as the Dataset Planner host. Standard scientific
+operation also requires model APIs, with different providers for the Question
+Owner and independent reviewer. Keep all credentials outside YAML.
+
+## What to read after a run
+
+Start with these files in order:
+
+1. `README.md` — the run state and links to currently valid products;
+2. `summary.md` — every attempted family and its outcome;
+3. `questions/question_families_detailed.md` — the scientific background,
+   meaning, and variants of every proposed family;
+4. `families/<family-slug>/dossier_detailed.md` — a reading guide to one
+   family's question, dataset grounding, plan, review, and limits; and
+5. `families/<family-slug>/dossier.md` — the complete scientific planning
+   record.
+
+The filenames are slightly asymmetric: `dossier_detailed.md` is the easier
+scientific reading guide, while `dossier.md` is the full record. Neither is an
+executed analysis.
 
 ## Human-readable products
 
-| Product | What to inspect |
+| Product | What it helps you inspect |
 | --- | --- |
-| Resolved inputs | The dataset identity, providers, host, and run mode actually resolved |
-| PaperCase | What the source paper asked, why, and which source spans support the reconstruction |
-| Formation trace | The paper's background → tension → data opportunity → question move |
-| Question patterns | Compact cross-paper moves plus a detailed scientific-reading view of their source cases, formation logic, payoff, and limits |
-| Research scope and topic brief | Current literature lanes, support, disagreement, and missing evidence |
-| DatasetNarrative | Coarse proposal context with source-backed claims and explicit limits |
-| QuestionFamilies | Compact and detailed views of every family and distinct variant before planning, including scientific motivation and unselected alternatives |
-| Shortlist | Included, rejected, deferred, or revision-needed decisions |
-| Family dossier | A compact/full scientific dossier plus a detailed reading guide to the refined question, dataset grounding, plan or rejection, review, interpretations, and limitations |
-| Run summary | All family outcomes and the next action |
+| Resolved inputs | Which dataset, papers, providers, host, and run settings were actually used |
+| PaperCase | What a source paper asked and which published spans support the reconstruction |
+| Formation trace | How published background, tension, data opportunity, and inferential move connect to the paper's question |
+| Question patterns | Reusable cross-paper question-forming moves, their source cases, scientific payoff, and transfer limits |
+| Research scope and topic evidence | Current literature lanes, supporting and conflicting evidence, and evidence gaps |
+| DatasetNarrative | Coarse proposal context with source-backed claims and explicit unknowns |
+| QuestionFamilies | Every family and variant before planning, including scientific motivation, alternatives, assumptions, and possible result meanings |
+| Shortlist | Which families proceed to planning and which are rejected, deferred, or need revision |
+| Family dossiers | The refined question, target-dataset evidence, plan or non-proceed reason, independent review, claim ceiling, and limitations |
+| Run summary | The outcome of every attempted family and the next action |
+
+Rejected, deferred, warning, and mixed outcomes remain visible. A run can be
+technically complete without every family becoming an accepted plan.
 
 ## Run directory
 
-Each `maieusis run` creates one immutable-identity run below the configured
-output root:
+Each `maieusis run` creates a new run identity beneath `run.output_root`:
 
 ```text
 <output-root>/<run-id>/
 ├── README.md
 ├── run_manifest.yaml
 ├── summary.md
-├── inputs/resolved_inputs.md
+├── inputs/
+│   └── resolved_inputs.md
 ├── paperbank/
 │   ├── paperbank_summary.md
 │   ├── papers/*.md
@@ -68,7 +107,8 @@ output root:
 │   ├── research_scope.md
 │   ├── retrieval_summary.md
 │   └── topic_evidence_summary.md
-├── dataset/dataset_narrative.md
+├── dataset/
+│   └── dataset_narrative.md
 ├── questions/
 │   ├── question_families.md
 │   ├── question_families_detailed.md
@@ -83,25 +123,35 @@ output root:
 └── artifacts/
 ```
 
-Open the run `README.md` first. It is generated from the manifest and links the
-currently valid products. `summary.md` is written after family closure.
+The compact pattern and question pages are useful for scanning. Their
+`*_detailed.md` companions add scientific background, interpretation, and
+links without changing the underlying scientific decisions.
 
-The `artifacts/`, `receipts/`, and `stage_outputs/` trees support validation,
-resume, and audit. They are not a substitute for the user-facing dossier.
+Receipts, manifests, stage outputs, and hidden audit files support integrity,
+status, and safe resume. They are useful for diagnosis and provenance, but the
+family dossier is the main scientific reading surface. Do not hand-edit any of
+these files to change an outcome or force reuse.
 
-Detailed pages are a deterministic post-finalization presentation add-on. They
-read the persisted typed products already bound by scientific receipts and make
-no model, API, or coding-agent call. A rendering warning cannot change the six
-scientific stages, completion status, family outcome, compact files, or earned
-authority; it only means the run is not yet presentation-ready. See the
-[demo question gallery](../demos/QUESTIONS.md) for concrete examples.
+If a detailed page cannot be rendered, the scientific run state and compact
+products remain unchanged. `maieusis status` reports the situation, and
+`maieusis resume` can regenerate the readable detailed pages without repeating
+scientific model work when all scientific stages remain reusable.
 
-## What is not an output
+## What Maieusis does not output
 
 Maieusis v0.1.0 does not produce:
 
 - a scientific finding or confirmatory result;
-- a guarantee that a question is novel, important, or publishable;
-- a locked analysis contract;
-- permission to access restricted data; or
-- an executed analysis or manuscript.
+- a guarantee that a question is novel, important, true, or publishable;
+- a locked downstream analysis contract;
+- permission to access or redistribute restricted material;
+- an executed analysis; or
+- a manuscript.
+
+See the [method overview](METHOD_OVERVIEW.md) for how these products are formed
+and [provenance](PROVENANCE.md) for how to interpret recorded authority.
+
+---
+
+[Documentation home](INDEX.md) · [Method overview](METHOD_OVERVIEW.md) ·
+[Provenance](PROVENANCE.md) · [Troubleshooting](TROUBLESHOOTING.md)

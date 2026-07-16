@@ -1,129 +1,189 @@
 # Agent-guided setup
 
-Maieusis is designed to be operated by a coding agent. The agent is not just an
-installation helper: during a serious run, one isolated planner branch per
-QuestionFamily inspects the real target dataset and returns typed planning
-evidence. Use Codex, Claude Code, or an equivalent host that can read the
-project, run commands, and work inside the configured safety boundary.
+[Documentation home](INDEX.md) · [Installation](INSTALLATION.md)
 
-## 1. Install and authenticate a coding-agent host
+Maieusis is designed to be operated with Codex or Claude Code. The coding
+agent helps configure the project and, during a run, inspects the target
+dataset inside an isolated planning workspace. It does not perform the final
+scientific analysis.
 
-Choose one host. You do not need both.
+If you prefer to prepare every file yourself, use [manual setup](MANUAL_SETUP.md).
+
+## 1. Install and sign in to one coding host
+
+Choose one coding host. You do not need both.
 
 ### Codex
 
-Follow the current [official Codex CLI setup](https://developers.openai.com/codex/cli)
-for your chosen Codex surface. For the command-line host, install or upgrade the
-official package, then verify the executable:
+Follow the current [official Codex CLI setup](https://developers.openai.com/codex/cli).
+On macOS or Linux, the documented standalone installer and login checks are:
 
 ```bash
-npm install -g @openai/codex
+curl -fsSL https://chatgpt.com/codex/install.sh | sh
 codex --version
+codex login
 codex login status
 ```
 
-Complete the sign-in flow shown by the client. A Codex/ChatGPT login is a
-coding-agent credential; it is separate from the model API keys Maieusis uses
-for scientific roles. The final-quality `gpt-5.6-terra` profile requires
-`codex-cli >=0.144.4`; `maieusis check` verifies this before any paid call or
-planner spawn.
+Your Codex or ChatGPT login authorizes the coding-agent host. It is separate
+from the API keys used by Maieusis scientific-model roles.
 
 ### Claude Code
 
-Follow Anthropic's [official Claude Code setup](https://docs.anthropic.com/en/docs/claude-code/getting-started):
+Follow the current [official Claude Code setup](https://docs.anthropic.com/en/docs/claude-code/getting-started).
+The npm route requires Node.js 22 or newer:
 
 ```bash
+node --version
 npm install -g @anthropic-ai/claude-code
 claude
 claude doctor
 ```
 
-Sign in with the account or provider you intend to use. When Maieusis launches
-Claude Code in its relocated safety environment, it may need a subscription
-token created by:
+Maieusis runs the Claude planner with an isolated configuration directory, so
+the ordinary interactive login is not reused. Create a subscription token with:
 
 ```bash
 claude setup-token
 ```
 
-Store the resulting value as `CLAUDE_CODE_OAUTH_TOKEN` in your untracked
-runtime environment file. It is a secret; never paste it into an issue,
-`maieusis.yaml`, or a prompt.
+Store that token as `CLAUDE_CODE_OAUTH_TOKEN` in the runtime environment file
+described below. Never paste it into `maieusis.yaml`, a prompt, an issue, or a
+committed file.
 
-## 2. Install Maieusis and create the project
+## 2. Install Maieusis in a clean project
 
-Follow [INSTALLATION.md](INSTALLATION.md), then:
+Follow [INSTALLATION.md](INSTALLATION.md). Your scientific project should be
+separate from any Maieusis source checkout. From the project directory, run:
 
 ```bash
-mkdir my-question-project
-cd my-question-project
 maieusis init
 ```
 
-Open the coding agent in this directory. `maieusis init` creates `AGENTS.md`,
-`CLAUDE.md`, `PROJECT_LAYOUT.md`, `maieusis.yaml`, and the Codex and Claude Code
-Dataset Planner role files. Keep those generated files in place: they are the
-project-local operating and runtime assets.
+The command is idempotent: it prints `skip` rather than overwriting an existing
+file. It creates `AGENTS.md`, `CLAUDE.md`, `PROJECT_LAYOUT.md`,
+`maieusis.yaml`, `.codex/agents/dataset-planner.toml`, and
+`.claude/agents/dataset-planner.md`.
 
-## 3. Give the agent only the inputs it needs
+Open Codex or Claude Code in this project directory. Keep the generated files
+in place; they define the operating rules and the isolated Dataset Planner
+role.
 
-Prepare:
+## 3. Prepare the scientific inputs
 
-- `papers/inbox/`: lawfully obtained source papers as PDFs;
-- a dataset's stable public identifier or official URL;
-- official dataset documentation and/or metadata files;
-- a local read-only dataset root or small representative sample;
-- a clean Git checkout that the Dataset Planner can inspect; and
+Give the coding agent only what the run needs:
+
+- lawfully obtained source-paper PDFs under `papers/inbox/`;
+- a stable public dataset identifier or official URL;
+- official dataset documentation and metadata where available;
+- a local read-only dataset directory or representative sample;
+- permitted read-only dataset loading or preprocessing code, when needed;
+- a clean Maieusis Git checkout used only for source-integrity checks; and
 - optional topic terms or a seed question.
 
-Do not put keys in the project config. Do not commit source-paper PDFs or
-restricted data. The IBL and NLB demo pages provide exact paper identities and
-legal acquisition instructions without redistributing PDFs.
+Do not commit PDFs, restricted data, runtime credentials, or run outputs. The
+The International Brain Laboratory (IBL) and Neural Latents Benchmark (NLB)
+demo pages identify their papers and datasets without redistributing them.
 
-## 4. Use this setup prompt
+## 4. Configure credentials separately
+
+A standard run uses scientific model APIs as well as the coding-agent host.
+The Question Owner and independent reviewer must use different providers, so
+the common OpenAI/Anthropic configuration needs both keys:
+
+```text
+OPENAI_API_KEY=...
+ANTHROPIC_API_KEY=...
+```
+
+Depending on your choices, you may also need:
+
+```text
+CLAUDE_CODE_OAUTH_TOKEN=...  # required when coding_host: claude_code
+ELICIT_API_KEY=...           # only for an opt-in Elicit literature profile
+MAIEUSIS_ALLOW_PRO_MODEL=1   # only when you deliberately selected a gated model
+```
+
+Put the required assignments in `~/.config/maieusis/runtime.env`, one per line,
+then restrict access to that file:
+
+```bash
+mkdir -p ~/.config/maieusis
+chmod 700 ~/.config/maieusis
+touch ~/.config/maieusis/runtime.env
+chmod 600 ~/.config/maieusis/runtime.env
+```
+
+Do not ask the coding agent to print secret values. Provider/model names belong
+in `maieusis.yaml`; credentials do not.
+
+## 5. Give the coding agent this prompt
 
 ```text
 You are helping me operate Maieusis, not perform the scientific analysis.
 Read the generated AGENTS.md, CLAUDE.md, PROJECT_LAYOUT.md, and maieusis.yaml.
 Do not assume that this clean project contains a cloned Maieusis repository
-README.md or docs/ tree. Inspect the available dataset documentation and small
-sample without modifying them.
+README.md or docs/ tree. Treat the dataset, dataset documentation, source
+checkout, and source papers as read-only inputs.
 
-First, inventory my PDF filenames and dataset inputs. Do not infer missing
-facts. Configure the dataset link/docs, read-only dataset root, inspection
-runtime, coding host, model roles, literature profile, research intent, and
-output directory. Keep credentials only in
-~/.config/maieusis/runtime.env and tell me which variable names are needed;
-never print their values.
+First inventory the PDF filenames and the dataset materials that are actually
+present. Do not invent missing dataset facts. Help me configure:
+- the paper inbox and PDF parser;
+- the dataset identity, official link/docs, read-only local root, inspection
+  environment, allowed resources, and clean Maieusis source-integrity checkout;
+- my open, topic-conditioned, or seed-question research intent;
+- every scientific model role, using a different provider for the Question
+  Owner and independent reviewer;
+- Codex or Claude Code as the Dataset Planner host, with an explicit model;
+- the literature source profile; and
+- bounded output, concurrency, timeout, and revision settings.
 
-Run `maieusis check --project maieusis.yaml`. Resolve all preflight failures
-without weakening provenance, filesystem, authority, confirmation, or
-execution guards. Show me the call/spawn estimate and ask before the paid
-`maieusis run`. During the run, do not alter source, config, inputs, or models.
-After completion, open summary.md, every family outcome, the end-user dossiers,
-and the run README. Clearly separate accepted, rejected, deferred, provisional,
-and incomplete products. Never claim a novelty search or scientific result
-that the run did not perform.
+Keep credentials only in ~/.config/maieusis/runtime.env. Tell me which variable
+names are needed, but never print their values or put them in YAML.
+
+Run `maieusis check --project maieusis.yaml`. Resolve every failure without
+changing the scientific boundary, making the dataset writable, or disabling an
+identity, evidence, filesystem, or execution safeguard. Show me the estimated
+model calls, planner launches, and external services, then ask before starting
+the paid `maieusis run --project maieusis.yaml`.
+
+After the run, open the run README, summary.md, the detailed question-family
+page, and every family dossier. Clearly distinguish accepted plans, rejections,
+deferred or warning outcomes, and incomplete work. Do not claim novelty or a
+scientific result that the run did not establish.
 ```
 
-## 5. Review before approving a paid run
+## 6. Review the zero-paid-call preflight
 
-The coding agent should show you:
+Before authorizing a run, confirm that the coding agent has shown you:
 
-1. exact project configuration and model identities;
-2. PDF filenames and hashes;
-3. dataset paths and access mode;
-4. output and capture locations;
-5. preflight results;
-6. estimated model calls and planner spawns; and
-7. any authority limitation caused by incomplete evidence.
+1. the resolved project configuration and exact provider/model identities;
+2. the PDF filenames and hashes;
+3. the dataset link, paths, and read-only access mode;
+4. the clean Maieusis source-integrity checkout;
+5. the output location and concurrency/revision limits;
+6. every preflight result;
+7. the estimated model calls and planner launches; and
+8. any evidence limitation that lowers scientific authority.
 
-Only then run:
+`maieusis check` makes no paid model or coding-agent call. Once it passes and
+you accept the disclosed cost and egress, run:
 
 ```bash
 maieusis run --project maieusis.yaml
 ```
 
-The final scientific judgment remains yours. Maieusis makes question
-development inspectable; it does not certify scientific importance,
-publishability, or novelty.
+## 7. Read the result
+
+Open the path printed by the CLI. Start with the run-local `README.md` and
+`summary.md`, then read `questions/question_families_detailed.md` and the
+per-family dossiers. A dossier is a planning product or an honest
+non-proceed outcome, not a scientific finding.
+
+The final scientific judgment remains yours. Maieusis does not certify
+importance, novelty, publishability, or truth.
+
+---
+
+[Documentation home](INDEX.md) · [Configuration](CONFIGURATION.md) ·
+[Inputs and outputs](INPUTS_AND_OUTPUTS.md) · [Troubleshooting](TROUBLESHOOTING.md)

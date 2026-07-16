@@ -2,15 +2,18 @@
 
 ## Supported versions
 
-During the Research Preview, security fixes are provided for the latest
-published `0.1.x` release. Upgrade to the newest patch before reporting a
-problem that may already be fixed.
+During the Research Preview, security fixes target the latest published
+`0.1.x` release. Please upgrade to the newest patch before reporting a problem
+that may already be fixed.
 
 ## Report a vulnerability privately
 
-Email `dracoxu@uchicago` with:
+Use [GitHub private vulnerability reporting](https://github.com/BeibaiDraco/maieusis/security/advisories/new).
+If that channel is unavailable, email `dracoxu@uchicago.edu`.
 
-- the affected version and operating system;
+Include:
+
+- the affected Maieusis version and operating system;
 - the smallest safe reproduction;
 - the expected impact; and
 - any suggested mitigation.
@@ -29,8 +32,8 @@ for a secure transfer method if a private artifact is essential.
 - Keep target datasets read-only during question planning.
 - Run `maieusis check` before `maieusis run`; preflight performs no paid model
   calls.
-- Inspect the run manifest, receipts, and audit subset before relying on a
-  dossier.
+- Review provenance and authority labels before relying on a dossier; see the
+  [provenance guide](docs/PROVENANCE.md) for how Maieusis records them.
 
 Scientific error, weak novelty, an unanswerable question, or a rejected family
 is not normally a software vulnerability. Report those as scientific-quality

@@ -1,84 +1,126 @@
 # Architecture and trust boundaries
 
-Maieusis is a portable, agent-operated question-development system. Dataset-
-specific semantics stay behind input/adaptor boundaries; IBL and NLB are demo
-targets, not assumptions in the core.
+[Documentation home](INDEX.md) · [Method overview](METHOD_OVERVIEW.md)
+
+Maieusis is an agent-operated scientific question-development system. Dataset-
+specific semantics remain behind input and inspection boundaries; the
+International Brain Laboratory (IBL) Brain-Wide Map and Neural Latents
+Benchmark (NLB) MC_Maze-S datasets are examples, not assumptions built into the
+core.
 
 ```mermaid
 flowchart TB
     subgraph Proposal["Proposal-safe context"]
-      PB["Reviewed PaperBank patterns"]
+      PB["PaperBank question-forming patterns"]
       TL["Current topic literature"]
       DN["Source-backed coarse DatasetNarrative"]
       RI["Research intent"]
     end
-    Proposal --> QS["Question Scientist API agent"]
+    Proposal --> QS["Question Scientist"]
     QS --> VF["Visible QuestionFamilies and variants"]
-    VF --> S["Configured shortlist review"]
-    S --> B1["Isolated family branch 1"]
-    S --> B2["Isolated family branch …"]
-    subgraph Branch["One isolated planning branch"]
-      O["Question Owner API agent"] <--> P["Dataset Planning coding agent"]
-      P --> E["Read-only dataset evidence"]
-      O --> C["Plan / revise / reject / defer"]
+    VF --> S["Shortlist review"]
+    S --> B["One isolated branch per shortlisted family"]
+    subgraph Branch["Isolated family branch"]
+      O["Question Owner"] <--> P["Dataset Planner"]
+      P --> E["Read-only target-dataset evidence"]
+      O --> C["Plan / revise / reject / defer / warning"]
       P --> C
     end
-    B1 --> Branch
+    B --> Branch
     C --> IR["Independent plan reviewer"]
-    IR --> D["End-user dossier + hidden audit sidecar"]
-    D -. "closed in v0.1.0" .-> X["Downstream analysis-execution contract"]
+    IR --> D["End-user dossier + audit record"]
+    D -. "not available in v0.1.0" .-> X["Analysis execution"]
 ```
 
-## The information firewall
+## Two coding-agent responsibilities
 
-The Question Scientist may see only four separated context families:
+The coding agent appears in two related but distinct places:
 
-- reviewed PaperBank question patterns;
-- current topic literature evidence;
-- the coarse DatasetNarrative; and
-- research intent.
+- The **lead coding-agent session** helps the user configure and operate the
+  project, invokes the CLI, and presents the resulting artifacts.
+- The **Dataset Planner** is launched by Maieusis for one family in an isolated
+  workspace. It inspects the configured dataset and writes only branch-scoped
+  planning evidence and plans.
 
-It must not see exact table/column schema, precise joint coverage, target-result
-search, confirmation outcomes, planner receipts, negative benchmark answers,
-or full raw review/source dumps. This firewall prevents proposal from becoming
-a disguised search over what is easiest or already known to work.
+They may use the same Codex or Claude Code product, but a lead session's prose
+is not scientific evidence, and one planner branch cannot borrow hidden state
+or variant-specific evidence from another.
 
-Once a family exists, the Dataset Planner may inspect exact target-dataset
-facts. It cannot run a full scientific analysis, optimize against target
-outcomes, access a confirmation set, or claim a result.
+## The proposal information firewall
 
-## Scientific roles
+Before a question is proposed, the Question Scientist receives four separated
+context families:
 
-| Role | Authority | Cannot do |
+- PaperBank question-forming patterns with their earned authority;
+- current topic-literature evidence;
+- a coarse, source-backed DatasetNarrative; and
+- the user's research intent.
+
+It does not receive exact table or column schemas, precise joint coverage,
+target-result searches, confirmation outcomes, planner receipts, negative
+benchmark answers, or unrestricted raw source/review dumps. This prevents
+proposal from becoming a disguised search for what is easiest or already known
+to work.
+
+After a family has been proposed and shortlisted, its Dataset Planner may
+inspect exact target-dataset facts. That planner still may not run the full
+scientific analysis, optimize against target outcomes, access a confirmation
+set, or claim a result.
+
+## Scientific roles and authority
+
+| Role | What it may establish | Boundary |
 | --- | --- | --- |
-| Lead coding-agent host | Operates files, tools, providers, branches, validation | Treat its own prose as scientific evidence |
-| Question Scientist | Proposes ambitious families from proposal-safe context | Certify target feasibility or novelty |
-| Question Owner | Protects scientific intent and judges operational meaning | Certify dataset facts without planner evidence |
-| Dataset Planner | Inspects real dataset context and proposes grounded plans | Execute the full analysis or silently change the question |
-| Independent reviewer | Challenges intent drift, grounding, overclaim, controls | Reuse hidden generator state as “independence” |
-| Human expert | Optional post-hoc scientific checkpoint | Required only for a future execution-bridge authorization |
+| Lead coding-agent session | Correct operation of files, commands, tools, and visible workflow | Its own prose is not scientific evidence |
+| Question Scientist | Candidate families and scientifically distinct variants from the allowed proposal context | Cannot certify dataset feasibility, novelty, or truth |
+| Question Owner | The scientific meaning that a family or variant must preserve | Cannot certify dataset facts without planner evidence |
+| Dataset Planner | Dataset-grounded operationalization and a non-executable analysis plan | Cannot execute the full analysis or silently change the question |
+| Independent reviewer | A separate critique of intent, grounding, controls, overclaim, and revision | Does not establish empirical truth or replace a human expert |
+| Human expert | Optional post-hoc scientific assessment of importance, constructs, and usefulness | Explicit human authorization would be required for any future execution bridge |
 
-## Isolation and typed state
+No role can promote an artifact above the authority of its supporting evidence
+simply by changing a label.
 
-Each shortlisted family receives its own branch, owner session, planning
-workspace, evidence, dialogue, and closure. Family branches do not share hidden
-model state or variant-specific evidence. Shared resources are limited to
-reviewed static artifacts such as the PaperBank, topic brief, DatasetNarrative,
-domain pack, and public documentation.
+## Isolation and persisted state
 
-Owner/planner dialogue is typed and replayable: every turn carries a message
-type, actor, branch identity, family or variant scope, provenance, and payload
-digest. Provider session IDs are not the source of truth.
+Each shortlisted family receives its own owner session, planner workspace,
+evidence set, dialogue, and closure. Branches do not share hidden model state or
+variant-specific evidence. They may share reviewed static resources such as
+PaperBank patterns, the topic brief, the DatasetNarrative, a domain pack, and
+public documentation.
 
-## Closure and execution boundary
+Owner–Planner dialogue is typed and replayable. Each turn records the actor,
+branch, family or variant scope, message type, provenance, and content digest.
+Provider conversation IDs are operational references, not the authoritative
+scientific state; persisted project artifacts are.
 
-Valid branch outcomes include accepted plans, accepted plans needing a new
-skill, dataset mismatch, operationalization failure, scientific drift, or
-honest escalation/defer. The run attempts every selected family and summarizes
-all outcomes; a rejected family is scientific information, not infrastructure
-failure.
+## Scientific outcomes versus software failures
 
-v0.1.0 ends at the scientific dossier. It does not create a downstream
-analysis-execution contract or invoke an analysis executor. That bridge requires
-a later explicit human authorization and is not unlocked by a model, config
-flag, accepted dossier, or demo.
+A valid family outcome can be:
+
+- an accepted plan;
+- a plan that needs a new analysis skill;
+- rejection because the dataset cannot support the question;
+- rejection because no faithful operationalization was found;
+- rejection because revision drifted from the scientific intent;
+- deferment or optional human escalation; or
+- a readable warning after a recoverable provider or validation problem.
+
+These outcomes preserve what was learned and do not imply that the system
+failed to run. Evidence, identity, source-tree, filesystem, branch-isolation,
+or confirmation-firewall violations are different: affected content cannot be
+trusted or promoted, and the run remains incomplete.
+
+## The execution boundary
+
+Maieusis v0.1.0 ends at the scientific question dossier. An accepted dossier
+is still a plan, not an analysis contract or result. No model output, config
+change, demo, or accepted plan can authorize downstream analysis execution.
+
+See [limitations](LIMITATIONS.md) for the practical consequences and
+[provenance](PROVENANCE.md) for how these boundaries are recorded.
+
+---
+
+[Documentation home](INDEX.md) · [Method overview](METHOD_OVERVIEW.md) ·
+[Provenance](PROVENANCE.md) · [Limitations](LIMITATIONS.md)

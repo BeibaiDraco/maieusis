@@ -1,35 +1,48 @@
-# MC_Maze-S source-backed dataset notes
+# MC_Maze-S dataset note: identifying M1 and PMd units
 
-This file is an input document for the Maieusis NLB demo, not a portable-core
-assumption. It records a release-specific conversion caveat that a dataset
-planner must reconcile before making M1-versus-PMd feasibility claims.
+This note records a documented conversion caveat that must be handled before
+using MC_Maze-S to compare primary motor cortex (M1) with dorsal premotor cortex
+(PMd). It is a data-interpretation requirement, not a scientific result.
 
-## Pinned dataset identity
+## Dataset and study references
 
-- DANDI:000140, MC_Maze_Small.
-- Published version: `0.220113.0408`.
-- DOI: <https://doi.org/10.48324/dandi.000140/0.220113.0408>.
-- Official NLB dataset page: <https://neurallatents.github.io/datasets.html>.
+- **Dataset:** Churchland, Mark; Kaufman, Matthew (2022), *MC_Maze_Small:
+  macaque primary motor and dorsal premotor cortex spiking activity during
+  delayed reaching*, [DANDI:000140, version
+  0.220113.0408](https://doi.org/10.48324/dandi.000140/0.220113.0408).
+- **Benchmark:** Pei et al. (2021), [*Neural Latents Benchmark ’21: Evaluating
+  latent variable models of neural population
+  activity*](https://datasets-benchmarks-proceedings.neurips.cc/paper/2021/hash/979d472a84804b9f647bc185a877a8b5-Abstract-round2.html).
+- **Original studies:** Kaufman et al. (2010), [*Cortical preparatory activity:
+  representation of movement or first cog in a dynamical
+  machine?*](https://doi.org/10.1016/j.neuron.2010.09.015); Churchland et al.
+  (2012), [*Neural population dynamics during
+  reaching*](https://doi.org/10.1038/nature11129).
+- **Official dataset documentation:** [Neural Latents Benchmark dataset
+  page](https://neurallatents.github.io/datasets.html).
 
-The DANDI description states that the recording used arrays in primary motor
-cortex (M1) and dorsal premotor cortex (PMd), and that this scaled release is
-limited to 100 train and 100 test trials.
+The DANDI release contains sorted-unit spiking times and behavioral data from
+one rhesus macaque performing delayed center-out reaches around barriers. It
+includes straight and curved reaches, recordings from M1 and PMd, and cursor,
+hand, eye, and hand-velocity measurements. The scaled release is limited to 100
+training and 100 test trials.
 
-## Known region-index conversion caveat
+## The region-index conversion caveat
 
 The official NLB dataset page states that the first digit of each unit ID is the
-authoritative region indicator for the MC_Maze releases:
+region indicator for the MC_Maze releases:
 
 - leading `1`: PMd;
 - leading `2`: M1.
 
 It also documents a conversion error: the stored electrode indices for M1 units
-are incorrect and the correct electrode-table row is obtained by adding 96.
-Therefore, raw `units/electrodes` values must not be used alone to conclude that
+are incorrect, and the correct electrode-table row is obtained by adding 96.
+Raw `units/electrodes` values therefore must not be used alone to conclude that
 the released sorted-unit population is PMd-only.
 
-For the pinned local files used during release preparation, a bounded metadata
-inspection found:
+## Verification of the pinned files
+
+A bounded metadata check of DANDI version `0.220113.0408` found:
 
 | split | PMd units | M1 units | total units |
 | --- | ---: | ---: | ---: |
@@ -37,17 +50,28 @@ inspection found:
 | test held-in | 52 | 55 | 107 |
 
 The raw electrode table has 96 PMd and 96 M1 rows. Before correction, all stored
-unit electrode indices fall in the first 96 rows; after applying the documented
-unit-ID rule and M1 `+96` correction, both regions are represented.
+unit electrode indices fall in the first 96 rows. After applying the documented
+unit-ID rule and the M1 `+96` correction, both regions are represented.
 
-## Planning rule
+These counts verify metadata handling for the pinned files. They do not
+establish trial-level coverage, unit quality equivalence, a regional difference,
+or any other scientific outcome.
 
-A planner may use the combined within-session M1+PMd population and may propose
-region-stratified sensitivity analyses, subject to ordinary sample-size and
-single-session limitations. A terminal that claims M1 units are absent must not
-rely only on the uncorrected electrode indices. Any disagreement among unit IDs,
-electrode metadata, DANDI metadata, or the official NLB caveat must remain visible
-and be reconciled before a scientific rejection is issued.
+## Required handling for this dataset
 
-This note does not authorize scientific analysis, confirmation access, or the
-downstream execution bridge.
+Before a region-specific plan proceeds, the Dataset Planner must:
+
+1. assign units using the documented unit-ID convention;
+2. apply and verify the M1 `+96` electrode-row correction;
+3. reconcile unit IDs, electrode metadata, DANDI metadata, and the official NLB
+   documentation;
+4. keep any unresolved disagreement visible rather than inferring that M1 units
+   are absent; and
+5. verify usable trial counts, event timing, and region-specific coverage before
+   claiming feasibility.
+
+The combined M1+PMd population may support planning, with region-stratified
+sensitivity analyses subject to the ordinary limitations of a small,
+single-subject release. The public helper
+[`verify_region_mapping.py`](verify_region_mapping.py) performs only the bounded
+metadata check described here; it does not execute a scientific analysis.

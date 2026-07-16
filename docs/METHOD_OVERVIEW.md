@@ -1,129 +1,157 @@
 # Method overview
 
-Maieusis develops a question far enough to decide whether it deserves a real
-analysis plan. It stops before analysis execution.
+[Documentation home](INDEX.md)
 
-<!-- RELEASE-ASSET-SLOT: docs/assets/maieusis-question-development.png -->
+Maieusis develops candidate scientific questions into dataset-grounded
+analysis plans or explicit non-proceed outcomes. It works upstream of analysis
+execution: the product is a question-development dossier, not a scientific
+result.
 
-## The idea in one minute
+## The method in one minute
 
-1. **Learn how questions were formed, not just what papers said.** Each source
-   paper becomes a PaperCase. Its important cited works and local citation
-   contexts support a reviewed formation trace: background → unresolved gap →
-   noticed data opportunity → question → possible scientific consequence.
-2. **Separate a reusable move from a paper-specific fact.** Reviewed traces
-   across papers are compared to induce cross-paper question-formation
-   patterns. A pattern is not a formula that forces every new question; it is
-   a source-backed reasoning move the Question Scientist may adapt.
-3. **Propose with broad context.** The Question Scientist sees reviewed
-   patterns, current topic literature, a coarse DatasetNarrative, and the user's
-   research intent as separate inputs. It proposes visible QuestionFamilies
-   with scientifically distinct variants.
-4. **Inspect the real target only after proposal.** Each shortlisted family gets
-   an isolated Question Owner and Dataset Planner. The planner reads real
-   documentation, code, metadata, and small samples. The owner protects the
-   scientific meaning. Together they produce a grounded plan, revise the
-   question, reject it, defer it, or close honestly as incomplete.
-5. **Review before presenting closure.** An independent reviewer checks intent
+1. **Reconstruct published question-forming moves.** Each source paper becomes
+   a PaperCase. Source spans and relevant citation context support an
+   evidence-bound formation trace: published background → unresolved tension →
+   data opportunity → inferential move → question → possible scientific
+   consequence. This is a reconstruction of the published record, not a claim
+   about an author's private thought process.
+2. **Abstract moves that can transfer.** Independently reviewed traces across
+   papers are compared to induce reusable question-forming patterns. The
+   pattern captures a transformation, not a copied question, result, or
+   conclusion.
+3. **Propose with separated context.** The Question Scientist receives four
+   distinct inputs: PaperBank patterns, current topic literature, a coarse
+   DatasetNarrative, and the user's research intent. It renders visible
+   QuestionFamilies with scientifically different variants.
+4. **Inspect the real dataset after proposal.** Each shortlisted family enters
+   an isolated branch. A Question Owner protects scientific meaning while a
+   Dataset Planner inspects real documentation, code, metadata, and bounded
+   samples. The branch may plan, revise, reject, defer, or close with an honest
+   warning.
+5. **Review before closure.** An independent reviewer checks intent
    preservation, dataset grounding, competing explanations, controls,
-   overclaim, and material revision. The system then renders an end-user
-   dossier and retains a machine/audit record.
+   overclaim, and material revision. Maieusis then renders the user-facing
+   dossier and retains the provenance needed to audit it.
 
 ## DatasetNarrative: useful context without premature certainty
 
-The DatasetNarrative is a source-backed, coarse description of what the target
-dataset broadly contains and why it may be scientifically useful. It is built
-from official links, documentation, metadata, and bounded source packets.
+The DatasetNarrative is a coarse, source-backed account of what the target
+dataset broadly contains and why it may be relevant. It is built from official
+links, readable documentation, metadata, and bounded source packets.
 
-It is deliberately **not** a complete table/column schema, coverage guarantee,
-or feasibility certificate. Giving a proposer every exact variable and joint
-coverage fact can make ideation imitate the current schema instead of asking
-important questions. Exact units, joins, events, hierarchy, missingness,
-controls, and estimability are inspected later inside the isolated planning
-branch.
+It is deliberately not a complete schema, coverage guarantee, or feasibility
+certificate. Giving the proposing model every exact variable and joint
+coverage fact would bias question generation toward what looks easiest in the
+current tables. Exact units, joins, events, hierarchy, missingness, controls,
+and estimability are inspected later inside the isolated planning branch.
 
-Every narrative claim keeps its source identity. Missing or weak source support
+Every narrative claim retains its source identity. Missing or weak support
 lowers the authority ceiling rather than being filled with plausible prose.
 
-## PaperBank: from papers to question-forming patterns
+## PaperBank: learn the move, not the result
 
 For each source paper, Maieusis:
 
 1. parses the PDF into source-addressable spans;
 2. extracts a PaperCase whose claims point back to those spans;
-3. identifies citations that actually participated in forming the question,
-   using local citation context and available bibliographic/abstract evidence;
-4. drafts a formation trace that distinguishes the paper's background,
-   tension, data opportunity, inferential move, resulting question, and
-   scientific stakes;
-5. sends the trace to an independent reviewer; and
+3. identifies cited works that contributed to the published question framing,
+   using local citation context and available bibliographic or abstract
+   evidence;
+4. drafts a formation trace separating background, tension, data opportunity,
+   inferential move, resulting question, and scientific stakes;
+5. submits that trace to an independent reviewer; and
 6. induces and independently reviews patterns across accepted traces.
 
-A pattern therefore summarizes a recurring move across source-bound cases. It
-does not claim that the papers used identical wording or that every cited work
-was available in full text. Paper identity, citations, evidence spans, review
-status, prompt version, model identity, and content hashes remain visible.
+A pattern summarizes a recurring move across source-bound cases. It does not
+claim that papers used identical wording, that every cited work was available
+in full text, or that an inferred move reflects private author intent. Paper
+identity, supporting spans, citations, review status, model identity, and
+content hashes remain part of the record.
 
-## Literature retrieval and evidence authority
+## Current literature is separate from PaperBank
 
-Topic literature is retrieved independently from the PaperBank so historical
-question-formation examples are not confused with the current field state.
-The default route uses public scholarly metadata sources and can enrich records
-with lawful open full text where available.
+PaperBank provides historical examples of question formation. Topic-literature
+retrieval instead describes the current field context around the user's
+research direction. Keeping them separate prevents a historical example from
+being mistaken for the present state of evidence.
 
-Evidence can remain useful when incomplete, but its authority is explicit:
+The default route uses public scholarly metadata and can enrich records with
+lawful open full text. Incomplete evidence may still be useful, but its limits
+remain explicit:
 
-- source-backed and independently reviewed artifacts can support the verified
+- source-backed, independently reviewed material can support the verified
   route;
-- incomplete but source-bound artifacts may support provisional inspiration;
+- incomplete but source-bound material may support provisional inspiration;
 - title-only, metadata-only, diagnostic-only, blocked, or fabricated material
-  cannot be relabeled as verified evidence; and
-- the final family, plan, and dossier cannot outrank the authority of the inputs
-  that support it.
+  cannot be renamed as verified evidence; and
+- a family, plan, or dossier cannot outrank the evidence that supports it.
 
-Novelty is separate. v0.1.0 does not run a product novelty search, so novelty is
-reported as `not_assessed`.
+Novelty is a separate question. Maieusis v0.1.0 does not perform a product
+novelty search, so novelty is reported as `not_assessed`.
 
-## How a question becomes answerable—or is rejected
+## From a proposed question to a plan—or a reason not to proceed
 
-“Answerable” is not decided by the proposing model. After a family is visible:
+The proposing model does not certify answerability. After a family is visible:
 
 - the **Question Owner** states what must remain scientifically true and judges
-  whether proposed operationalizations still answer the intended question;
-- the **Dataset Planner** inspects the target dataset and records concrete
-  evidence about units, variables, joins, time structure, controls, hierarchy,
-  limitations, and feasible diagnostics;
-- typed messages bind every claim and decision to one family or variant;
+  whether an operationalization still addresses the intended question;
+- the **Dataset Planner** inspects target-dataset evidence about units,
+  variables, joins, time structure, controls, hierarchy, limitations, and
+  feasible diagnostics;
+- every dialogue turn and evidence item is scoped to one family or variant;
 - bounded revision may clarify a construct or change an operationalization;
-  material scientific changes require a new question version and renewed
-  literature/novelty review; and
-- if the dataset cannot support the distinction the question requires, the
-  correct result is an evidence-backed rejection, not a smaller trivial
-  question.
+- a material scientific change requires a new question version and renewed
+  literature and novelty review; because v0.1.0 has no product novelty-search
+  route, it must defer rather than accept a materially changed question; and
+- when the dataset cannot support the distinction a question requires, the
+  correct outcome is an evidence-backed rejection or deferment, not a smaller
+  trivial question presented as equivalent.
 
-Example: a family may ask whether a population geometry is stable across a
-behavioral transition. If the dataset has the necessary population recordings
-but cannot align the transition without circular selection, the planner can
-reject the proposed operationalization. The dossier should show the promising
-idea, the missing discriminating evidence, and what new data or method would be
-needed.
+For example, a family may ask whether a measured relationship remains stable
+across a scientifically meaningful transition. If observations exist but the
+transition cannot be aligned without circular selection, the planner should
+not claim the question is answerable. The dossier can preserve the promising
+idea, explain the missing discriminating evidence, and state what new data or
+method would be needed.
 
-## What is new and citable
+## What the independent reviewer checks
 
-For AI for Science, Maieusis defines a question-development problem with three
-linked contributions:
+Owner acceptance is not enough. The reviewer examines:
+
+- whether the refined question preserves the original scientific intent;
+- whether dataset claims are supported by branch-local inspection evidence;
+- whether competing explanations and controls are adequate;
+- whether the claim ceiling matches the design;
+- whether a revision changed the scientific question materially; and
+- whether the plan stays on the planning side of the execution boundary.
+
+Independent AI review reduces self-approval; it does not establish truth or
+replace domain expertise.
+
+## The problem definition and system contribution
+
+For AI for Science, Maieusis links three system-design ideas:
 
 1. **Explicit transfer of question-forming moves.** It reconstructs and reviews
-   how prior papers transformed background, tension, and data opportunity into
-   questions, then makes those moves reusable across new contexts.
-2. **Pre-execution target-dataset answerability.** It separates imaginative
-   proposal from exact target-dataset inspection and makes plan/revise/reject a
-   first-class outcome before full analysis.
-3. **A proof-carrying question-development funnel.** It preserves visible,
-   digest-bound intermediate products, branch-local evidence, independent
-   review, honest authority ceilings, and closure for accepted and rejected
-   families.
+   how published background, tension, and data opportunity connect to a
+   scientific question, then makes that move reusable across contexts.
+2. **Pre-execution target-dataset planning.** It separates imaginative proposal
+   from exact target-dataset inspection and makes plan, revise, reject, defer,
+   and warning first-class outcomes before analysis.
+3. **An inspectable question-development funnel.** It preserves visible
+   intermediate products, source and evidence lineage, isolated branches,
+   independent review, honest authority ceilings, and readable closure for
+   successful and unsuccessful families.
 
-These are problem-definition and system-design claims. They are not claims that
-Maieusis automatically discovers true hypotheses, outperforms every prior
-system, or replaces domain expertise.
+These are problem-definition and system-design claims. They are not claims
+that Maieusis automatically discovers true or important hypotheses,
+outperforms every prior system, or replaces scientific judgment.
+
+Next, read [architecture and trust boundaries](ARCHITECTURE.md), inspect the
+[demo question gallery](../demos/QUESTIONS.md), or follow the
+[installation guide](INSTALLATION.md).
+
+---
+
+[Documentation home](INDEX.md) · [Architecture](ARCHITECTURE.md) ·
+[Provenance](PROVENANCE.md) · [Limitations](LIMITATIONS.md)

@@ -3,9 +3,10 @@ message: "If you use Maieusis, please cite the software release described here."
 type: software
 title: "Maieusis"
 abstract: >-
-  A multi-agent scientific question-development system that transfers
-  source-backed question-forming patterns and tests proposed question families
-  against a real target dataset before scientific analysis.
+  An agent-operated scientific question-development system that transfers
+  source-backed question-forming patterns and evaluates whether proposed
+  question families can be responsibly planned through inspection of a real
+  target dataset before scientific analysis.
 authors:
   - family-names: "Xu"
     given-names: "Yunlong"
@@ -16,7 +17,7 @@ authors:
     given-names: "Brent"
     orcid: "https://orcid.org/0000-0002-6916-5511"
 version: "0.1.0"
-date-released: 2026-07-15
+date-released: 2026-07-16
 license: "Apache-2.0"
 repository-code: "https://github.com/BeibaiDraco/maieusis"
 keywords:

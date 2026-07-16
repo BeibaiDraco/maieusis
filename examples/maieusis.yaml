@@ -32,8 +32,9 @@ dataset:
     inspection_command: "uvx --with pynwb python"   # XOR inspection_python
     inspection_pythonpath: ""
     inspection_extra_env: {}
-    # Required when running an installed wheel outside its source checkout. Must be a Git checkout
-    # with a valid HEAD; `maieusis check` verifies it before any paid call.
+    # Required when running an installed wheel outside its source checkout. Point to a clean
+    # Maieusis Git checkout with a valid HEAD; `maieusis check` verifies its Git state before any
+    # paid call.
     source_tree_root: null
     max_turns: 40
     timeout_seconds: 1800

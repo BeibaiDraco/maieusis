@@ -1,9 +1,8 @@
 # Changelog
 
-Maieusis follows semantic versioning. This file records public releases, not
-the private development history.
+Maieusis follows semantic versioning. This file records public releases.
 
-## 0.1.0 — Research Preview
+## 0.1.0 — Research Preview (2026-07-16)
 
 Initial public release.
 
@@ -20,7 +19,8 @@ Initial public release.
 - Resume receipts, artifact digests, authority labels, and a hidden audit
   sidecar.
 - Codex and Claude Code planner-host support.
-- IBL and NLB reproducible demonstration packages without source-paper PDFs.
+- International Brain Laboratory Brain-Wide Map and Neural Latents Benchmark
+  MC_Maze-S reproducible demonstration packages without source-paper PDFs.
 
 ### Boundaries
 
@@ -28,5 +28,3 @@ Initial public release.
   findings, novelty certifications, or guarantees of answerability.
 - The downstream analysis-execution bridge and confirmatory analysis remain
   closed.
-- The technical report planned within one week of first release will have a
-  citation separate from the software release citation.
