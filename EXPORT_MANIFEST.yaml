@@ -2,7 +2,7 @@
 schema_version: 2
 distribution: maieusis
 version: 0.1.0
-tree_digest: c07246803e4510d4fdf8faba11904cbccf8f26808d5c3862ec5f07df46694d7a
+tree_digest: f9ee47443d6c2b63a82ea2cd4b2e1bee3f0407e4b3dd7dda1f55c9d529ec37cb
 file_count: 381
 projection_sources:
   - source: curated public contract tests
@@ -66,7 +66,7 @@ files:
   - path: .github/ISSUE_TEMPLATE/bug_report.yml
     sha256: 1a5d9f1bdfb51081086a9350fa1026a2619168d578910087158e8b0a97b8756d
   - path: .github/ISSUE_TEMPLATE/config.yml
-    sha256: b3c731ccc3725e4a0b172895e3d3a9d547f43d6f353d4c4138412aa4123d5e2a
+    sha256: ea716b502c76c6aa7be2f24ca83ef90489f991b8d82043786ccd9d8a100de231
   - path: .github/ISSUE_TEMPLATE/scientific_workflow.yml
     sha256: 5f9843aca1088a45de9bedc0829044e95a2de23247aafc2f47e7561c7caa9c8f
   - path: .github/pull_request_template.md
@@ -292,7 +292,7 @@ files:
   - path: demos/shared/paper_sources.yaml
     sha256: c2c29c9daa8d836c8a6e8e9ca20ed04cae7758e3b4dcaa97b1c4db91f076b85f
   - path: docs/AGENT_GUIDED_SETUP.md
-    sha256: 585ae3509e62548ffeb21c3c3b41f928b614f4a1b6e64c85e83f95c304f911b2
+    sha256: d1ff8455fb5d9e99c2098bdd67cd1200aa3e420b2740f19527e31a790424dd58
   - path: docs/ARCHITECTURE.md
     sha256: 01423dcae9b1c503b78aca44698be05dedf2e36602d78b704a0ebf98791407d3
   - path: docs/CONFIGURATION.md

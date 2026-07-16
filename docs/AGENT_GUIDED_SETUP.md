@@ -82,7 +82,7 @@ Give the coding agent only what the run needs:
 - optional topic terms or a seed question.
 
 Do not commit PDFs, restricted data, runtime credentials, or run outputs. The
-The International Brain Laboratory (IBL) and Neural Latents Benchmark (NLB)
+International Brain Laboratory (IBL) and Neural Latents Benchmark (NLB)
 demo pages identify their papers and datasets without redistributing them.
 
 ## 4. Configure credentials separately

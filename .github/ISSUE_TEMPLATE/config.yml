@@ -4,5 +4,5 @@ contact_links:
     url: https://github.com/BeibaiDraco/maieusis/security/advisories/new
     about: Report vulnerabilities and sensitive material privately.
   - name: Usage help
-    url: mailto:dracoxu@uchicago
+    url: mailto:dracoxu@uchicago.edu
     about: Contact Draco (Yunlong) Xu for help applying Maieusis.
