@@ -1,0 +1,182 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "maieusis"
+version = "0.1.0"
+description = "Maieusis: inspectable, dataset-aware scientific question development before analysis"
+readme = "README.md"
+requires-python = ">=3.11,<3.14"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE", "THIRD_PARTY_NOTICES.md"]
+authors = [
+  {name = "Yunlong Xu"},
+  {name = "Brent Doiron"},
+]
+maintainers = [
+  {name = "Yunlong Xu"},
+]
+keywords = [
+  "ai-for-science",
+  "coding-agents",
+  "research-planning",
+  "scientific-question-development",
+]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Scientific/Engineering",
+]
+dependencies = [
+  "pydantic>=2.8,<3",
+  "typer>=0.12,<1",
+  "PyYAML>=6.0,<7",
+  "rich>=13.7,<16",
+]
+
+[project.urls]
+Homepage = "https://github.com/BeibaiDraco/maieusis"
+Documentation = "https://github.com/BeibaiDraco/maieusis/tree/main/docs"
+Repository = "https://github.com/BeibaiDraco/maieusis"
+Issues = "https://github.com/BeibaiDraco/maieusis/issues"
+
+[project.optional-dependencies]
+openai = ["openai>=2.0,<3"]
+anthropic = ["anthropic>=0.111,<1"]
+mcp = ["mcp>=1.27,<2"]
+data = ["pyarrow>=18,<25"]
+pdf = [
+  "beautifulsoup4>=4.12,<5",
+  "docling>=2.70,<3",
+  "lxml>=5,<7",
+  "numpy>=2,<2.5",
+  "pdfplumber>=0.11,<1",
+  "pypdf>=5,<7",
+]
+dev = [
+  "pytest>=8.0,<10",
+  "pytest-cov>=5.0,<8",
+  "pytest-xdist>=3.6,<4",
+  "ruff>=0.7,<1",
+  "mypy>=1.11,<3",
+  "types-PyYAML>=6.0",
+]
+all = [
+  "openai>=2.0,<3",
+  "anthropic>=0.111,<1",
+  "mcp>=1.27,<2",
+  "pyarrow>=18,<25",
+  "beautifulsoup4>=4.12,<5",
+  "docling>=2.70,<3",
+  "lxml>=5,<7",
+  "numpy>=2,<2.5",
+  "pdfplumber>=0.11,<1",
+  "pypdf>=5,<7",
+  "pytest>=8.0,<10",
+  "pytest-cov>=5.0,<8",
+  "pytest-xdist>=3.6,<4",
+  "ruff>=0.7,<1",
+  "mypy>=1.11,<3",
+  "types-PyYAML>=6.0",
+]
+
+[project.scripts]
+maieusis = "research_agenda_engine.product_cli:app"
+[tool.hatch.build.targets.wheel]
+packages = ["src/research_agenda_engine"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"examples" = "research_agenda_engine/_builtin/examples"
+"prompts" = "research_agenda_engine/_builtin/prompts"
+".claude/agents/dataset-planner.md" = "research_agenda_engine/_builtin/roles/claude/dataset-planner.md"
+".codex/agents/dataset-planner.toml" = "research_agenda_engine/_builtin/roles/codex/dataset-planner.toml"
+
+[tool.pytest.ini_options]
+addopts = "-q --strict-markers -m 'not live_openai and not agent_host and not live_agent'"
+testpaths = ["tests"]
+markers = [
+  "slow: heavy pipeline tests excluded from `make test-fast`",
+  "agent_host: opt-in coding-agent host adapter tests; default-skipped everywhere (like live_openai), run only via `-m agent_host` (Phase 2 dual-host milestone)",
+  "live_agent: opt-in gated real coding-agent spawn; default-skipped everywhere, never in CI, run only via `-m live_agent` with a logged-in coding-agent CLI",
+  "live_openai: opt-in tests that call the OpenAI API",
+  "local_artifacts: tests that read the gitignored runs/ artifact dir (present locally, absent on a fresh CI checkout); deselected on CI until they are made hermetic in Phase 3",
+]
+
+[tool.coverage.run]
+branch = true
+source = ["research_agenda_engine"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = [
+  ".maieusis-cache",
+  "example_papers",
+  "runs",
+]
+
+[tool.ruff.lint]
+# BLE001 (blind except) + S110 (try-except-pass) + E722 (bare except, via E) enforce the 6-H1a
+# ingestion ADR: a broad except on the product path is only legal when registered in seams.yaml as
+# an honest degrade. The allowlist below is per-FILE (not per-line noqa) because 6-H1a writes no
+# product-code edits; the precise per-seam gate is tests/test_seam_registry_guard.py — any NEW
+# broad except anywhere in src/ goes red there until registered, so a file-level lint ignore does
+# not open a hole. Do NOT extend the allowlist without registering the seam.
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF", "BLE", "S110"]
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+# Not the product path: guard #4 + the registry own product-seam enforcement.
+"tests/**" = ["BLE001", "S110"]
+"scripts/**" = ["BLE001", "S110"]
+"src/research_agenda_engine/dev_cli.py" = ["BLE001"] # private_dev CLI (import-closure bucket)
+# Paper-ingest honest degrades (live-hardened PRs #32-#37): failures are surfaced as per-paper
+# warnings/diagnostics, never silent (seams.yaml: services.paper_ingest.*).
+"src/research_agenda_engine/services/paper_ingest/pipeline.py" = ["BLE001"]
+"src/research_agenda_engine/services/paper_ingest/reference_resolution.py" = ["BLE001"]
+"src/research_agenda_engine/services/paper_ingest/external_lookup.py" = ["BLE001"]
+"src/research_agenda_engine/services/paper_ingest/local_literature_build.py" = ["BLE001"]
+"src/research_agenda_engine/services/paper_ingest/cited_abstracts.py" = ["BLE001"]
+"src/research_agenda_engine/services/paper_ingest/parsing.py" = ["BLE001"]
+# Paper-pattern honest degrades: keep the context, mark only the failing selection/draft.
+"src/research_agenda_engine/services/paper_patterns/citation_importance.py" = ["BLE001"]
+"src/research_agenda_engine/services/paper_patterns/trace_drafting.py" = ["BLE001"]
+# Retrieval best-effort network degrades (seams.yaml inventory #19 cluster: degrade must surface).
+"src/research_agenda_engine/services/retrieval/dataset_seed_retrieval.py" = ["BLE001"]
+"src/research_agenda_engine/services/retrieval/topic_sources.py" = ["BLE001"]
+"src/research_agenda_engine/services/retrieval/fulltext_fetch.py" = ["BLE001"]
+"src/research_agenda_engine/services/retrieval/literature_prior_search.py" = ["BLE001"]
+# Optional Source-C skip is a recorded, legitimate degrade (AGENTS.md do-not-"fix" list).
+"src/research_agenda_engine/services/narrative_sources/narrator.py" = ["BLE001"]
+# Planner-artifact boundary (seams.yaml inventory #7) + bounded synthetic probe validation.
+"src/research_agenda_engine/services/planning/dataset_planner_packet.py" = ["BLE001"]
+"src/research_agenda_engine/services/planning/construct_probe_validation.py" = ["BLE001"]
+# Preflight probes must fail clean (report a failed check), never crash preflight itself.
+"src/research_agenda_engine/services/preflight.py" = ["BLE001"]
+# RED-LINE / 0-diff dossier files: cannot take noqa edits; registered as seams.yaml inventory
+# #3/#12 (sanitize-at-source cohort fixes land in 6-H2 via their own reviewed slice).
+"src/research_agenda_engine/services/dossier/multi_family_coordinator.py" = ["BLE001"]
+"src/research_agenda_engine/services/dossier/multi_family_development_orchestrator.py" = ["BLE001"]
+# Vendor session adapters: degrade a failed vendor call into the typed session error surface.
+"src/research_agenda_engine/providers/scientific_agents/openai.py" = ["BLE001"]
+"src/research_agenda_engine/providers/scientific_agents/anthropic.py" = ["BLE001"]
+
+[tool.mypy]
+python_version = "3.11"
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_return_any = true
+no_implicit_optional = true
+check_untyped_defs = true
+strict_optional = true
+exclude = ["tests/fixtures"]

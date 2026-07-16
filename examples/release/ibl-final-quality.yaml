@@ -1,0 +1,88 @@
+# Maieusis v0.1.0 release validation — IBL final-quality profile.
+# Replace only the explicit /ABSOLUTE/PATH placeholders before running the zero-paid preflight.
+version: maieusis_project_config/v1
+mode: standard
+
+paperbank:
+  inbox_dir: /ABSOLUTE/PATH/TO/SELECTED_RELEASE_PDFS
+  extraction: {provider: openai, model: gpt-5.6-luna}
+  parser: poppler_text
+  evidence_mode: source_span
+  max_workers: 5
+  cited_literature: true
+  select_key_citations: true
+  external_reference_fallback: true
+  min_local_reference_count: 10
+  crossref_mailto: ""
+  openalex_email: ""
+  citation_prompt_char_budget: 180000
+
+dataset:
+  seed:
+    dataset_id: ibl-brain-wide-map
+    link: https://docs.internationalbrainlab.org/notebooks_external/2025_data_release_brainwidemap.html
+    docs: []
+  inspection_runtime:
+    dataset_root: /ABSOLUTE/PATH/TO/IBL_BWM_READONLY
+    dataset_access_mode: external_readonly
+    inspection_python: /ABSOLUTE/PATH/TO/IBL_ENV/bin/python
+    inspection_command: ""
+    inspection_pythonpath: ""
+    inspection_extra_env: {}
+    source_tree_root: /ABSOLUTE/PATH/TO/CLEAN_MAIEUSIS_RC_CHECKOUT
+    # Claude-only compatibility field; Codex has no synthetic turn cap.
+    max_turns: 60
+    timeout_seconds: 2400
+  allowed_inspection_resources:
+    - official IBL Brain-Wide Map documentation
+    - read-only dataset metadata and small samples
+    - dataset repository code
+  official_online_resources:
+    - https://docs.internationalbrainlab.org/notebooks_external/2025_data_release_brainwidemap.html
+
+research_intent:
+  mode: topic_conditioned
+  topic_terms:
+    - neural population geometry
+    - dynamical systems models
+    - neural dynamics
+    - neural population code
+    - neural co-variability
+    - neural manifolds
+    - representational geometry
+    - neural circuit models
+  topic_description: ""
+  seed_question: ""
+
+models:
+  pattern: {provider: openai, model: gpt-5.6-sol}
+  questioner: {provider: openai, model: gpt-5.6-sol}
+  narrator: {provider: openai, model: gpt-5.6-luna}
+  topic: {provider: openai, model: gpt-5.6-terra}
+  owner: {provider: openai, model: gpt-5.6-terra}
+  reviewer: {provider: anthropic, model: claude-opus-4-8}
+  coding_host: codex
+  coding_model: gpt-5.6-terra
+  coding_reasoning_effort: high
+  allow_pro_model: true
+
+literature:
+  enabled: true
+  openalex_email: ""
+  fulltext_enrichment: true
+  source_profile: public
+
+novelty:
+  enabled: false
+  direct_recap_threshold: 0.9
+  close_prior_threshold: 0.7
+  max_candidates: 5
+
+run:
+  output_root: /ABSOLUTE/PATH/TO/MAIEUSIS_RUNS/ibl-final-quality
+  shortlist_path: null
+  target_family_ids: []
+  max_families: 6
+  variants_per_family: 2
+  max_parallel_family_workers: 3
+  max_revise_rounds: 3

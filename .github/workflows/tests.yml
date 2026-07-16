@@ -1,0 +1,96 @@
+name: checks
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  full-offline:
+    name: Full offline, static, and package checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: Validate CITATION.cff against CFF 1.2
+        uses: citation-file-format/cffconvert-github-action@2.0.0
+        with:
+          args: "--validate"
+      - name: Resolve development environment
+        run: uv sync --all-extras
+      - name: Static checks
+        run: |
+          uv run ruff format --check src tests
+          uv run ruff check src tests
+          uv run mypy src/research_agenda_engine
+      - name: Offline tests
+        env:
+          OPENAI_API_KEY: ""
+          ANTHROPIC_API_KEY: ""
+        run: >-
+          uv run pytest
+          -m "not live_openai and not local_artifacts and not agent_host and not live_agent"
+          tests
+      - name: Build distributions
+        run: uv build
+      - name: Check distributions
+        run: uvx twine check dist/*
+      - uses: actions/upload-artifact@v4
+        with:
+          name: checked-python-package-distributions
+          path: dist/
+          if-no-files-found: error
+          retention-days: 1
+
+  installed-wheel:
+    name: Installed wheel (Python ${{ matrix.python-version }})
+    needs: full-offline
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version:
+          - "3.11"
+          - "3.12"
+          - "3.13"
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - uses: astral-sh/setup-uv@v5
+      - uses: actions/download-artifact@v4
+        with:
+          name: checked-python-package-distributions
+          path: dist/
+      - name: Smoke-test the installed wheel with a fresh home
+        env:
+          OPENAI_API_KEY: ""
+          ANTHROPIC_API_KEY: ""
+        run: |
+          uv venv --python "$(command -v python)" "${RUNNER_TEMP}/maieusis-wheel-smoke"
+          uv pip install \
+            --python "$RUNNER_TEMP/maieusis-wheel-smoke/bin/python" \
+            dist/*.whl
+          rm -rf "${RUNNER_TEMP}/maieusis-home" "${RUNNER_TEMP}/maieusis-project"
+          mkdir -p "${RUNNER_TEMP}/maieusis-home" "${RUNNER_TEMP}/maieusis-project"
+          env -u PYTHONPATH -u MAIEUSIS_PROJECT_ROOT \
+            HOME="$RUNNER_TEMP/maieusis-home" \
+            "$RUNNER_TEMP/maieusis-wheel-smoke/bin/maieusis" --help
+          (
+            cd "$RUNNER_TEMP/maieusis-project"
+            env -u PYTHONPATH -u MAIEUSIS_PROJECT_ROOT \
+              HOME="$RUNNER_TEMP/maieusis-home" \
+              "$RUNNER_TEMP/maieusis-wheel-smoke/bin/maieusis" init --dir .
+          )
+          test -f "${RUNNER_TEMP}/maieusis-project/maieusis.yaml"
+          test -f "${RUNNER_TEMP}/maieusis-project/AGENTS.md"
+          test -f "${RUNNER_TEMP}/maieusis-project/CLAUDE.md"
+          test -f "${RUNNER_TEMP}/maieusis-project/.claude/agents/dataset-planner.md"
+          test -f "${RUNNER_TEMP}/maieusis-project/.codex/agents/dataset-planner.toml"

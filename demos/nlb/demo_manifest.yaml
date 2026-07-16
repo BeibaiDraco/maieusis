@@ -1,0 +1,169 @@
+schema_version: maieusis.public_demo/v1
+demo_id: nlb-mc-maze-s
+release: 0.1.0
+release_ready: true
+release_readiness_scope: curated_demo_artifacts_only
+publication_gate: operator_pending
+release_blocker: null
+raw_pdfs_included: false
+paper_sources: ../shared/paper_sources.yaml
+paper_cohort_status: frozen_twelve_source_release_input
+dataset:
+  name: Neural Latents Benchmark MC_Maze-S
+  dandiset_id: "000140"
+  pinned_version: 0.220113.0408
+  landing_page: https://dandiarchive.org/dandiset/000140
+  access_mode: external_readonly
+  source_note: DATASET_NOTES.md
+  known_conversion_caveat: m1_unit_electrode_indices_require_plus_96
+  metadata_verifier: verify_region_mapping.py
+  files:
+    dandiset.yaml: 2492a05c49b2e3024797b45bc8db263a1bf12078891ec668b0623f0db1e0ba5a
+    sub-Jenkins_ses-small_desc-train_behavior+ecephys.nwb: dcaf3a524e2b2f65f163ee3b07789b8474bdfc6ca66098bc542ab93dff489884
+    sub-Jenkins_ses-small_desc-test_ecephys.nwb: ca8a0bef5f189eafb9db1961d617e065cb461360718fde1c16a538922a6fa5fe
+profile:
+  final_quality: ../../examples/release/nlb-final-quality.yaml
+release_candidate:
+  immutable_rc_commit: a897715b065ee50251924307aaa96771f0e16e3a
+  immutable_rc_version: 0.1.0
+  rc_wheel_sha256: a5826a426f2e708ae1aaa4d42719bf491d78597519db49b208780d3ff5a3ce99
+  pair_receipt_sha256: 2da077057e92f30a0022a0856ad11b7476654223c67e9919c487e65ca243df06
+paperbank_import:
+  status: receipt_bound_exact_reuse
+  source_demo: ibl-brain-wide-map
+  source_run_id: 20260715T173301Z-4eefe86a
+  source_paper_half_receipt_sha256: fbfa86c4ee1e1f925488f3d5c5b8f388a61700ab6e37fac5d613e85ffd03e4d6
+  import_receipt_sha256: 75bc8baaf98629e8deaaead956e025fa07a0de54cdfb1061463cdc6872728f34
+  public_provenance_path: artifacts/provenance/paperbank_import.yaml
+  public_provenance_sha256: 92a52f97bb9736db6002db23d813e9b6537202a9fe4f4bd6e283380ca20dbfbc
+  absolute_source_path_persisted: false
+live_proof:
+  status: passed
+  run_id: 20260715T182133Z-ec7b6cde
+  config_sha256: 8a6674564fd455a4c5d9def8dfec623abbe5f19e9f9d42625b3b5046d7b7a999
+  run_manifest_sha256: bf69416ff18dcda3478911b57400068169f75b5e8ed8a94f5e35fee85f95abf2
+  family_count: 6
+  variants_per_family: 2
+  terminal_family_count: 6
+  accepted_dossier_stack_count: 5
+  validation_warning_family_count: 1
+  run_used_resume: false
+  planning_only: true
+presentation:
+  status: deterministic_replay_from_sealed_scientific_run
+  runtime_commit: f7edb2151e83f5d096a007476b01c7a5f17bfd54
+  pair_output_set_sha256: 350cfa04d71361762b85cfb291b374e620a514c1689e3f525cab43e549cf7c62
+  output_set_sha256: 85a1be4bbda90976cbda422401ff56302bab9f4f98ca883f07dadddab158013c
+  pattern_detailed_sha256: 4940bbcae206d2c14f3f74062d3174a2b6f2e4ffdacfcda2425c3f5bf91c1467
+  question_families_detailed_sha256: b6db73f98ffb9ec157c3675846acceb3522ffae93bded50f616176ac2a0695ae
+  detailed_page_count: 8
+  scientific_pair_reexecuted: false
+  detailed_present_in_original_invocation: false
+artifacts:
+  status: curated
+  root: artifacts
+  file_count: 43
+  inventory_sha256: 64ccebe49f946f92abd2a63b662d404d6d4a52fa01cc57a2141602daa6d506a1
+  sanitization:
+    - remove_internal_citation_identifiers
+    - remove_internal_evidence_request_labels
+    - remove_private_reviewer_session_label
+    - summarize_excluded_candidate_diagnostic
+    - sanitize_private_links_from_validation_warning_dossier
+    - derive_public_paperbank_reuse_receipt
+  sanitized_source_bindings:
+    - path: families/preparatory-operating-regimes/dossier.md
+      source_sha256: 65aa4a5132604eb6c74c59227b3ebbadb457c9ab9dfa94c671e61c8685f5afda
+      public_sha256: afa40bcad1fc2c58e3b0543e651ffc9536873c97a82cba0e6ea24bdba592c6f1
+      transform: sanitized_private_links
+  sanitized_inventory:
+    - path: dataset/dataset_narrative.md
+      sha256: 8a5d8616202dcf4794e93b8d498ce71822e97412d7122fff273eb77d637b1929
+    - path: families/behavior-explains-neural-variance/dossier.md
+      sha256: ede8ff2b6724fca37c527833c64e27b3caa47425c07e7db3afb911f350842f76
+    - path: families/behavior-explains-neural-variance/dossier_detailed.md
+      sha256: f95ba7e23eddef40c3c3ae76525ed633eb6cbb6e3b772cbccf47c5bc5a834ee7
+    - path: families/geometry-definition-generalization/dossier.md
+      sha256: be604e04217d214aeaa141d310a8360215668c5f02a9265340e97ed70b25dc56
+    - path: families/geometry-definition-generalization/dossier_detailed.md
+      sha256: b642b0d366dd3c8e2b61bfc4f60f9d1afdd2d17cfaa981d61913b6b410f43b4e
+    - path: families/preparatory-operating-regimes/dossier.md
+      sha256: afa40bcad1fc2c58e3b0543e651ffc9536873c97a82cba0e6ea24bdba592c6f1
+    - path: families/preparatory-operating-regimes/dossier_detailed.md
+      sha256: 4db6d12704279b8f6173cffa4b6b3566c7de31bf689aace3b8636074b075b561
+    - path: families/reach-geometry-invariance/dossier.md
+      sha256: ed2975e05b815ceeb9bf9a2e7e0189b998f73c872bc26beb6f64d23fcb6b41e7
+    - path: families/reach-geometry-invariance/dossier_detailed.md
+      sha256: 2a4fafdfebeae357419f8c4f8bf8dcba3cdca99aadce750045efee752779cb80
+    - path: families/selective-pmd-m1-coupling/dossier.md
+      sha256: f968b9f69cd985e4b72002cb004e423d22091ac94f9c57b7de84f701141cfdf1
+    - path: families/selective-pmd-m1-coupling/dossier_detailed.md
+      sha256: 239743f9e1ecc22471f01d84ebf0bef3098022a0eda76a2f17eda316e622cc5f
+    - path: families/variability-alignment-readout/dossier.md
+      sha256: 512373df0a8415dd718724e90f4acd053eb7f9baab8cb4ffe83f682d92e090a6
+    - path: families/variability-alignment-readout/dossier_detailed.md
+      sha256: ffe6579db3eb04718e9ef32e901ca2ef177af481161c2ef178d7676f1eacc84a
+    - path: literature/research_scope.md
+      sha256: dbf581defab4d2bbea05c80d2f581f6ab47e8e6579366acd9cc1b73f098b0534
+    - path: literature/retrieval_summary.md
+      sha256: 14ee15c888c6e9563b99191aa29b8b1f5aa583fcb9269f9a951a20fb2bf13266
+    - path: literature/topic_evidence_summary.md
+      sha256: 70f27c81526edc419472bde8b228666329329ccbc55e6dc4efe6f24086b8a50c
+    - path: paperbank/formation_traces/1-s2-0-s0896627319300534-main.md
+      sha256: 12176d8d01cc82f6da8b35d58286582f8ab3e9ff2ed2318bde254bb6ddaae8db
+    - path: paperbank/formation_traces/2024-08-30-610535v3-full.md
+      sha256: b16696d6459e589b5ccbf1c6b2708d8cd8669382a6706fa11e63ea47bcbda57d
+    - path: paperbank/formation_traces/ibl-s41586-025-09226-1.md
+      sha256: a02f9cf865ba3cd565537e210e3d233e77f9e854eac252c092a734ea47a4360e
+    - path: paperbank/formation_traces/nature12742.md
+      sha256: 9cd7ed05ce5f9ab18212b51c62853a3c8d9b991969518a7cd74a28c7c36fee9d
+    - path: paperbank/formation_traces/nn-3807.md
+      sha256: 54da4a4646fb9480f91fadeab9da9b7301dde77d3bd1ae701077cc2832a1f765
+    - path: paperbank/formation_traces/s41586-019-1346-5.md
+      sha256: 39562da2a85399298f1c7925715645238ea7a8e6178fa207fb4a8de59490efcb
+    - path: paperbank/formation_traces/s41586-021-04268-7.md
+      sha256: 60d31c3919a3ca199b5d8b4e36703d4cd5e589779b3f186a68f54cfeb257b060
+    - path: paperbank/formation_traces/s41586-025-09528-4-1.md
+      sha256: 490ae8c37b343371b3ce4878c15f03fcc86a215131571fd923abd6c758729f57
+    - path: paperbank/formation_traces/science-aav7893.md
+      sha256: 99a9fc228d1f72da38e124dc640a6df45d32760ebdfbf394dbccad3236b1b705
+    - path: paperbank/formation_traces/srinath-et-al-2026-the-structure-of-correlated-variability-reflects-task-relevant-information-in-sensory-neurons.md
+      sha256: cccc7456219b792f19c510f48b11a014def0a37d1210cb34c0574a806f1860c5
+    - path: paperbank/paperbank_summary.md
+      sha256: 291a75d2adc3d7ddc9d30363aced002f44dfa7f9620058074aaf8fbdf45b4561
+    - path: paperbank/papers/1-s2-0-s0896627319300534-main.md
+      sha256: 881305fce003d4d6d5441cc01eb907a634d3d6a84f89ecb3a8976c080df20808
+    - path: paperbank/papers/2024-08-30-610535v3-full.md
+      sha256: 16d03721773e7769364ada1b96bca407312f7e186d0ca9490fa6b5d81f720436
+    - path: paperbank/papers/ibl-s41586-025-09226-1.md
+      sha256: 5f5cd84c6216fb63dfccb3330e8ac9be1cd99b07ef8173a0cdff355db4bd301e
+    - path: paperbank/papers/nature12160.md
+      sha256: 0ae85830dffa6f860cd728480bf701029a24ea493f37dd51833c6d3478414b8b
+    - path: paperbank/papers/nature12742.md
+      sha256: 2f9297b30c0b87e917d91fe9466309a35f0e0f2ed9ff0d5cf931349e8323d0a7
+    - path: paperbank/papers/nn-3807.md
+      sha256: 620932aacc549870e47f6c2518734477c448cdff287a6b0bc677df128478b2c5
+    - path: paperbank/papers/s41586-019-1346-5.md
+      sha256: 9d5fd813b6adaafbde7da9aab5da0e16d2230ea43601726372f0cfede828f298
+    - path: paperbank/papers/s41586-021-04268-7.md
+      sha256: 6bfbf092ef5e5168d9c4f3683975f7c4207ab6446eff22bf893c200dbc6a9e74
+    - path: paperbank/papers/s41586-025-09528-4-1.md
+      sha256: a579b42448181d2d239aec64d5302ede33ff23cdb2d764ba0f41e88a7500cd09
+    - path: paperbank/papers/science-aav7893.md
+      sha256: bdef2c16d071bb745a48afb9c30eee04f16854bb4e5e6e30e69c761900dae954
+    - path: paperbank/papers/srinath-et-al-2026-the-structure-of-correlated-variability-reflects-task-relevant-information-in-sensory-neurons.md
+      sha256: e9ea239f1fc5728472521988f50b916db14b58e61d93a9eb48b083f0d5ebbe1e
+    - path: paperbank/question_patterns.md
+      sha256: d3d2bbd78ffaa2609ca8da565fe5848098934bea23cd4ab4687441cad0750394
+    - path: paperbank/question_patterns_detailed.md
+      sha256: 4940bbcae206d2c14f3f74062d3174a2b6f2e4ffdacfcda2425c3f5bf91c1467
+    - path: provenance/paperbank_import.yaml
+      sha256: 92a52f97bb9736db6002db23d813e9b6537202a9fe4f4bd6e283380ca20dbfbc
+    - path: questions/question_families.md
+      sha256: 5b7b594480f2e31a417631008c3ae7dce0ec0863f2701013d37410f45d4f695e
+    - path: questions/question_families_detailed.md
+      sha256: b6db73f98ffb9ec157c3675846acceb3522ffae93bded50f616176ac2a0695ae
+  showcase_family_ids:
+    - family-006
+  showcase_selection_status: operator_selected
+bridge_status: closed

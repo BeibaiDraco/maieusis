@@ -1,0 +1,31 @@
+name: Scientific workflow feedback
+description: Report a question-development, planning, or dossier usability issue.
+title: "[Scientific workflow]: "
+labels: [scientific-workflow]
+body:
+  - type: dropdown
+    id: stage
+    attributes:
+      label: Stage
+      options:
+        - PaperBank
+        - Dataset narrative or topic evidence
+        - Question family generation
+        - Owner-planner dialogue
+        - Independent review
+        - Dossier
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: expectation
+    attributes:
+      label: Scientific expectation
+      description: Explain what would make the artifact more faithful or useful.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Shareable evidence
+      description: Use public identifiers or short excerpts; do not upload copyrighted PDFs.

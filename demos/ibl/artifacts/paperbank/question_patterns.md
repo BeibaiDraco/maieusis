@@ -1,0 +1,26 @@
+# PatternBank — automated review summary
+
+- Reviewed question patterns: 8
+
+## Patterns (reusable question-forming moves)
+
+- **Replace a magnitude heuristic with a structural-alignment test** — `ai_reviewed`, cross_paper, from 3 source paper(s)
+  - move: Reframe the problem from whether the summary statistic is large or small to whether its underlying structure is aligned with an independently defined outcome-relevant direction. Test whether alignment, rather than aggregate magnitude, predicts saturation, communication, behavior, or readout.
+- **Test a predicted collective structure and then test its invariance** — `ai_reviewed`, cross_paper, from 2 source paper(s)
+  - move: Estimate the predicted collective structure without imposing it in advance, then test whether defining features and element-specific organization persist across contexts that alter external inputs or operating conditions. Use invariance as the mechanistic discriminator when static structure is non-unique.
+- **Use controlled task contrasts to discriminate population-dynamical mechanisms** — `ai_reviewed`, cross_paper, from 2 source paper(s)
+  - move: Use a controlled experimental contrast—such as a within-task relevance manipulation or a temporally controlled input stream—to derive distinct population-geometric and temporal predictions from competing dynamical mechanisms. Compare those predictions at the population level, test whether the inferred mechanism has its expected behavioral consequence, and use task-constrained models only to sharpen or interpret the mechanistic alternatives rather than to establish biological implementation.
+- **Operationalize an underspecified explanatory variable and compare localized versus distributed representation** — `ai_reviewed`, cross_paper, from 2 source paper(s)
+  - move: Turn a latent or previously underspecified source of population variability into a predictive representation question: operationalize it either by inferring an internal construct from task history and behavior or by treating measured multidimensional behavior as the explanatory signal, use informative context contrasts to distinguish competing interpretations, and compare its spatial distribution, timing, and relation to other representational dimensions across processing levels.
+- **Turn unexplained variability into a predictive representation question** — `ai_reviewed`, cross_paper, from 3 source paper(s)
+  - move: Use rich simultaneous state measurements to predict the formerly unexplained population activity, compare them against simpler state summaries, and examine whether identified dimensions are local or distributed and separable from or overlapping with task-evoked representations.
+- **Test a mechanistic relation across operating points and deliberate boundary conditions** — `ai_reviewed`, cross_paper, from 3 source paper(s)
+  - move: Test the predicted relation within coherent units across operating points, then deliberately alter structural scale or pooling to find where it persists or breaks. Evaluate a functional consequence separately rather than assuming the mechanistic relation is beneficial.
+- **Use structured dimensions and matched controls to test selective organization** — `ai_reviewed`, cross_paper, from 3 source paper(s)
+  - move: Replace a generic association question with a specificity question: isolate a scientifically meaningful signal or dimension, characterize where it appears or which independently defined dimensions it relates to, and compare that structure against plausible generic or confounded alternatives using an appropriate matched or negative control. In the strict jointly observed source-target form, identify source dimensions predictive of the target and compare their dimensionality and alignment with dominant local modes and matched within-system prediction. Other supported forms compare a controlled latent variable across processing levels while accounting for behavioral confounds, or compare a variability dimension with independently defined task-relevant representations and control contrasts.
+- **Discriminate population-dynamical mechanisms with controlled within-task contrasts** — `ai_reviewed`, cross_paper, from 2 source paper(s)
+  - move: Move from complex unit-level activity to population trajectories, derive distinct predictions from competing mechanistic accounts, and use a controlled within-task contrast to test whether the observed dynamics have the predicted consequence for input influence, information flow, or behavior. One source contributes a temporal before-versus-after contrast that tests whether a candidate regime transition predicts altered behavioral influence of later input; the other contributes a relevant-versus-irrelevant context contrast that tests whether population information flow supports early filtering or recurrent selection and integration. Treat these as different instantiations of the shared move, not as evidence that every application contains an input-sensitive-to-autonomous transition.
+
+## If this looks wrong
+
+This is a diagnostic summary, not an approval. Adjust the PaperBank inputs and re-run; patterns are re-induced and re-reviewed from the accepted formation traces.

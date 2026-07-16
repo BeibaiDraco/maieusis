@@ -1,0 +1,311 @@
+name: publish distributions
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Package index to publish the validated build to
+        required: true
+        type: choice
+        options:
+          - testpypi
+          - pypi
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-${{ inputs.target }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build and validate once
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: Verify target, ref, tag, version, and commit
+        env:
+          TARGET: ${{ inputs.target }}
+          DISPATCH_REF: ${{ github.ref }}
+          DISPATCH_REF_TYPE: ${{ github.ref_type }}
+          DISPATCH_REF_NAME: ${{ github.ref_name }}
+          DISPATCH_SHA: ${{ github.sha }}
+        run: |
+          uv run --no-project python - <<'PY'
+          import os
+          import pathlib
+          import subprocess
+          import tomllib
+
+          metadata = tomllib.loads(pathlib.Path("pyproject.toml").read_text(encoding="utf-8"))
+          name = metadata["project"]["name"]
+          version = metadata["project"]["version"]
+          target = os.environ["TARGET"]
+          ref = os.environ["DISPATCH_REF"]
+          ref_type = os.environ["DISPATCH_REF_TYPE"]
+          ref_name = os.environ["DISPATCH_REF_NAME"]
+          dispatch_sha = os.environ["DISPATCH_SHA"]
+          head = subprocess.check_output(
+              ["git", "rev-parse", "HEAD"], text=True
+          ).strip()
+
+          if name != "maieusis":
+              raise SystemExit(f"unexpected distribution name: {name}")
+          if dispatch_sha != head:
+              raise SystemExit(f"dispatch/checkout commit mismatch: {dispatch_sha} != {head}")
+          if target == "testpypi":
+              if (ref, ref_type, ref_name) != ("refs/heads/main", "branch", "main"):
+                  raise SystemExit("TestPyPI publication must run from exact public main")
+          elif target == "pypi":
+              tag = f"v{version}"
+              if (ref, ref_type, ref_name) != (f"refs/tags/{tag}", "tag", tag):
+                  raise SystemExit(f"PyPI publication must run from the {tag} tag")
+              tag_commit = subprocess.check_output(
+                  ["git", "rev-list", "-n", "1", tag], text=True
+              ).strip()
+              if tag_commit != head:
+                  raise SystemExit(f"tag/checkout commit mismatch: {tag_commit} != {head}")
+              main_commit = subprocess.check_output(
+                  ["git", "rev-parse", "refs/remotes/origin/main^{commit}"], text=True
+              ).strip()
+              if main_commit != head:
+                  raise SystemExit(f"tag/main commit mismatch: {head} != {main_commit}")
+          else:
+              raise SystemExit(f"unsupported publication target: {target}")
+          PY
+      - name: Validate CITATION.cff against CFF 1.2
+        uses: citation-file-format/cffconvert-github-action@2.0.0
+        with:
+          args: "--validate"
+      - name: Build distributions once
+        run: |
+          rm -rf dist release
+          uv build
+      - name: Validate distribution metadata
+        run: uvx twine check dist/*
+      - name: Scan archive paths and public text
+        run: |
+          uv run --no-project python - <<'PY'
+          import re
+          import stat
+          import tarfile
+          import zipfile
+          from pathlib import Path, PurePosixPath
+
+          wheels = sorted(Path("dist").glob("*.whl"))
+          sdists = sorted(Path("dist").glob("*.tar.gz"))
+          if len(wheels) != 1 or len(sdists) != 1:
+              raise SystemExit(
+                  f"expected exactly one wheel and one sdist, got {len(wheels)} and {len(sdists)}"
+              )
+
+          refused_parts = {
+              ".git",
+              "__macosx",
+              "captures",
+              "corpus",
+              "example_papers",
+              "hidden_audit",
+              "hidden_audit_sidecar",
+              "raw_captures",
+              "runs",
+              "sessions",
+          }
+          refused_suffixes = (
+              ".pdf",
+              ".parquet",
+              ".pqt",
+              ".npy",
+              ".npz",
+              ".h5",
+              ".hdf5",
+              ".nwb",
+              ".feather",
+          )
+          text_suffixes = {
+              "",
+              ".cfg",
+              ".csv",
+              ".json",
+              ".md",
+              ".py",
+              ".rst",
+              ".toml",
+              ".txt",
+              ".yaml",
+              ".yml",
+          }
+          absolute_path = re.compile(r"(?:^|[\s\"'=(])/(?:Users|home|private|var|tmp|opt|etc)/")
+          secrets = (
+              re.compile(r"\bsk-[A-Za-z0-9]{16,}"),
+              re.compile(r"\bsk-ant-[A-Za-z0-9-]{16,}"),
+              re.compile(r"\bgh[pousr]_[A-Za-z0-9]{20,}"),
+              re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----"),
+          )
+
+          def check_name(raw_name: str) -> PurePosixPath:
+              if "\\" in raw_name:
+                  raise SystemExit(f"archive member uses a backslash: {raw_name}")
+              path = PurePosixPath(raw_name)
+              if path.is_absolute() or ".." in path.parts:
+                  raise SystemExit(f"unsafe archive member path: {raw_name}")
+              lowered_parts = tuple(part.lower() for part in path.parts)
+              if any(part in refused_parts for part in lowered_parts):
+                  raise SystemExit(f"private archive member path: {raw_name}")
+              if path.name == ".DS_Store" or path.name.startswith("._"):
+                  raise SystemExit(f"macOS metadata in archive: {raw_name}")
+              lowered = raw_name.lower()
+              if any(part.endswith(".zarr") for part in lowered_parts):
+                  raise SystemExit(f"refused scientific data directory in archive: {raw_name}")
+              if "/docs/plans/" in f"/{lowered}/":
+                  raise SystemExit(f"development plan in archive: {raw_name}")
+              if lowered.endswith(refused_suffixes):
+                  raise SystemExit(f"refused scientific input/data file in archive: {raw_name}")
+              return path
+
+          def check_text(path: PurePosixPath, data: bytes) -> None:
+              if path.suffix.lower() not in text_suffixes or len(data) > 8 * 1024 * 1024:
+                  return
+              try:
+                  text = data.decode("utf-8")
+              except UnicodeDecodeError:
+                  return
+              if absolute_path.search(text):
+                  raise SystemExit(f"local absolute path in archive text: {path}")
+              if any(pattern.search(text) for pattern in secrets):
+                  raise SystemExit(f"credential-like content in archive text: {path}")
+
+          for archive_path in [*wheels, *sdists]:
+              if archive_path.suffix == ".whl":
+                  with zipfile.ZipFile(archive_path) as archive:
+                      for info in archive.infolist():
+                          path = check_name(info.filename)
+                          mode = (info.external_attr >> 16) & 0o170000
+                          if mode == stat.S_IFLNK:
+                              raise SystemExit(f"symlink in wheel: {info.filename}")
+                          if not info.is_dir():
+                              check_text(path, archive.read(info))
+              else:
+                  with tarfile.open(archive_path, mode="r:gz") as archive:
+                      for member in archive.getmembers():
+                          path = check_name(member.name)
+                          if member.isdir():
+                              continue
+                          if not member.isfile():
+                              raise SystemExit(f"non-regular member in sdist: {member.name}")
+                          stream = archive.extractfile(member)
+                          if stream is None:
+                              raise SystemExit(f"unreadable member in sdist: {member.name}")
+                          check_text(path, stream.read())
+          PY
+      - name: Smoke-test the installed wheel with a fresh home
+        env:
+          OPENAI_API_KEY: ""
+          ANTHROPIC_API_KEY: ""
+        run: |
+          uv venv --python 3.11 "${RUNNER_TEMP}/maieusis-release-smoke"
+          uv pip install \
+            --python "${RUNNER_TEMP}/maieusis-release-smoke/bin/python" \
+            dist/*.whl
+          rm -rf "${RUNNER_TEMP}/maieusis-home" "${RUNNER_TEMP}/maieusis-project"
+          mkdir -p "${RUNNER_TEMP}/maieusis-home" "${RUNNER_TEMP}/maieusis-project"
+          env -u PYTHONPATH -u MAIEUSIS_PROJECT_ROOT \
+            HOME="${RUNNER_TEMP}/maieusis-home" \
+            "${RUNNER_TEMP}/maieusis-release-smoke/bin/maieusis" --help
+          (
+            cd "${RUNNER_TEMP}/maieusis-project"
+            env -u PYTHONPATH -u MAIEUSIS_PROJECT_ROOT \
+              HOME="${RUNNER_TEMP}/maieusis-home" \
+              "${RUNNER_TEMP}/maieusis-release-smoke/bin/maieusis" init --dir .
+          )
+          test -f "${RUNNER_TEMP}/maieusis-project/maieusis.yaml"
+          test -f "${RUNNER_TEMP}/maieusis-project/AGENTS.md"
+          test -f "${RUNNER_TEMP}/maieusis-project/CLAUDE.md"
+          test -f "${RUNNER_TEMP}/maieusis-project/.claude/agents/dataset-planner.md"
+          test -f "${RUNNER_TEMP}/maieusis-project/.codex/agents/dataset-planner.toml"
+      - name: Freeze hashes and publication payload
+        run: |
+          uv run --no-project python - <<'PY'
+          import hashlib
+          import shutil
+          from pathlib import Path
+
+          release = Path("release")
+          packages = release / "python-package-distributions"
+          packages.mkdir(parents=True)
+          source_files = sorted(
+              [*Path("dist").glob("*.whl"), *Path("dist").glob("*.tar.gz")]
+          )
+          if len(source_files) != 2:
+              raise SystemExit("refusing to freeze an unexpected distribution set")
+          for source in source_files:
+              shutil.copy2(source, packages / source.name)
+          lines = []
+          for path in sorted(packages.iterdir()):
+              digest = hashlib.sha256(path.read_bytes()).hexdigest()
+              # Release assets are attached flat by basename. Keep the checksum file valid both
+              # inside the Actions artifact and beside the final GitHub Release assets.
+              lines.append(f"{digest}  {path.name}")
+          (release / "SHA256SUMS.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: python-release-artifacts
+          path: release/
+          if-no-files-found: error
+          retention-days: 7
+
+  publish-testpypi:
+    name: Publish the approved build to TestPyPI
+    if: ${{ inputs.target == 'testpypi' }}
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/project/maieusis/
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: python-release-artifacts
+          path: release/
+      - name: Verify frozen hashes
+        working-directory: release/python-package-distributions
+        run: sha256sum --check ../SHA256SUMS.txt
+      - name: Publish with trusted identity
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: release/python-package-distributions/
+          repository-url: https://test.pypi.org/legacy/
+
+  publish-pypi:
+    name: Publish the approved build to PyPI
+    if: ${{ inputs.target == 'pypi' }}
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/maieusis/
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: python-release-artifacts
+          path: release/
+      - name: Verify frozen hashes
+        working-directory: release/python-package-distributions
+        run: sha256sum --check ../SHA256SUMS.txt
+      - name: Publish with trusted identity
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: release/python-package-distributions/

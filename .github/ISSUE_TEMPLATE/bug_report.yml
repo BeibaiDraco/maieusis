@@ -1,0 +1,39 @@
+name: Bug report
+description: Report an installation, configuration, or workflow defect.
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: >-
+        Do not attach API keys, raw private datasets, paper PDFs, full model captures, or hidden
+        audit sidecars.
+  - type: input
+    id: version
+    attributes:
+      label: Maieusis version
+      placeholder: 0.1.0
+    validations:
+      required: true
+  - type: textarea
+    id: observed
+    attributes:
+      label: What happened?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Minimal reproduction
+      description: Include sanitized configuration and logs only.
+    validations:
+      required: true
+  - type: dropdown
+    id: sensitive
+    attributes:
+      label: Did you check the report for sensitive material?
+      options:
+        - Yes, it contains no sensitive material
+        - I am unsure and will use the private security channel
+    validations:
+      required: true
