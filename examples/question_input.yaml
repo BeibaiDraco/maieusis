@@ -1,0 +1,37 @@
+question_id: human-cp-spatial
+question_text: Within CP, is the association between anatomical position and firing rate reproducible across held-out sessions after accounting for probe trajectory?
+scientific_motivation: Distinguish a local anatomical pattern from pooled-neuron gradients caused by recording geometry.
+question_operator: spatial_robustness
+origin: human
+constructs: [firing_rate, anatomical_position]
+brain_regions: [CP]
+claim_level: associational
+unit_of_observation: unit
+unit_of_inference: session
+primary_estimand: held-out session distribution of within-probe position–log-firing-rate associations
+required_measurements: [spikes, brain_location]
+required_events: []
+required_design_features: [three_dimensional_coordinates, repeated_measures]
+required_skills: [ibl-load, ibl-analyze, exploration-confirmation, ibl-anatomy]
+hypotheses:
+  - hypothesis_id: H0
+    role: null
+    statement: No reproducible within-probe association exists.
+  - hypothesis_id: H1
+    role: target
+    statement: A stable within-probe anatomical gradient exists.
+  - hypothesis_id: H_artifact
+    role: artifact
+    statement: The pooled gradient is produced by probe or session composition.
+predicted_signatures:
+  - hypothesis_id: H0
+    observations: [Held-out session slopes are centered near zero.]
+  - hypothesis_id: H1
+    observations: [Held-out session slopes have a common direction.]
+  - hypothesis_id: H_artifact
+    observations: [Pooled effects persist while within-probe effects disappear.]
+negative_controls: [coordinate-axis permutation, session-label permutation]
+falsification_conditions: [No held-out within-probe association]
+positive_result_consequence: Motivates targeted anatomical and cell-type follow-up.
+negative_result_consequence: Constrains the apparent gradient to sampling composition.
+confirmation_requested: true

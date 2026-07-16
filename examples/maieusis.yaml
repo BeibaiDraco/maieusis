@@ -1,0 +1,81 @@
+# Maieusis project config — scaffolded by `maieusis init`. Point `maieusis check --project maieusis.yaml`
+# at this file. Secrets are NEVER stored here — API keys/tokens load from a runtime.env
+# (.env.local / runtime.env / ~/.config/maieusis/runtime.env). This file holds only non-secret settings.
+version: maieusis_project_config/v1
+
+# standard = token API present (full automated generation + independent review).
+# subscription_only_demo = NO token API (API-agent providers resolve to mock; novelty + literature
+#   disabled; a loud "workflow demo only" banner; no scientific-quality guarantee).
+mode: standard
+
+paperbank:
+  inbox_dir: papers/inbox          # directory of source PDFs to extract (required)
+  extraction:
+    provider: openai
+    model: ""                      # or set OPENAI_MODEL in runtime.env
+  parser: poppler_text
+  evidence_mode: source_span
+  max_workers: 4
+  cited_literature: true
+  select_key_citations: true
+  crossref_mailto: you@example.org
+  openalex_email: you@example.org
+
+dataset:
+  seed:
+    dataset_id: my_dataset
+    link: https://example.org/my-dataset   # REQUIRED: a resolvable dataset link (DOI / URL / DANDI id)
+    docs: []
+  inspection_runtime:
+    dataset_root: /path/to/local/sample     # required for external_readonly access
+    dataset_access_mode: external_readonly
+    inspection_command: "uvx --with pynwb python"   # XOR inspection_python
+    inspection_pythonpath: ""
+    inspection_extra_env: {}
+    # Required when running an installed wheel outside its source checkout. Must be a Git checkout
+    # with a valid HEAD; `maieusis check` verifies it before any paid call.
+    source_tree_root: null
+    max_turns: 40
+    timeout_seconds: 1800
+  allowed_inspection_resources:             # at least one non-blank entry required
+    - local dataset documentation
+    - dataset repository code
+    - dataset metadata and small samples
+  official_online_resources: []
+
+research_intent:
+  mode: open           # open | topic_conditioned | seed_question
+  topic_terms: []
+  topic_description: ""
+  seed_question: ""
+
+models:
+  pattern: {provider: openai, model: ""}     # cross-paper question-pattern induction
+  questioner: {provider: openai, model: ""}
+  narrator: {provider: openai, model: ""}
+  topic: {provider: openai, model: ""}
+  owner: {provider: openai, model: ""}
+  reviewer: {provider: anthropic, model: ""}   # MUST be a DISTINCT provider from owner
+  coding_host: claude_code                      # codex | claude_code (required; never a fake host)
+  coding_model: opus                            # explicit CLI model; never inherited from user config
+  # coding_reasoning_effort: high               # required for Codex; omit for Claude Code
+  allow_pro_model: false
+
+literature:
+  enabled: true
+  openalex_email: you@example.org
+
+novelty:
+  enabled: false                 # product novelty search is not wired; unsearched = not_assessed
+  direct_recap_threshold: 0.9
+  close_prior_threshold: 0.7
+  max_candidates: 5
+
+run:
+  output_root: runs/my-run
+  shortlist_path: null             # non-null external shortlist is unsupported and fails preflight
+  target_family_ids: []            # non-empty external targeting is unsupported and fails preflight
+  max_families: 2                 # fast multi-family default; raise for a broader proposal set
+  variants_per_family: 3          # requested scientific variants within each generated family
+  max_parallel_family_workers: 2
+  max_revise_rounds: 1            # one bounded owner/planner repair by default

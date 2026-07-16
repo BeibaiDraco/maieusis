@@ -1,0 +1,18 @@
+reference,short_name,x_band_coordinate,y_band_coordinate,artifact_type,x_interpretation,y_interpretation,confidence
+1,SciMON,1.2,0.45,system,Literature-conditioned ideation,No concrete target-dataset gate,high
+2,ResearchAgent,1.48,0.7,system,Literature-conditioned ideation,No concrete target-dataset gate,high
+3,Scideator,2.05,0.5,system,Structured paper components,No concrete target-dataset gate,high
+4,HypER,2.65,0.72,method,Explicit literature reasoning chains,No concrete target-dataset gate,high
+5,HypoGen,3.1,0.42,dataset/method,Explicit paper-derived reasoning traces,No concrete target-dataset gate,high
+6,CrossTrace,3.55,0.66,dataset/method,Explicit cross-domain reasoning traces/patterns,No concrete target-dataset gate,high
+7,GoR,2.95,0.95,method,Citation-evolution supervision,No concrete target-dataset gate,high
+8,Lit. + Data,1.55,1.82,method,Literature-conditioned hypotheses,Dataset informs hypothesis refinement,high
+9,HARPA,1.95,2.18,system,Literature/testability workflow,Testability and execution feedback; no concrete target-dataset plan/reject,medium-high
+10,DiscoveryBench,0.42,1.02,benchmark,Data-driven task; question/goal supplied,"Dataset execution/verification, not question plan-or-reject",high
+11,DataVoyager,0.28,0.62,system,Data-first discovery,Direct hypothesis search/verification in data,high
+12,AutoDiscovery,0.64,0.56,system,Data-first open-ended discovery,Hypotheses selected through experimental surprise,high
+13,data-to-paper,0.86,1.72,pipeline,Data-first hypothesis generation,"Research planning from data, then analysis/manuscript",high
+14,HLER,1.12,2.88,pipeline,Dataset-aware question generation,Explicit dataset audit + question-quality/feasibility screening before analysis; no independent planner/defer protocol,high
+15,AI Scientist,0.92,0.84,pipeline,Idea-to-paper automation,Executes ideas; no target-dataset answerability gate,high
+16,Kosmos,1.1,1.46,pipeline,Objective + dataset discovery loop,"Iterative analysis/literature/hypothesis loop, not pre-execution gate",high
+17,RQ-Bench,1.92,0.22,benchmark,Research-question reconstruction/evaluation,No target dataset or planning gate,high

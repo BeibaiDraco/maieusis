@@ -1,0 +1,18 @@
+reference,work,primary_source_url,checked_on
+1,SciMON,https://aclanthology.org/2024.acl-long.18/,2026-07-14
+2,ResearchAgent,https://aclanthology.org/2025.naacl-long.342/,2026-07-14
+3,Scideator,https://doi.org/10.1145/3786335.3813161,2026-07-15
+4,HypER,https://aclanthology.org/2025.emnlp-main.1292/,2026-07-14
+5,HypoGen,https://arxiv.org/abs/2504.12976,2026-07-14
+6,CrossTrace,https://arxiv.org/abs/2603.28924,2026-07-14
+7,Graphs of Research,https://arxiv.org/abs/2605.14790,2026-07-14
+8,Literature Meets Data,https://aclanthology.org/2025.acl-long.12/,2026-07-14
+9,HARPA,https://arxiv.org/abs/2510.00620,2026-07-14
+10,DiscoveryBench,https://proceedings.iclr.cc/paper_files/paper/2025/hash/0d70af566e69f1dfb687791ecf955e28-Abstract-Conference.html,2026-07-14
+11,DataVoyager,https://arxiv.org/abs/2402.13610,2026-07-14
+12,AutoDiscovery,https://proceedings.neurips.cc/paper_files/paper/2025/hash/23b127521af7ca7a42f5cdb7507be4f2-Abstract-Conference.html,2026-07-15
+13,data-to-paper,https://arxiv.org/abs/2404.17605,2026-07-14
+14,HLER,https://arxiv.org/abs/2603.07444,2026-07-14
+15,The AI Scientist,https://arxiv.org/abs/2408.06292,2026-07-14
+16,Kosmos,https://arxiv.org/abs/2511.02824,2026-07-14
+17,RQ-Bench,https://arxiv.org/abs/2606.12071,2026-07-15

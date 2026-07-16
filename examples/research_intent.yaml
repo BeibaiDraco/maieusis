@@ -1,0 +1,82 @@
+theme: coding geometry in neural population activity
+mode: topic_conditioned
+topic_terms:
+  - coding geometry
+  - representational geometry
+  - neural population geometry
+  - noise geometry
+  - trial-to-trial covariability
+  - shared variability
+  - latent neural dynamics
+  - multi-area neural coding
+topic_description: >
+  Generate scientifically grounded questions about the geometry of neural
+  population codes, including representational geometry, latent state geometry,
+  trial-to-trial co-variability/noise geometry, multi-area distribution and
+  differences, latency structure, communication-like relationships across
+  areas, code dynamics, and circuit-level interpretation. The IBL/BWM dataset is
+  a public-data opportunity surface and constraint, not the scientific topic
+  itself.
+novelty_distance: adjacent
+include_concepts:
+  - shared versus region-specific coding geometry
+  - representational geometry
+  - population geometry
+  - trial-to-trial noise covariance geometry
+  - shared variability
+  - latent dynamics
+  - multi-area distribution of codes
+  - regional differences in coding geometry
+  - latency and temporal evolution of codes
+  - communication-like relationships across areas
+  - circuit-level interpretation of population geometry
+  - behavior-linked latent variables
+  - movement and behavioral-state confounds
+exclude_concepts:
+  - generic decoding benchmark
+  - method benchmark without neuroscience contrast
+  - purely engineering question
+  - causal claim from observational BWM data alone
+  - exact dataset feasibility claim at proposal stage
+preferred_epistemic_moves:
+  - distinguish alternative interpretations of population geometry
+  - test whether code geometry changes across time, state, or areas
+  - identify when noise or shared variability carries structured information
+  - relate observed latent geometry to circuit-level hypotheses without causal overclaim
+target_constructs:
+  - coding_geometry
+  - representational_geometry
+  - population_geometry
+  - noise_geometry
+  - shared_variability
+  - latent_dynamics
+  - multi_area_coding
+  - circuit_interpretation
+preferred_claim_levels:
+  - descriptive
+  - predictive
+  - associational
+target_regions: []
+target_events:
+  - stimulus
+  - movement
+  - response
+  - feedback
+constraints:
+  - use existing public BWM data only
+  - no required single target region or circuit at proposal stage
+  - questions must be grounded by current literature
+  - avoid causal language unless framed as future experimental motivation
+  - avoid generic decoding benchmarks
+  - exact feasibility belongs to the later Dataset Planner branch
+  - at least one possible result direction must produce a meaningful scientific update
+desired_question_families:
+  - coding geometry contrast
+  - noise or shared-variability geometry
+  - multi-area code dynamics
+  - latency or temporal-evolution geometry
+  - circuit-interpretation question with observational limits
+excluded_question_families:
+  - engineering benchmark
+  - pure decoding leaderboard
+  - causal mechanism claim from observational data only

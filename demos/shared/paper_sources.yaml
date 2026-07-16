@@ -1,0 +1,105 @@
+schema_version: maieusis.public_demo.paper_sources/v1
+release: 0.1.0
+status: frozen_twelve_source_release_input
+raw_pdfs_included: false
+note: >-
+  These are the 12 unique source inputs used by the accepted Luna release-validation front half and the
+  final-quality IBL run. Each DOI URL is an
+  acquisition/metadata starting point, not a promise that publisher full text is freely available.
+  Users must obtain lawful copies themselves. The frozen screen retains 11 accepted PaperCases, 10 reviewed
+  formation traces, and eight reviewed question-formation patterns. The s41593-024-01758-5 candidate remains
+  visible for provenance but is excluded from the accepted/importable PaperBank because its citation context
+  could not be verified. Warnings and imperfect intermediate artifacts remain visible rather than being
+  rewritten as stronger evidence.
+final_screen:
+  source_input_count: 12
+  accepted_paper_case_count: 11
+  reviewed_formation_trace_count: 10
+  reviewed_pattern_count: 8
+  excluded_from_accepted_paperbank:
+    - s41593-024-01758-5.pdf
+papers:
+  - filename: 1-s2.0-S0896627319300534-main.pdf
+    title: Cortical Areas Interact through a Communication Subspace
+    authors: João D. Semedo; Amin Zandvakili; Christian K. Machens; Byron M. Yu; Adam Kohn
+    year: 2019
+    doi: 10.1016/j.neuron.2019.01.026
+    acquisition_url: https://doi.org/10.1016/j.neuron.2019.01.026
+    pdf_sha256: a8e3bc43d4d592aedcbd2e3cbe2be62a49097a84122564876faf5f5e1e6a6482
+  - filename: 2024.08.30.610535v3.full.pdf
+    title: Firing rate diversity lowers the dimension of population covariability in neuronal networks
+    authors: Gengshuo Tian; Ou Zhu; Vinay Shirhatti; Charles M. Greenspon; John E. Downey; David J. Freedman; Brent Doiron
+    year: 2024
+    doi: 10.1101/2024.08.30.610535
+    acquisition_url: https://doi.org/10.1101/2024.08.30.610535
+    pdf_sha256: 4f5392320954ff98fd83da15a2f3b538b87753255e3d9e0cb3955bd950ad2614
+  - filename: ibl-s41586-025-09226-1.pdf
+    title: Brain-wide representations of prior information in mouse decision-making
+    authors: Charles Findling et al.; International Brain Laboratory
+    year: 2025
+    doi: 10.1038/s41586-025-09226-1
+    acquisition_url: https://doi.org/10.1038/s41586-025-09226-1
+    pdf_sha256: a014031cd0023347792305e807b565f833b7b4a00e39d5dfd2efc01561f9b2b9
+  - filename: nature12160.pdf
+    title: The importance of mixed selectivity in complex cognitive tasks
+    authors: Mattia Rigotti; Omri Barak; Melissa R. Warden; Xiao-Jing Wang; Nathaniel D. Daw; Earl K. Miller; Stefano Fusi
+    year: 2013
+    doi: 10.1038/nature12160
+    acquisition_url: https://doi.org/10.1038/nature12160
+    pdf_sha256: 5e86b83a153d4cd3f65785a734888f9df0bfb7a5024aebfd77e5d3884f842cac
+  - filename: nature12742.pdf
+    title: Context-dependent computation by recurrent dynamics in prefrontal cortex
+    authors: Valerio Mante; David Sussillo; Krishna V. Shenoy; William T. Newsome
+    year: 2013
+    doi: 10.1038/nature12742
+    acquisition_url: https://doi.org/10.1038/nature12742
+    pdf_sha256: 7fbe1cee260ec93f6d9084406c032647be093c488d4a30b0169276aab1c549aa
+  - filename: nn.3807.pdf
+    title: Information-limiting correlations
+    authors: Rubén Moreno-Bote; Jeffrey M. Beck; Ingmar Kanitscheider; Xaq Pitkow; Peter E. Latham; Alexandre Pouget
+    year: 2014
+    doi: 10.1038/nn.3807
+    acquisition_url: https://doi.org/10.1038/nn.3807
+    pdf_sha256: 8c019f3ed61e3e03644069d0b72466cdede4cb5c89c3f33bb45609ea73d52591
+  - filename: s41586-019-1346-5.pdf
+    title: High-dimensional geometry of population responses in visual cortex
+    authors: Carsen Stringer; Marius Pachitariu; Nicholas A. Steinmetz; Matteo Carandini; Kenneth D. Harris
+    year: 2019
+    doi: 10.1038/s41586-019-1346-5
+    acquisition_url: https://doi.org/10.1038/s41586-019-1346-5
+    pdf_sha256: 95c774e6432cc6c29269b618a1d56f278e63c7b7aeb5e85ea9e0ab35d4389f4b
+  - filename: s41586-021-04268-7.pdf
+    title: Toroidal topology of population activity in grid cells
+    authors: Richard J. Gardner; Erik Hermansen; Marius Pachitariu; Yoram Burak; Nils A. Baas; Benjamin Dunn; May-Britt Moser; Edvard I. Moser
+    year: 2022
+    doi: 10.1038/s41586-021-04268-7
+    acquisition_url: https://doi.org/10.1038/s41586-021-04268-7
+    pdf_sha256: ca9bdede2572d45e7ebed1f7cde1d64aec79046b80d57b1cbaeff742e65c7a7d
+  - filename: s41586-025-09528-4 (1).pdf
+    title: Transitions in dynamical regime and neural mode during perceptual decisions
+    authors: Thomas Zhihao Luo; Timothy Doyeon Kim; Diksha Gupta; Adrian Bondy; Charles D. Kopec; Verity Alexander Elliott; Brian DePasquale; Carlos D. Brody
+    year: 2025
+    doi: 10.1038/s41586-025-09528-4
+    acquisition_url: https://doi.org/10.1038/s41586-025-09528-4
+    pdf_sha256: 1dd19ac2906f4180c5cbb2ec6bc95a795b263d7d1f155cca2fca22aa6f501dca
+  - filename: s41593-024-01758-5.pdf
+    title: Semi-orthogonal subspaces for value mediate a binding and generalization trade-off
+    authors: W. Jeffrey Johnston; Justin M. Fine; Seng Bum Michael Yoo; R. Becket Ebitz; Benjamin Y. Hayden
+    year: 2024
+    doi: 10.1038/s41593-024-01758-5
+    acquisition_url: https://doi.org/10.1038/s41593-024-01758-5
+    pdf_sha256: 66defedae05ee2e1919b5390365cced4155bccf383de3dc3d812c1cbabebaf02
+  - filename: science.aav7893.pdf
+    title: Spontaneous behaviors drive multidimensional, brainwide activity
+    authors: Carsen Stringer; Marius Pachitariu; Nicholas A. Steinmetz; Charu Bai Reddy; Matteo Carandini; Kenneth D. Harris
+    year: 2019
+    doi: 10.1126/science.aav7893
+    acquisition_url: https://doi.org/10.1126/science.aav7893
+    pdf_sha256: 380ac73d0c1fd7bc62e402a0dcc2244cc9064b5fbaf9bee530a65cc3b824b1c8
+  - filename: srinath-et-al-2026-the-structure-of-correlated-variability-reflects-task-relevant-information-in-sensory-neurons.pdf
+    title: The structure of correlated variability reflects task-relevant information in sensory neurons
+    authors: Ramanujan Srinath; Yunlong Xu; Douglas A. Ruff; Amy M. Ni; Brent Doiron; Marlene R. Cohen
+    year: 2026
+    doi: 10.1073/pnas.2523217123
+    acquisition_url: https://doi.org/10.1073/pnas.2523217123
+    pdf_sha256: afbade7cbdf5af1666a11a7d4b2038f4fec5fa5ecef8142f7a66ca027b8b60ce
