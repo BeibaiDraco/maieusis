@@ -341,9 +341,9 @@ _LAYOUT_EXPLAINER = """\
    datasets, and credentials untracked.
 3. Edit `maieusis.yaml` — set the real `dataset.seed.link`, read-only
    `dataset.inspection_runtime.dataset_root`, and distinct Owner/Reviewer providers. When running an
-   installed wheel outside its source checkout, also point `source_tree_root` at a clean Git
-   checkout with HEAD. Keep API keys only in an untracked runtime.env, never in this YAML. The
-   coding-host login/subscription is separate from scientific model API credentials.
+   installed wheel outside its source checkout, also point `source_tree_root` at a clean Maieusis
+   source-integrity checkout with HEAD. Keep API keys only in an untracked runtime.env, never in
+   this YAML. The coding-host login/subscription is separate from scientific model API credentials.
 4. Run `maieusis check --project maieusis.yaml`. It preflights the inputs and reports the estimated
    model calls/planner spawns with ZERO paid calls. Resolve failures, show the report, and ask the
    user before any paid run.

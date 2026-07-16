@@ -22,9 +22,6 @@ misrepresentation, doxxing, and sustained personal attacks are not acceptable.
 
 This policy applies in project repositories, issue trackers, review spaces,
 and project-organized events or communications. Report conduct concerns to
-`dracoxu@uchicago`. Reports will be handled as privately as practical. Project
-maintainers may edit or remove content, restrict participation, or take other
-proportionate action to protect the community.
-
-This code is a project-authored policy and is not presented as an unmodified
-copy of another community standard.
+`dracoxu@uchicago.edu`. Reports will be handled as privately as practical.
+Project maintainers may edit or remove content, restrict participation, or
+take other proportionate action to protect the community.

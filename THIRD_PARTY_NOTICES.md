@@ -10,13 +10,11 @@ The public documentation and demos refer to, but do not redistribute:
 - OpenAI Codex and OpenAI API services;
 - Anthropic Claude Code and Anthropic API services;
 - International Brain Laboratory (IBL) data and software;
-- DANDI Archive dataset `000140` / NLB MC Maze; and
+- Neural Latents Benchmark (NLB) MC_Maze-S, distributed as DANDI Archive
+  dataset `000140`; and
 - scientific works listed in the demo paper manifests and positioning
   bibliography.
 
-The positioning bibliography is maintained at
-`docs/positioning/references.bib`. A citation is identification and
-attribution, not incorporation of the cited work into Maieusis.
-
-If a future release vendors third-party code or assets, this file must be
-updated with the applicable copyright and license notice before release.
+The [positioning bibliography](docs/positioning/references.bib) identifies the
+related scientific works used in the public comparison. A citation identifies
+and attributes a work; it does not incorporate that work into Maieusis.

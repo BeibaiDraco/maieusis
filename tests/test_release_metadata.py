@@ -101,7 +101,7 @@ def test_citation_metadata_names_only_the_two_software_authors() -> None:
     assert citation["cff-version"] == "1.2.0"
     assert citation["title"] == "Maieusis"
     assert citation["version"] == "0.1.0"
-    assert str(citation["date-released"]) == "2026-07-15"
+    assert str(citation["date-released"]) == "2026-07-16"
     assert citation["license"] == "Apache-2.0"
     assert citation["repository-code"] == "https://github.com/BeibaiDraco/maieusis"
     assert len(citation["authors"]) == 2
@@ -485,15 +485,75 @@ def test_public_questions_index_covers_all_families_variants_and_resolves_links(
 
     assert len(re.findall(r"^###\s+\d+\.\s+", text, re.M)) == 12
     assert len(re.findall(r"^[12]\.\s+\[[^\]]+\]\(", text, re.M)) == 24
-    assert len(re.findall(r"questions/question_families_detailed\.md#family-", text)) == 12
+    family_links = re.findall(r"questions/question_families_detailed\.md#(family-[^)]+)", text)
+    assert len(family_links) == 14  # 12 gallery links plus two featured-entry links.
+    assert len(set(family_links)) == 12
     assert len(re.findall(r"questions/question_families_detailed\.md#variant-", text)) == 24
 
     root = _demo_root().resolve()
+    projected_root_readme = (questions_path.parent / ".." / "README.md").resolve()
     for destination, fragment in _local_markdown_links(questions_path):
+        if destination == projected_root_readme:
+            assert fragment == "explore-the-demos"
+            if destination.is_file():
+                assert destination == (ROOT / "README.md").resolve()
+            continue
         assert destination.is_relative_to(root), destination
         assert destination.is_file(), destination
         if fragment:
             assert fragment in _github_heading_anchors(destination), (destination, fragment)
+
+
+def test_demo_reader_guides_carry_primary_citations_and_no_stale_editorial_state() -> None:
+    demo_root = _demo_root()
+    questions = (demo_root / "QUESTIONS.md").read_text(encoding="utf-8")
+    ibl = (demo_root / "ibl" / "README.md").read_text(encoding="utf-8")
+    nlb = (demo_root / "nlb" / "README.md").read_text(encoding="utf-8")
+    nlb_note = (demo_root / "nlb" / "DATASET_NOTES.md").read_text(encoding="utf-8")
+    paper_sources = (demo_root / "PAPER_SOURCES.md").read_text(encoding="utf-8")
+    paper_manifest = yaml.safe_load(
+        (demo_root / "shared" / "paper_sources.yaml").read_text(encoding="utf-8")
+    )
+
+    assert "10.1038/s41586-025-09235-0" in ibl
+    neurips_source = (
+        "datasets-benchmarks-proceedings.neurips.cc/paper/2021/hash/"
+        "979d472a84804b9f647bc185a877a8b5-Abstract-round2.html"
+    )
+    questions_prose = " ".join(questions.split())
+    assert "for any scientific discipline and any scientific dataset" in questions_prose
+    assert "International Brain Laboratory (IBL)" in questions_prose
+    assert "Neural Latents Benchmark (NLB)" in questions_prose
+    assert "10.1038/s41586-025-09235-0" in questions
+    assert "2025_data_release_brainwidemap.html" in questions
+    assert "primary motor cortex (M1)" in questions
+    assert "dorsal premotor cortex (PMd)" in questions
+    for text in (questions, nlb, nlb_note):
+        assert neurips_source in text
+        assert "10.48324/dandi.000140/0.220113.0408" in text
+
+    for text in (nlb, nlb_note):
+        assert "10.1016/j.neuron.2010.09.015" in text
+        assert "10.1038/nature11129" in text
+
+    assert "IBL-002" in questions and "NLB-006" in questions
+    assert "provisional/degraded" in questions
+    assert "no accepted-plan authority" in questions
+    for stale_copy in (
+        "remain an operator editorial choice",
+        "allowlisted public subset",
+        "showcase family is intentionally undecided",
+    ):
+        assert stale_copy not in (questions + ibl + nlb).lower()
+
+    assert "does **not** distribute the source PDFs" in paper_sources
+    assert "shared/paper_sources.yaml" in paper_sources
+    paper_sources_prose = " ".join(paper_sources.split())
+    assert "NLB run reused those paper-derived products" in paper_sources_prose
+    assert "field-relevant source papers" in paper_sources_prose
+    for paper in paper_manifest["papers"]:
+        assert paper["title"] in paper_sources
+        assert f"https://doi.org/{paper['doi']}" in paper_sources
 
 
 def test_public_demo_outcome_boundaries_preserve_mixed_and_warning_families() -> None:

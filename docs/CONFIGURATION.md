@@ -1,143 +1,326 @@
 # Configuration and credentials
 
-`maieusis.yaml` contains non-secret, versioned run configuration. Runtime
-credentials come from environment variables or an untracked runtime file.
-Unknown fields fail validation.
+[Documentation home](INDEX.md) · [Agent-guided setup](AGENT_GUIDED_SETUP.md) ·
+[Manual setup](MANUAL_SETUP.md)
 
-## Configuration sections
+`maieusis init` creates a commented `maieusis.yaml`. Edit that generated file
+rather than starting from an empty document. It contains non-secret run
+settings; API keys and coding-host credentials belong in the runtime
+environment.
 
-| Section | Controls |
+Unknown YAML fields fail validation, and key-shaped secret values are rejected.
+Always run `maieusis check --project maieusis.yaml` after editing.
+
+## Configuration map
+
+| Section | What it controls |
 | --- | --- |
-| `paperbank` | PDF inbox, parser, extraction provider/model, evidence mode, paper worker cap, citation retrieval |
-| `dataset` | stable identity/link/docs, read-only inspection root/runtime, allowed and official resources |
-| `research_intent` | open, topic-conditioned, or seed-question mode |
-| `models` | questioner, pattern, narrator, topic, owner, reviewer, coding host, and coding-host model profile |
-| `literature` | free/public retrieval, full-text enrichment, optional paid source profile |
-| `novelty` | currently off; unsearched novelty is `not_assessed` |
-| `run` | output root, family/variant counts, worker cap, revision budget |
+| `mode` | `standard` scientific operation or an explicitly non-scientific `subscription_only_demo` |
+| `paperbank` | PDF inbox, parser, extraction model, citation processing, and paper concurrency |
+| `dataset` | Dataset identity, source documents, read-only inspection runtime, and allowed resources |
+| `research_intent` | Open, topic-conditioned, or seed-question direction |
+| `models` | Scientific API roles, independent reviewer, coding host, and coding-host model |
+| `literature` | Public literature retrieval, open-full-text enrichment, and optional Elicit use |
+| `novelty` | Must remain disabled in v0.1.0; unsearched novelty is `not_assessed` |
+| `run` | Output directory, requested family/variant breadth, concurrency, and revision limit |
 
-Paths are resolved from the project config. Secrets are rejected if they appear
-inside YAML.
+Paths are interpreted from the directory in which you run the CLI. The safest
+practice is to run every command from the project directory containing
+`maieusis.yaml`.
 
-## Model roles
+## Operation mode
 
-Each serious role records an explicit provider and model:
+Use:
 
-- `models.questioner`: Question Scientist family generation;
-- `models.pattern`: cross-paper question-pattern induction;
-- `models.narrator`: coarse source-backed DatasetNarrative;
-- `models.topic`: topic evidence and field-state synthesis;
-- `models.owner`: branch-local Question Owner;
-- `models.reviewer`: independent reviewer; use a provider distinct from owner;
-- `models.coding_host`: `codex` or `claude_code` Dataset Planner;
-- `models.coding_model`: explicit subscription coding-agent model;
-- `models.coding_reasoning_effort`: Codex-only reasoning effort; omit it for Claude Code.
+```yaml
+mode: standard
+```
 
-The paper extractor is configured separately under
-`paperbank.extraction`. PaperCase, citation, and formation-trace work is bound
-to the paper-stage receipt along with pattern and reviewer identities. Changing
-a bound model invalidates reuse.
+for a scientific question-development run. Standard mode requires real model
+providers and a real Codex or Claude Code planner host.
 
-The release validation uses two explicit profiles:
+`subscription_only_demo` replaces scientific API roles with mock providers and
+disables literature retrieval. It demonstrates workflow mechanics only; it
+does not produce scientific-quality questions or independent scientific
+review.
 
-| Role | Luna clean gate | Final quality |
-| --- | --- | --- |
-| PaperCase, citations, formation trace | `gpt-5.6-luna` | `gpt-5.6-luna` |
-| Pattern induction | `gpt-5.6-luna` | `gpt-5.6-sol` |
-| DatasetNarrative | `gpt-5.6-luna` | `gpt-5.6-luna` |
-| Topic synthesis | `gpt-5.6-luna` | `gpt-5.6-terra` |
-| Question Scientist | `gpt-5.6-luna` | `gpt-5.6-sol` |
-| Question Owner | `gpt-5.6-luna` | `gpt-5.6-terra` |
-| Independent reviewer | `claude-opus-4-8` | `claude-opus-4-8` |
-| Dataset Planner | Claude Code Opus | Codex CLI `gpt-5.6-terra`, effort `high` |
+## PaperBank
 
-These exact model IDs are release provenance, not a promise of availability to
-every account. Use only models your provider authorizes. Never allow a silent
-fallback to a different or more expensive model.
+At minimum, point `inbox_dir` at the source PDFs and name an extraction
+provider/model:
 
-## Credentials
+```yaml
+paperbank:
+  inbox_dir: papers/inbox
+  extraction:
+    provider: openai
+    model: "<model-id>"
+  parser: poppler_text
+  evidence_mode: source_span
+  max_workers: 4
+  cited_literature: true
+  select_key_citations: true
+  crossref_mailto: you@example.org
+  openalex_email: you@example.org
+```
 
-Current standard release profiles use:
+`max_workers` bounds concurrent paper processing. Contact emails help Crossref
+and OpenAlex identify polite API use; use your real email rather than the
+placeholder.
 
-| Variable | Purpose |
-| --- | --- |
-| `OPENAI_API_KEY` | OpenAI scientific API roles |
-| `ANTHROPIC_API_KEY` | Anthropic scientific API roles |
-| `CLAUDE_CODE_OAUTH_TOKEN` | relocated Claude Code planner host, when selected |
-| `MAIEUSIS_ALLOW_PRO_MODEL=1` | explicit gate for configured expensive/pro roles |
-| `ELICIT_API_KEY` | optional paid literature source; not used in the release demos |
+The optional `paperbank.import_from_run` route is for receipt-verified reuse of
+a completed PaperBank. It requires both a source run path and the expected
+receipt SHA-256. Do not use it for an ordinary first run.
 
-The final-quality profile also requires a ChatGPT-authenticated Codex CLI. Its
-cleanroom may use an explicit `CODEX_HOME` pointing at the already-authenticated
-Codex home while `HOME` itself remains fresh; this path is not a secret, but its
-`auth.json` is. Terra requires `codex-cli >=0.144.4` for this release profile.
+## Dataset identity and inspection
 
-Create API keys in the provider's official console. OpenAI recommends loading
-API keys from environment variables or a key-management service; see its
-[API authentication reference](https://platform.openai.com/docs/api-reference/authentication).
-Never expose a key in client-side code, YAML, logs, screenshots, or model
-prompts.
+The proposal stage receives only coarse, source-backed dataset context. Exact
+schema and feasibility inspection occurs later in isolated family branches.
 
-Runtime-file search order is:
+```yaml
+dataset:
+  seed:
+    dataset_id: my_dataset
+    link: https://example.org/my-dataset
+    docs:
+      - inputs/dataset_overview.md
+  inspection_runtime:
+    dataset_root: /absolute/path/to/read-only/sample
+    dataset_access_mode: external_readonly
+    inspection_python: /absolute/path/to/inspection-env/bin/python
+    inspection_command: ""
+    inspection_pythonpath: ""
+    inspection_extra_env: {}
+    source_tree_root: /absolute/path/to/clean/maieusis-checkout
+    max_turns: 40
+    timeout_seconds: 1800
+  allowed_inspection_resources:
+    - official dataset documentation
+    - local metadata tables and small representative samples
+    - public loading and preprocessing code
+  official_online_resources:
+    - https://example.org/my-dataset/docs
+```
 
-1. existing process environment;
-2. project `.env.local`;
-3. project `runtime.env`;
-4. project `.env`;
-5. `~/.config/maieusis/runtime.env`.
+Important rules:
 
-The user-level file is recommended. Ensure project-local secret files are
-ignored by Git.
+- Give `seed.link`, readable local `seed.docs`, or both. A link should resolve
+  to substantive dataset information, not only a metadata stub.
+- `external_readonly` requires `dataset_root`.
+- `inspection_python` and `inspection_command` are mutually exclusive. Set one
+  when the dataset requires a specific interpreter or multi-token environment
+  command; leave both blank only when the coding host's environment already has
+  everything needed for bounded inspection.
+- `allowed_inspection_resources` requires at least one non-blank description.
+- `source_tree_root` must point to a Maieusis Git checkout with a valid `HEAD`
+  when the installed package is run outside that checkout. Use a clean
+  checkout so the recorded identity is easy to interpret. Preflight verifies
+  the Git state; the operator is responsible for selecting the Maieusis source
+  tree rather than a dataset-code repository. Maieusis digests the full state
+  before and after planner work to detect source changes.
+- `timeout_seconds` applies to each planner invocation and cannot exceed 2400
+  seconds.
+- `max_turns` applies to Claude Code. Codex is bounded by
+  `timeout_seconds` rather than a Maieusis turn counter.
 
-## Literature and novelty
+Do not put the dataset inside the run-output directory. Keep source data and
+documentation read-only.
 
-`literature.source_profile: public` uses free public sources. Full-text
-enrichment may strengthen evidence when lawful open text is available; missing
-full text remains visible and lowers authority rather than being fabricated.
-`hybrid` or `elicit` requires `ELICIT_API_KEY` and is opt-in.
+## Research intent
 
-Novelty search is not wired in v0.1.0. Keep `novelty.enabled: false`.
-The system must report `not_assessed`, never “novel,” when no novelty search
-ran.
+Choose exactly one mode:
 
-## Bounded execution
+### Open
 
-Use explicit limits:
+```yaml
+research_intent:
+  mode: open
+  topic_terms: []
+  topic_description: ""
+  seed_question: ""
+```
 
-- `paperbank.max_workers` controls PDF workers;
-- `run.max_parallel_family_workers` is sliding concurrency, not a batch
-  barrier;
-- `run.max_revise_rounds` bounds owner/planner repair;
-- `dataset.inspection_runtime.max_turns` bounds Claude Code only;
-- `dataset.inspection_runtime.timeout_seconds` bounds either host.
+### Topic-conditioned
 
-For the final-quality release demos: six requested families, two requested
-variants each, family cap three, three revise rounds, Codex CLI
-`gpt-5.6-terra` at `high` effort, and the explicit bounded maximum of 2400
-seconds per invocation. Codex has no Maieusis turn cap; the `max_turns` value
-retained in the frozen YAML is Claude-only compatibility metadata and is not
-passed to Codex. Returned breadth and scientific outcomes remain honest; the
-product does not fabricate a perfect 6x2 cohort. Do not change a profile during
-a run.
-
-The IBL and NLB release demos use `topic_conditioned` research intent with the
-same eight terms:
+The example below is deliberately domain-neutral. Replace it with concepts and
+distinctions from your own field.
 
 ```yaml
 research_intent:
   mode: topic_conditioned
   topic_terms:
-    - neural population geometry
-    - dynamical systems models
-    - neural dynamics
-    - neural population code
-    - neural co-variability
-    - neural manifolds
-    - representational geometry
-    - neural circuit models
-  topic_description: ""
+    - system stability
+    - response heterogeneity
+  topic_description: >-
+    Develop questions about how relationships change across conditions while
+    separating the target mechanism from measured alternative explanations.
   seed_question: ""
 ```
 
-They use the free/public literature profile with full-text enrichment enabled,
-Elicit disabled, novelty disabled (`not_assessed`), and no family consolidation.
+### Seed question
+
+```yaml
+research_intent:
+  mode: seed_question
+  topic_terms: []
+  topic_description: ""
+  seed_question: >-
+    Which dataset-supported distinctions would make this broad question
+    scientifically discriminating?
+```
+
+Research intent guides proposal framing. It is not evidence, a feasibility
+certificate, or permission to bypass literature and dataset inspection.
+
+## Scientific model roles
+
+Every role records an explicit provider and model:
+
+| Field | Role |
+| --- | --- |
+| `paperbank.extraction` | Extract source-bound PaperCases from PDFs |
+| `models.pattern` | Induce cross-paper question-forming patterns |
+| `models.questioner` | Generate QuestionFamilies and variants |
+| `models.narrator` | Build the coarse DatasetNarrative |
+| `models.topic` | Synthesize current topic evidence |
+| `models.owner` | Protect scientific intent inside a family branch |
+| `models.reviewer` | Independently review the plan and scientific closure |
+
+Example:
+
+```yaml
+models:
+  pattern: {provider: openai, model: "<model-id>"}
+  questioner: {provider: openai, model: "<model-id>"}
+  narrator: {provider: openai, model: "<model-id>"}
+  topic: {provider: openai, model: "<model-id>"}
+  owner: {provider: openai, model: "<model-id>"}
+  reviewer: {provider: anthropic, model: "<model-id>"}
+  coding_host: codex
+  coding_model: "<codex-model-id>"
+  coding_reasoning_effort: high
+  allow_pro_model: false
+```
+
+In standard mode, `models.owner.provider` and `models.reviewer.provider` must
+be different. Other roles may share a provider, but every configured model
+must be available to your account. Maieusis does not silently substitute a
+different model.
+
+## Coding-agent host
+
+The coding host is a subscription CLI, not a scientific token-API role.
+
+For Codex:
+
+```yaml
+models:
+  coding_host: codex
+  coding_model: "<codex-model-id>"
+  coding_reasoning_effort: high  # minimal | low | medium | high | xhigh
+```
+
+For Claude Code:
+
+```yaml
+models:
+  coding_host: claude_code
+  coding_model: "<claude-model-id-or-alias>"
+  # coding_reasoning_effort must be omitted
+```
+
+The host, model, and Codex reasoning effort are explicit run inputs. Do not
+change them during a run.
+
+## Credentials and cost authorization
+
+The standard OpenAI/Anthropic arrangement uses:
+
+| Variable | Needed when |
+| --- | --- |
+| `OPENAI_API_KEY` | Any scientific role uses the OpenAI provider |
+| `ANTHROPIC_API_KEY` | Any scientific role uses the Anthropic provider |
+| `CLAUDE_CODE_OAUTH_TOKEN` | The Claude Code host requires token-based login in its isolated environment |
+| `ELICIT_API_KEY` | `literature.source_profile` is `elicit` or `hybrid`, or `auto` should enable Elicit |
+| `MAIEUSIS_ALLOW_PRO_MODEL=1` | You deliberately authorize a model classified as expensive/pro |
+
+The supported user-level location for a clean scientific project is:
+
+```text
+~/.config/maieusis/runtime.env
+```
+
+An existing process environment variable takes precedence over this file.
+Keep credentials out of project-local `.env` files: the generated project
+contract is designed around the user-level location, which also reduces the
+risk of accidental commits and coding-agent exposure.
+
+`models.allow_pro_model: true` and `MAIEUSIS_ALLOW_PRO_MODEL=1` both authorize
+gated models. Leave the YAML value `false` and use the environment variable for
+a deliberate run-specific authorization unless you intentionally want that
+choice versioned with the project.
+
+## Literature sources and novelty
+
+```yaml
+literature:
+  enabled: true
+  openalex_email: you@example.org
+  fulltext_enrichment: true
+  source_profile: public  # public | auto | elicit | hybrid
+
+novelty:
+  enabled: false
+  direct_recap_threshold: 0.9
+  close_prior_threshold: 0.7
+  max_candidates: 5
+```
+
+- `public` uses free public scholarly sources.
+- `auto` uses Elicit only when `ELICIT_API_KEY` is available; otherwise it stays
+  on public sources.
+- `elicit` and `hybrid` require `ELICIT_API_KEY` and fail preflight without it.
+- Full-text enrichment uses lawful open text when available. Missing full text
+  remains visible and may lower authority.
+- Novelty search is not implemented in v0.1.0. Keep `novelty.enabled: false`;
+  the correct status is `not_assessed`.
+
+## Run breadth and bounds
+
+```yaml
+run:
+  output_root: runs/my-run
+  shortlist_path: null
+  target_family_ids: []
+  max_families: 2
+  variants_per_family: 3
+  max_parallel_family_workers: 2
+  max_revise_rounds: 1
+```
+
+- `max_families` and `variants_per_family` request breadth; they do not promise
+  that every requested item will become an accepted plan.
+- `max_parallel_family_workers` bounds concurrent family branches.
+- `max_revise_rounds` bounds Owner–Planner repair after review.
+- Leave `shortlist_path: null` and `target_family_ids: []`; external shortlist
+  injection and family targeting are not supported by the v0.1.0 product path.
+- Do not change configuration while a run is active. A later `resume` reuses
+  work only when all bound inputs still match.
+
+## Validate before spending
+
+Run:
+
+```bash
+maieusis check --project maieusis.yaml
+```
+
+Preflight performs no paid model or coding-agent call. It reports failures,
+warnings, estimated model calls and planner launches, and external egress.
+Resolve every failure and review every warning before authorizing
+`maieusis run`.
+
+---
+
+[Documentation home](INDEX.md) · [Manual setup](MANUAL_SETUP.md) ·
+[Inputs and outputs](INPUTS_AND_OUTPUTS.md) · [Troubleshooting](TROUBLESHOOTING.md)

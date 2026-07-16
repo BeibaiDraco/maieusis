@@ -1,8 +1,13 @@
 # Manual setup
 
-This path is for users who prefer to prepare files and run the CLI themselves.
+[Documentation home](INDEX.md) · [Installation](INSTALLATION.md)
 
-## 1. Scaffold a project
+This path is for users who want to prepare the project files and run the CLI
+themselves. Complete [installation](INSTALLATION.md) first.
+
+## 1. Scaffold a clean project
+
+From a directory outside the Maieusis source checkout:
 
 ```bash
 mkdir my-maieusis-project
@@ -10,7 +15,7 @@ cd my-maieusis-project
 maieusis init
 ```
 
-Expected starting layout:
+The initial layout is:
 
 ```text
 my-maieusis-project/
@@ -26,34 +31,56 @@ my-maieusis-project/
         └── dataset-planner.toml
 ```
 
-## 2. Add papers
+Existing files are never overwritten. Read `PROJECT_LAYOUT.md` before editing
+the generated configuration.
 
-Create `papers/inbox/`, then put only source-paper PDFs you may lawfully use
-there. One
-scientific paper should appear once: do not include both a preprint and the
-publisher version unless you deliberately want them screened as possible
-duplicates.
+## 2. Add source papers
 
-For a release demo, follow its paper manifest exactly. Verify every file's
-SHA-256 before running. The public repository does not distribute PDFs.
+Create the configured inbox and add only PDFs you may lawfully use:
 
-## 3. Prepare the dataset
+```bash
+mkdir -p papers/inbox
+```
+
+Keep one file per scientific work. Do not include both a preprint and publisher
+copy unless you deliberately want Maieusis to screen them as possible
+duplicates. Do not commit the PDFs.
+
+For an International Brain Laboratory (IBL) or Neural Latents Benchmark (NLB)
+reproduction, use that demo's paper manifest and verify every filename and
+SHA-256 before running. The repository does not redistribute the papers.
+
+## 3. Prepare read-only dataset access
 
 You need:
 
-- a stable dataset ID and official URL;
-- zero or more local documentation files;
-- at least one allowed inspection-resource description;
-- a local read-only dataset directory or representative sample; and
-- an inspection Python executable or command with the dataset dependencies.
+- a stable dataset ID;
+- a substantive official URL, local documentation files, or both;
+- a local read-only dataset directory or representative sample;
+- when needed, a Python executable or command with the libraries required to
+  inspect it;
+- at least one plain-language description of what the planner may inspect; and
+- for a standard installed-package run, a Maieusis Git checkout with a valid
+  `HEAD` for source-integrity checks; use a clean checkout unless you
+  deliberately need to bind uncommitted source bytes.
 
-The source dataset should live outside the project output tree. Maieusis plans
-against the dataset; it must not modify the dataset or run a full confirmatory
+An allowed-resource entry should name a real inspection surface, for example:
+
+```yaml
+allowed_inspection_resources:
+  - official dataset documentation
+  - local metadata tables and small representative samples
+  - the dataset's public loading and preprocessing code
+```
+
+The dataset should live outside the run-output tree. Keep it read-only: the
+Dataset Planner may inspect structure, metadata, documentation, and bounded
+samples, but it must not modify the source data or execute the final scientific
 analysis.
 
-## 4. Configure providers without storing secrets
+## 4. Store credentials outside YAML
 
-Create the user-level runtime file:
+Create the recommended user-level environment file:
 
 ```bash
 mkdir -p ~/.config/maieusis
@@ -62,61 +89,83 @@ touch ~/.config/maieusis/runtime.env
 chmod 600 ~/.config/maieusis/runtime.env
 ```
 
-Add only the variables required by your configured providers. For the release
-profiles this normally includes:
+Add only the variables required by your configuration. A standard
+OpenAI/Anthropic run normally needs:
 
 ```text
 OPENAI_API_KEY=...
 ANTHROPIC_API_KEY=...
-CLAUDE_CODE_OAUTH_TOKEN=...
-MAIEUSIS_ALLOW_PRO_MODEL=1
 ```
 
-Keep each value on one line. Never commit or paste this file. Model names and
-provider choices belong in `maieusis.yaml`; keys do not.
+Host- and feature-specific variables are conditional:
+
+```text
+CLAUDE_CODE_OAUTH_TOKEN=...  # required when coding_host: claude_code
+ELICIT_API_KEY=...           # only for source_profile: elicit or hybrid
+MAIEUSIS_ALLOW_PRO_MODEL=1   # only for a deliberately selected gated model
+```
+
+A Codex/ChatGPT login is stored by the Codex CLI and is not an OpenAI API key.
+Keep every assignment on one line. Maieusis loads the user-level runtime file
+automatically and does not overwrite an environment variable already set in
+the process.
 
 ## 5. Edit `maieusis.yaml`
 
-Use [CONFIGURATION.md](CONFIGURATION.md). At minimum set:
+Use the [configuration guide](CONFIGURATION.md). At minimum, replace the
+placeholders for:
 
-- paper inbox and parser;
-- dataset identity, documentation, local root, inspection command, and allowed
-  resources;
+- the paper inbox, parser, and extraction model;
+- dataset identity, link/docs, read-only root, inspection environment, allowed
+  resources, and `source_tree_root`;
 - research intent;
-- every model role, including the independent reviewer and coding host; and
-- output root and bounded worker/turn/revision limits.
+- all scientific API roles, with different providers for Owner and Reviewer;
+- coding host, coding model, and Codex reasoning effort when applicable; and
+- output directory, family/variant counts, concurrency, timeout, and revision
+  limit.
 
-## 6. Preflight without spending money
+Keep `novelty.enabled: false`; v0.1.0 does not perform a novelty search.
+
+## 6. Preflight without paid calls
 
 ```bash
-set -a
-source ~/.config/maieusis/runtime.env
-set +a
 maieusis check --project maieusis.yaml
 ```
 
-`check` resolves paths, parses the config, checks inputs and credentials, and
-confirms that a configured dataset link yields substantive public text rather
-than only a metadata stub. It then prints estimated model/spawn work. It makes
-zero paid model calls. Treat every failure as a stop signal.
+`check` parses the configuration, resolves paths, verifies the paper and
+dataset inputs, checks configured provider credentials and coding-host
+installation/login indicators, tests the public dataset context route, and
+reports estimated model calls, planner launches, and external services. It
+makes no paid model or coding-agent call and does not authenticate by placing a
+provider request.
+
+Treat every `FAIL` as a stop signal. Read warnings before deciding whether the
+resulting authority ceiling is acceptable.
 
 ## 7. Run and inspect
+
+After you have reviewed the preflight cost and egress disclosure:
 
 ```bash
 maieusis run --project maieusis.yaml
 ```
 
-Open the run-local `README.md` first, then `summary.md`, visible PaperBank and
-context artifacts, rendered QuestionFamilies, per-family closure packages, and
-end-user dossiers. Use the hidden audit sidecar for provenance—not as a public
-scientific narrative.
+The CLI prints the run location. Open its `README.md` first, then `summary.md`,
+the PaperBank and context pages, `questions/question_families_detailed.md`, and
+every family dossier.
 
-If interrupted, inspect before resuming:
+If a run is interrupted, inspect what would be reused before resuming:
 
 ```bash
 maieusis status <run-id> --project maieusis.yaml
 maieusis resume <run-id> --project maieusis.yaml
 ```
 
-Resume reuses only receipt-bound stages whose inputs and configuration still
-match. Do not hand-edit artifacts to force reuse.
+`status` is read-only. `resume` reuses only products whose recorded inputs,
+configuration, versions, and file hashes still match. Do not edit run artifacts
+to force reuse.
+
+---
+
+[Documentation home](INDEX.md) · [Configuration](CONFIGURATION.md) ·
+[Inputs and outputs](INPUTS_AND_OUTPUTS.md) · [Troubleshooting](TROUBLESHOOTING.md)

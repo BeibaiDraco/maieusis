@@ -2,8 +2,8 @@
 schema_version: 2
 distribution: maieusis
 version: 0.1.0
-tree_digest: 02af40743ed1c28e1163f6aee3914ef564e9f0b898d4f732cd5e7085f05a707c
-file_count: 382
+tree_digest: f9ee47443d6c2b63a82ea2cd4b2e1bee3f0407e4b3dd7dda1f55c9d529ec37cb
+file_count: 381
 projection_sources:
   - source: curated public contract tests
     destination: tests
@@ -66,7 +66,7 @@ files:
   - path: .github/ISSUE_TEMPLATE/bug_report.yml
     sha256: 1a5d9f1bdfb51081086a9350fa1026a2619168d578910087158e8b0a97b8756d
   - path: .github/ISSUE_TEMPLATE/config.yml
-    sha256: b3c731ccc3725e4a0b172895e3d3a9d547f43d6f353d4c4138412aa4123d5e2a
+    sha256: ea716b502c76c6aa7be2f24ca83ef90489f991b8d82043786ccd9d8a100de231
   - path: .github/ISSUE_TEMPLATE/scientific_workflow.yml
     sha256: 5f9843aca1088a45de9bedc0829044e95a2de23247aafc2f47e7561c7caa9c8f
   - path: .github/pull_request_template.md
@@ -78,33 +78,35 @@ files:
   - path: .gitignore
     sha256: e5b975d59db10839ba15f9bc68fc21c2e5a672d9b836008a28e2b813e8417056
   - path: AUTHORS.md
-    sha256: 8433b03dabc994e555f9617bab8a6229495aa4364e2b091f820f62af51039231
+    sha256: b21ae18339a47a2daee55dee21c152bcb42f3d2e06406bbf7006686f4ea39a6c
   - path: CHANGELOG.md
-    sha256: 2b3ef4c93756d723646e8e537b8f87454354c9b9026f9c6df2fd6ee61230ce6c
+    sha256: 4fdc3c583efeddc9e01588449c75a9a0add76f4e97af111aae6724f896041686
   - path: CITATION.cff
-    sha256: 00e70f59ef2597b06adb9124b0967ebd650acd5894b8173b2653770c7cf3bb96
+    sha256: b1d2647960fe07962bd3478f255a53af65990d08f49d1394db6faa8923f63262
   - path: CODE_OF_CONDUCT.md
-    sha256: 5b3fa2a8a713ba318ceac9c280ffddadf2e4acb3a7a222a63b66e1f8d77ac41c
+    sha256: 8d71c2ce03b5f42fd3cb91813aa6cb064969058318c9f666c079fdbebe7eb869
   - path: CONTRIBUTING.md
-    sha256: 9035ce81ae78e982bbfdc9420164d52e753939b2b9d55b76e5a7f72fc2c96bd6
+    sha256: 61ba2651ad297956a0028258070b708ced47c77aaab4169cd609b09f63fef2e6
   - path: CONTRIBUTORS.md
-    sha256: a374f7ac58622073d1467ef06996091b6d2856596bede1e38ce79f040658b40d
+    sha256: 7fb3b9be6859fe1ced1c1018c1f220989ac793ed40a7699822607f04d97a3861
   - path: LICENSE
     sha256: c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4
   - path: LICENSE_POLICY.md
-    sha256: 4c3d2e775740ab48e99ffb13de502848714bf918a14a9594ff9793b31bf0b429
+    sha256: 2edbd7698c9841683b0ef289f12818ccb2347680b8f41103d5f435d82992d5f2
   - path: NOTICE
     sha256: ded3ee67a56e5408af5882247ffeb12f5b941924b41ca89a686b9cd4cb58bad8
   - path: README.md
-    sha256: 4b72598331930ca3cc45d86e7d84dfccdf42350a383ae69e74b9a332a79bea8c
+    sha256: 77252b362414d51c63452090663ca466c85e30e67059e620b9574a7459c9273f
   - path: SECURITY.md
-    sha256: 154d819a2222e5955c98bbb0659bb0810b82c55664596218b1906ef2a6060c89
+    sha256: 34be1bd7a4ed3f5c0092f6c43d58b3477731af273de7d6809f10273f02952efa
   - path: THIRD_PARTY_NOTICES.md
-    sha256: b74e9dea91910ffb4f17230abb225fb7f68468e068e7e1ad53a4f2ae0793f9da
+    sha256: 69f981e4246a462c5555879307015a6717479c71097ba493b717e15f24115d54
+  - path: demos/PAPER_SOURCES.md
+    sha256: 1e4404f792ae31a476d02bc4ab042562a06b5e6c1319f4ba1818269af9bfe51e
   - path: demos/QUESTIONS.md
-    sha256: 4d7e83e874a2b4fb6949e4874312d912f46acbef64e66e737fca30645fa854e5
+    sha256: 3e8f4e92cbbe50dbef6716d4b4515d099b4d6f3f1e7d1016e9c177d33d4ba984
   - path: demos/ibl/README.md
-    sha256: 55c854ad0910a827e5902d08e536406af4b688706467ddeba163ce876f7a0e83
+    sha256: bbe5e29a4ec0f1d2d18dc3174bc55f07278d1ffaee6c924b3e2702b3b60f0536
   - path: demos/ibl/artifacts/dataset/dataset_narrative.md
     sha256: ae306738f410e298781d4b4c5e6c561a6db1f990463d7e7e87eb97c524b20e71
   - path: demos/ibl/artifacts/families/covariance-alignment/dossier.md
@@ -194,9 +196,9 @@ files:
   - path: demos/ibl/demo_manifest.yaml
     sha256: 5bad09a596c33e1037286cfff48f722f460d3c48dd9401b2fae1530336802dac
   - path: demos/nlb/DATASET_NOTES.md
-    sha256: d1591879269d5964e693e76db7028a6407fa0f033dfac7cd1aea4eb1881d4cf7
+    sha256: 55ecd6a5e052f08907f1d03e28689f4557d886a2e6a509ce00387afeda48643d
   - path: demos/nlb/README.md
-    sha256: 4a985fb742b8dd7109c75e144af8f44f80d1de2d8c98b2ebd3dd491cb9d66281
+    sha256: 8e91b867ce7883c14103f2193f6faedbd21b8ee1567a548de291483a7d282b27
   - path: demos/nlb/artifacts/dataset/dataset_narrative.md
     sha256: 8a5d8616202dcf4794e93b8d498ce71822e97412d7122fff273eb77d637b1929
   - path: demos/nlb/artifacts/families/behavior-explains-neural-variance/dossier.md
@@ -290,29 +292,27 @@ files:
   - path: demos/shared/paper_sources.yaml
     sha256: c2c29c9daa8d836c8a6e8e9ca20ed04cae7758e3b4dcaa97b1c4db91f076b85f
   - path: docs/AGENT_GUIDED_SETUP.md
-    sha256: ea1885d804027224eeef6271784d539a86a9fd86bae2d5eed6892e1b8f6dda0e
+    sha256: d1ff8455fb5d9e99c2098bdd67cd1200aa3e420b2740f19527e31a790424dd58
   - path: docs/ARCHITECTURE.md
-    sha256: 9058144fe090ca9e1fb080b19b4b18d4e58e24f9b845068bc05bdea1d4e8ac1b
+    sha256: 01423dcae9b1c503b78aca44698be05dedf2e36602d78b704a0ebf98791407d3
   - path: docs/CONFIGURATION.md
-    sha256: e1eef28a0086e792c4ee368e53bad69c52fcb749ad9aca9bdeefda65637a7a6d
+    sha256: 4cb78520e4b82423183d795586122859db479643bb61475c88bbed656da86345
   - path: docs/INDEX.md
-    sha256: 1a459b6bc1267634b0f576ce048d617da647905dcd368e064702125957ba4c51
+    sha256: d92ea49cc48663e086f3bb4a451e7da3b625eadb65c8ac91104f22b95ce55d47
   - path: docs/INPUTS_AND_OUTPUTS.md
-    sha256: 4570c8b9aa5c9d0ecdb130db24bbc7beb86a29515bb3642316e308b31772f94f
+    sha256: df7fd3392a38193f6a1bf54f1e785ca32668d2d7d122c566d1adf9464f9c5f8e
   - path: docs/INSTALLATION.md
-    sha256: 77f75b27620ff0b83320b7c4235b77dd4cc455988c7d33f41af83479076688b1
+    sha256: db159b896f2d83e0d6356cf7e1a309969155f336fdc339a1520fd4497f59beac
   - path: docs/LIMITATIONS.md
-    sha256: cc86976c3b909d896bb3ab0eb7a855b9b0ea930660d003a7389a0bb188d910ed
+    sha256: 5ddf504728bf3c20c7e5a7613640a47deb18159177d426c850ff9e267d22dad8
   - path: docs/MANUAL_SETUP.md
-    sha256: 9322ddb23dab6a010d0b91828fca685ec45309a8a79a513bb2dbafca7913b3da
+    sha256: 7cbef921cc75ca5d89189ecc099b4657a96532f2c640943e5f8483289b6daa1f
   - path: docs/METHOD_OVERVIEW.md
-    sha256: 44f155da7b7945e09ad67758791c0c2f77dd0520f75cd9367bc6b44b416f8b43
+    sha256: 66d6a3268368d72205a3202dba94bc89ba86dbcb9e9b39f7f3e76e3e1d65ea14
   - path: docs/PROVENANCE.md
-    sha256: 5d37fc153b741e6f357e7c8146e072fb2f39087205d9d112ac516b2c8f78f0fa
+    sha256: f33e678c717f075cfbc0b4fe0dcdf28d40a672c40f03df8c42ed6e04133135e4
   - path: docs/TROUBLESHOOTING.md
-    sha256: 0ba0ce83058632a574e1f8eccc3a548c48e1ee7990b5541414a1677c9756cb9f
-  - path: docs/assets/README.md
-    sha256: 2d5449a7aafa44ceb6aa48299004e9f3a1d97387c0ac47f70da1417c7ff6b169
+    sha256: 6c488902f0bf549bc2340991904ef3418cc61b8795cf529b18bd7dd3acc52450
   - path: docs/assets/maieusis-paperbank-pattern-induction.png
     sha256: 311a15deffb49748397f89249125786f5787ce77dc1914c81325b1dfdca05990
   - path: docs/assets/maieusis-positioning-map.png
@@ -320,21 +320,19 @@ files:
   - path: docs/assets/maieusis-question-development.png
     sha256: 9df06c89a7bbbe6c92fdc7b8f7be440cfc75fbd23ef37c8f98371ca4177c39cf
   - path: docs/positioning/POSITIONING.md
-    sha256: e91988cc70cdc82b9476a1ebabe64d3ef57f7ba57d3bf45cbe7a6e0932bb6d36
+    sha256: c4af30af521f30192637b08727977a8c721f7d87b92918adc91356025b22a66c
   - path: docs/positioning/PRIMARY_SOURCE_LOG.csv
-    sha256: 16e6d49da21d2391aa12afdf0134a21f4c2235d9b4551f8b12e188bf1af51c20
+    sha256: 9753773d22b7d176946d945d97ef14ae1ffc838fa9fd0624e04e0155a440bff2
   - path: docs/positioning/REFERENCE_MAP.md
-    sha256: 1043c9a7f0d24668e7648d1add8cd8c6d73efebf305ae4dc981d59ad692dc7d3
-  - path: docs/positioning/VISUAL_AUDIT.md
-    sha256: a1c3c3709e320c8f40c97da67ca2a3284ba807a3e1c0b798c36c251081950eb8
+    sha256: cae1057527f6c7b45db0becccf264816fbaf8012591992529f90b1d2cfed5d35
   - path: docs/positioning/positioning_coordinates.csv
     sha256: dae55077b07f1fe505991614292cdf2ac9e7cabcda1a0c8d3ede53d242f6f0ad
   - path: docs/positioning/references.bib
-    sha256: b6c2c9a4ecb01db1e096a5d0364d8835c2c42a7dfc2b04118a561e6ed5188ae9
+    sha256: ee896d1e577251f3dbbb2b8a1eb7437764fb5154bd7204f9b29d128f6bb6b1d2
   - path: examples/maieusis.yaml
-    sha256: 6a1ad4f4428d29d55b74470650cd53066902307f95fc7416da41eb81a9bdd08d
+    sha256: 8d556eb0b0621566471433cf3a8d2a187cca996f6dd51956dd43ae717bbb10f4
   - path: examples/project/AGENTS.template.md
-    sha256: 8f81938766564e82a62dcfc3c537e3e43b43307bbfad03dcbabdf9c809666fb0
+    sha256: 3a0175daca992cc94159f44603c7655635c1b828d620f4a1192f04a15230a906
   - path: examples/project/CLAUDE.template.md
     sha256: 5ba39e02a35908fed82a2442a797b4d0fefe0aed8dc17bc2cecc0e5e12c9597e
   - path: examples/question_input.yaml
@@ -430,7 +428,7 @@ files:
   - path: src/research_agenda_engine/mcp/scientific_dialogue_server.py
     sha256: cb485acab6d16abe4b24e679723b821d1b2d2c69246a64cd3fc867e38a791a54
   - path: src/research_agenda_engine/product_cli.py
-    sha256: 8f383896f0155ff7b02027f8bc32c3345fc7ad217cdee2fb46f5757e64bd4682
+    sha256: deca62f88b6c26f276f26e589f523bf870af6a2558b919daa0461204909904d5
   - path: src/research_agenda_engine/provenance.py
     sha256: b3e94221a2440631cff3939835aa1b46f51b6878e49948c6dc25123cc92fe7b2
   - path: src/research_agenda_engine/providers/__init__.py
@@ -820,4 +818,4 @@ files:
   - path: tests/test_context_firewall.py
     sha256: fbcdf013f945e8efdf4e9d73c14e2eba4a42fc1a2636d4ba0f93f9fb28ff2efb
   - path: tests/test_release_metadata.py
-    sha256: 35a1d624a239746a0c386ab2ce42d486ddf6cd47cfcb67a22c1ea7098ff69d44
+    sha256: 61918d46037ec9d18706b70925e528d74a874764a9101115c5cb1cfe29cebdc5

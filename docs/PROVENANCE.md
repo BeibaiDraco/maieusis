@@ -1,69 +1,147 @@
-# Provenance and audit model
+# Provenance and scientific authority
 
-Maieusis treats provenance as application state, not as a paragraph added at
-the end. Every reusable scientific product is tied to the inputs, prompt,
-provider/model, implementation, review, and content digests that produced it.
+[Documentation home](INDEX.md) · [Architecture](ARCHITECTURE.md)
 
-## What is recorded
+Maieusis treats provenance as application state. A reusable scientific product
+is tied to the inputs, source evidence, models, prompts, review, implementation,
+and content identity that produced it. This makes a dossier inspectable; it
+does not make the dossier true.
 
-- source-paper identities and content hashes;
+## What Maieusis records
+
+Depending on the stage and artifact, a local run records:
+
+- source-paper filenames, bibliographic identities, and content hashes;
+- source spans and citation context used by PaperCases and formation traces;
+- dataset identity, links, local source documents, and read-only inspection
+  surfaces;
+- research intent and the separated context shown to the Question Scientist;
 - prompt family and version;
-- provider and model IDs for generation and review;
+- provider and model identities for generation and review;
 - input and output digests;
-- stage and resume receipts;
+- stage-completion and resume receipts;
 - review decisions and earned authority;
-- branch, family, and variant scope;
-- planner run records and validated inspection evidence;
-- final branch outcomes; and
-- run-manifest paths and hashes for current products.
+- family, variant, branch, and dialogue scope;
+- Dataset Planner invocation records and validated inspection evidence;
+- final family outcomes; and
+- the current paths and hashes of run products.
 
-Provider-owned conversation IDs are not authoritative state. A run can be
-understood from its persisted, typed artifacts and receipts.
+Provider conversation or request IDs may help diagnose a local run, but they
+are not the scientific source of truth. Persisted, validated artifacts and
+their evidence relationships are authoritative for what Maieusis claims to
+have produced.
+
+## Source-backed does not mean correct
+
+Provenance answers questions such as:
+
+- Which paper span supports this reconstruction?
+- Which current-literature record motivated this claim?
+- Which dataset document or bounded inspection supports this planning fact?
+- Which model generated the artifact, and which independent model reviewed it?
+- Did a later stage consume the same bytes that were reviewed?
+
+It does not answer:
+
+- Is the scientific interpretation true?
+- Is the question important or novel?
+- Is the planned analysis adequately powered?
+- Will executing the plan produce a positive result?
+
+Those require scientific judgment and, eventually, empirical analysis outside
+the v0.1.0 product boundary.
 
 ## Authority is earned, not renamed
 
-An artifact can be verified/agent-reviewed, provisional, unknown, degraded, or
-unavailable. Incomplete source evidence can remain visible and useful without
-being promoted. Downstream families and dossiers cannot exceed the authority
-ceiling of the context that supports them.
+Artifacts may be independently reviewed, provisional, unknown, degraded, or
+unavailable. Incomplete but source-bound evidence can remain visible without
+being promoted. A downstream family or dossier cannot receive greater
+authority than the evidence on which it depends.
 
-The visible product index means “discoverable,” not “true.” Independent review
-means a separate review process with recorded model/provider identity; it is
-still not a human or empirical guarantee.
+Common interpretations are:
+
+| Label or condition | Meaning |
+| --- | --- |
+| Reviewed / verified route | The required source, identity, validation, and independent-review checks passed |
+| Provisional | Useful source-bound material is present, but one or more evidence or review conditions limit authority |
+| Degraded | A recoverable limitation reduced the completeness or reliability of the available surface |
+| Warning | The family closed readably after a provider or validation problem; inspect the warning before use |
+| Rejected or deferred | The scientific or dataset-planning branch found a reason not to proceed now |
+| Unavailable / incomplete | A required trustworthy product could not be established |
+
+An accepted plan is still not a scientific result. A visible artifact is
+discoverable, not necessarily correct.
+
+## Branch-local evidence
+
+Each shortlisted family has an isolated planning branch. Family-scoped evidence
+may support variants within that family; variant-scoped evidence may support
+only its named variant. Evidence from one family cannot silently justify
+another.
+
+The Question Owner cannot certify dataset facts from model knowledge. Dataset
+claims need validated Dataset Planner evidence. Conversely, the planner cannot
+silently redefine the scientific question: material changes require explicit
+versioning, Owner approval, and renewed literature and novelty review.
+
+## Independent review
+
+The standard path uses a Question Owner and independent reviewer from different
+providers. Provider separation reduces shared generation context and
+self-approval, while session and artifact identities prevent a generator from
+being presented as its own reviewer.
+
+Independence is procedural evidence, not a human or empirical guarantee. Read
+the review findings and the plan, not only the final disposition.
 
 ## Resume and PaperBank reuse
 
-`maieusis status` recomputes input/configuration identity and explains what a
-resume would reuse. `maieusis resume` writes its decision receipt before work
-begins and reuses only stages whose receipts, inputs, versions, providers,
-models, and output hashes still validate.
+`maieusis status <run-id>` recomputes current input and configuration identity
+and reports what a resume would reuse or repeat. It is read-only.
 
-A receipt-bound PaperBank import may reuse only paper-half products after
-verifying the current PDF name/hash set, parser, prompts, implementation,
-models, configuration digest, source receipt, and every imported output hash.
-It does not import dataset context, topic evidence, QuestionFamilies, planner
-branches, dossiers, raw captures, or source PDFs. The new run records the
-source run identity and receipt/output digests without persisting an absolute
-source path.
+`maieusis resume <run-id>` reuses a stage only when its receipt, inputs,
+configuration, implementation, prompt and model identities, and output hashes
+still validate. The resume decision is written before new scientific work
+begins.
 
-## Public demo audit subset
+Optional PaperBank reuse applies the same principle to paper-derived products.
+It verifies the current PDF filename/hash set, parser, prompts, models,
+configuration, source receipt, and imported product hashes. It does not import
+dataset context, current topic evidence, QuestionFamilies, planning branches,
+dossiers, source PDFs, or raw model traffic.
 
-The v0.1.0 public demos are curated from one sealed, zero-resume IBL →
-receipt-bound NLB validation pair. Detailed presentation pages were rendered
-deterministically from copies of those roots after scientific finalization;
-the paid scientific pair was not reexecuted and its compact products and
-receipts were not changed. Start at the [question gallery](../demos/QUESTIONS.md)
-and follow links to each demo's readable artifact tree.
+## Readable pages and audit files
 
-Public demos retain only the information needed to inspect the scientific
-question-development path and understand the reproduction binding:
+The run `README.md`, `summary.md`, detailed question-family page, and family
+dossiers are the main human reading surfaces. Manifests, receipts, stage
+outputs, and hidden audit files support integrity, diagnosis, and safe resume.
+They should not be substituted for the scientific narrative or published with
+credentials, restricted data, or raw provider traffic.
 
-- provider/model IDs and prompt versions;
-- input and output hashes;
-- review decisions and branch outcomes; and
-- stage, resume, or reuse receipts after sanitization.
+The public International Brain Laboratory (IBL) Brain-Wide Map and Neural
+Latents Benchmark (NLB) MC_Maze-S examples contain curated readable scientific
+products and sanitized inventories. They omit source PDFs, datasets,
+credentials, raw model traffic, provider session IDs, absolute local paths,
+and hidden local audit files. Curation cannot increase the authority of an
+outcome; warnings and non-accepted families remain labeled as such.
 
-They exclude raw API captures, API logs, provider session IDs, absolute paths,
-secrets, complete hidden audit sidecars, source PDFs, full text, and long source
-excerpts. The NLB warning family remains visibly provisional/degraded and has
-no accepted-plan authority; curation does not promote that outcome.
+## A practical reading checklist
+
+Before relying on a dossier as a candidate plan, ask:
+
+1. Are the relevant source and dataset claims linked to evidence?
+2. What is the authority ceiling of the PaperBank, literature, and dataset
+   context?
+3. Did the Dataset Planner inspect the facts needed by this variant?
+4. Did the Owner accept the operational meaning without changing the question?
+5. What did the independent reviewer challenge?
+6. Is the outcome accepted, provisional, rejected, deferred, or warning-only?
+7. What does the claim ceiling explicitly forbid?
+
+Then read [limitations](LIMITATIONS.md). Provenance makes uncertainty visible;
+it does not remove it.
+
+---
+
+[Documentation home](INDEX.md) · [Inputs and outputs](INPUTS_AND_OUTPUTS.md) ·
+[Architecture](ARCHITECTURE.md) · [Limitations](LIMITATIONS.md)

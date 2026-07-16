@@ -1,54 +1,96 @@
 # Troubleshooting
 
-Start with:
+[Documentation home](INDEX.md) · [Installation](INSTALLATION.md) ·
+[Configuration](CONFIGURATION.md)
+
+Start from the project directory with:
 
 ```bash
 maieusis --help
 maieusis check --project maieusis.yaml
 ```
 
-Preflight makes zero paid calls. Fix it before running.
+Preflight makes no paid model or coding-agent call. Fix every `FAIL` before
+running. A `WARN` does not always block the run, but it may lower the authority
+or completeness of the result.
 
 ## `maieusis` is not found
 
-Activate the environment where you installed the package, then verify:
+Activate the environment where you installed the package:
 
 ```bash
+source .venv/bin/activate
 python -m pip show maieusis
 python -m pip check
+maieusis --help
 ```
 
-Reinstall the needed extras if provider, MCP, or PDF imports are missing:
+If provider, MCP, or PDF imports are missing, reinstall the needed extras:
 
 ```bash
 python -m pip install "maieusis[openai,anthropic,mcp,pdf]==0.1.0"
 ```
 
+Do not run from inside a different Maieusis source checkout unless that is the
+installation you intend to test.
+
+## `maieusis init` skipped a file
+
+`init` never overwrites an existing file. A `skip` message is expected when
+`maieusis.yaml`, `AGENTS.md`, `CLAUDE.md`, `PROJECT_LAYOUT.md`, or a Dataset
+Planner role file already exists.
+
+Inspect the existing file before deciding whether to move it aside. Do not
+delete a project contract or configuration blindly.
+
 ## PDF parsing fails
 
 - Confirm `pdftotext -v` works.
-- Confirm the PDF opens and contains extractable text.
-- Check that it is not an HTML error page renamed `.pdf`.
-- Compare its SHA-256 with the demo manifest.
-- If one paper remains bad while others work, remove that paper instead of
-  weakening source/evidence checks.
+- Confirm the file opens and contains selectable text.
+- Check that an HTML error page was not saved with a `.pdf` suffix.
+- Keep only one version of each scientific work.
+- For a demo reproduction, compare the filename and SHA-256 with its paper
+  manifest.
+- If one malformed paper blocks the run, replace or remove that input rather
+  than weakening source-evidence checks.
 
 ## A credential appears missing
 
-- Check that the variable name—not its value—matches the configured provider.
-- Load the runtime file with `set -a; source ...; set +a`.
-- Keep every assignment on one line.
-- Do not print the secret or add it to YAML.
-- Remember that coding-agent login/subscription auth and scientific API keys
-  are separate.
+- Check the environment-variable name, not its value, against
+  [CONFIGURATION.md](CONFIGURATION.md).
+- Keep one `KEY=value` assignment per line.
+- Confirm the recommended file exists and is readable:
 
-## Claude Code planner cannot authenticate
+  ```bash
+  ls -l ~/.config/maieusis/runtime.env
+  ```
 
-Run `claude doctor`. If ordinary interactive login works but the relocated
-planner does not, create a fresh `claude setup-token` and set
-`CLAUDE_CODE_OAUTH_TOKEN` in the untracked runtime file.
+- Remember that coding-host login and scientific API keys are separate.
+- Do not print the secret, add it to YAML, or attach the runtime file to an
+  issue.
 
-## Codex planner cannot authenticate or Terra asks for an upgrade
+Existing process variables take precedence over runtime files. A stale value
+already exported in the shell can therefore override the file you just edited.
+
+## Claude Code cannot authenticate
+
+Verify Claude Code outside Maieusis:
+
+```bash
+claude doctor
+```
+
+The isolated planner does not reuse the ordinary interactive login. Create the
+required subscription token with:
+
+```bash
+claude setup-token
+```
+
+Store the resulting token as `CLAUDE_CODE_OAUTH_TOKEN` in the untracked runtime
+environment file, then rerun `maieusis check`.
+
+## Codex cannot authenticate
 
 Verify the subscription CLI independently:
 
@@ -57,63 +99,140 @@ codex --version
 codex login status
 ```
 
-The final-quality `gpt-5.6-terra` profile requires `codex-cli >=0.144.4`.
-Upgrade an older CLI with the same package manager used to install it. Codex
-auth normally lives at `~/.codex/auth.json`; when a cleanroom changes `HOME`,
-set `CODEX_HOME` to the already-authenticated Codex home before running
-`maieusis check`. Do not copy `auth.json` into the project or output tree. The
-runner stages only that file into a short-lived private home, deletes the staged
-copy after `thread.started`, and removes the temporary home at process exit.
+If you intentionally keep Codex authentication outside the default
+`~/.codex` directory, set `CODEX_HOME` to that Codex home before running
+preflight. Do not copy `auth.json` into the scientific project or run-output
+tree.
+
+If preflight reports that a configured Codex model needs a newer CLI, upgrade
+Codex with the same package manager used to install it, then repeat the version
+and login checks.
 
 ## Dataset preflight fails
 
-- Use a stable official dataset link or source-backed local docs.
-- If `dataset.seed_link_content` fails, the URL returned no substantive text;
-  replace it with the current canonical documentation page or add readable
-  `dataset.seed.docs`.
-- Set a real, readable, read-only dataset root.
-- Provide exactly one of `inspection_python` and `inspection_command`.
-- Ensure the inspection environment can import the dataset's required tools.
-- For an installed wheel outside a source checkout, provide a clean Git source
-  tree with a valid `HEAD` for planner source-integrity checks.
+Check each part separately:
 
-## A model is blocked as expensive or unauthorized
+- `dataset.seed.link` should resolve to substantive official information. If it
+  returns only a metadata stub, use the canonical documentation page or add
+  readable files under `dataset.seed.docs`.
+- `dataset.inspection_runtime.dataset_root` must exist and be readable.
+- `external_readonly` requires `dataset_root`.
+- Do not set both `inspection_python` and `inspection_command`. If neither is
+  set, confirm that the coding host's own environment already contains the
+  required inspection tools.
+- Test the chosen inspection executable or command outside Maieusis and confirm
+  it can import the dataset's required libraries.
+- Add at least one non-blank `allowed_inspection_resources` entry describing a
+  real resource.
+- `source_tree_root` must be a Maieusis Git checkout with a valid `HEAD`. It is
+  the source-integrity surface, not the dataset-code inspection checkout. Use a
+  clean checkout unless you intentionally want uncommitted source bytes
+  included in the run identity. If the field is omitted, automatic detection
+  must find a Git checkout from the current environment.
 
-Verify the configured model name and account entitlement. Only if you intended
-that exact role/model, set `MAIEUSIS_ALLOW_PRO_MODEL=1`. Never enable a blanket
-fallback or change models during a run.
+Do not make the dataset writable merely to pass preflight.
 
-## Literature is incomplete
+## Owner and reviewer are not independent
 
-This can be an honest external limitation. Inspect the retrieval summary and
-authority labels. Missing open full text must not be fabricated. Add lawful
-source material or accept the provisional ceiling.
+In standard mode, these providers must differ:
 
-## A family is rejected
+```yaml
+models:
+  owner: {provider: openai, model: "<model-id>"}
+  reviewer: {provider: anthropic, model: "<model-id>"}
+```
 
-Read its dossier or fallback closure and planner evidence. Dataset mismatch,
-operationalization failure, scientific drift, or an unresolvable ambiguity may
-be the correct scientific outcome. Do not edit the artifact to turn rejection
-into acceptance.
+Changing only the model name while keeping the same provider does not satisfy
+this check.
 
-## A run was interrupted
+## A model is blocked as expensive or unavailable
+
+Confirm that the provider/model identifier is correct and enabled for your
+account. Maieusis does not silently fall back to another model.
+
+Only when you deliberately intend to use that exact gated model, set:
+
+```text
+MAIEUSIS_ALLOW_PRO_MODEL=1
+```
+
+Then rerun preflight and review the disclosed work estimate. Do not change
+models while a run is active.
+
+## Literature evidence is incomplete
+
+Open `literature/retrieval_summary.md` and
+`literature/topic_evidence_summary.md`. Missing open full text or incomplete
+metadata can be an honest external limitation.
+
+- With `source_profile: public`, add lawful source material or accept the
+  provisional authority ceiling.
+- With `source_profile: auto`, Elicit is used only when its key is available.
+- With `source_profile: elicit` or `hybrid`, a missing `ELICIT_API_KEY` is a
+  preflight failure.
+
+Never fill an evidence gap with an unsupported abstract or fabricated text.
+
+## A family was rejected, deferred, or closed with a warning
+
+Read `summary.md`, the family's `dossier_detailed.md`, and its complete
+`dossier.md`. Dataset mismatch, an unfaithful operationalization, scientific
+drift, material revision, or an unresolved ambiguity may be the correct
+outcome.
+
+A provider or validation warning is not an accepted plan. Do not edit a dossier
+or completion file to promote it.
+
+## Detailed pages are not ready
+
+The scientific run state and compact products remain unchanged when only the
+readable detailed pages fail to render. Inspect:
 
 ```bash
 maieusis status <run-id> --project maieusis.yaml
 ```
 
-Review the reuse/re-run table. If inputs and configuration are correct:
+If all scientific stages are reusable, this command retries only the readable
+pages:
 
 ```bash
 maieusis resume <run-id> --project maieusis.yaml
 ```
 
-If source, config, prompts, models, or artifacts changed, expect the affected
-stage to re-run.
+## A run was interrupted
+
+First inspect what is present and what would repeat:
+
+```bash
+maieusis status <run-id> --project maieusis.yaml
+```
+
+If the project configuration and inputs are correct:
+
+```bash
+maieusis resume <run-id> --project maieusis.yaml
+```
+
+When source files, config, prompts, models, or recorded products changed,
+expect the affected stages to run again. Do not remove receipts or hand-edit
+hashes to force reuse.
 
 ## Reporting a problem
 
-Share the package version, operating system, sanitized config, run ID,
-diagnostic code, and the smallest redacted reproduction. Do not share keys,
-private data, source PDFs, absolute paths, session IDs, or raw model captures.
-Use [SECURITY.md](../SECURITY.md) for vulnerabilities.
+Share only:
+
+- package version and operating system;
+- the failing command;
+- a sanitized configuration;
+- run ID and diagnostic code;
+- relevant `check` or `status` output; and
+- the smallest redacted reproduction.
+
+Do not share API keys, subscription tokens, private data, source PDFs,
+absolute local paths, provider session/request IDs, or raw model traffic.
+Follow [SECURITY.md](../SECURITY.md) for vulnerabilities or sensitive reports.
+
+---
+
+[Documentation home](INDEX.md) · [Manual setup](MANUAL_SETUP.md) ·
+[Configuration](CONFIGURATION.md) · [Limitations](LIMITATIONS.md)

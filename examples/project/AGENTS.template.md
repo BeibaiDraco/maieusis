@@ -38,8 +38,7 @@ An initialized project may not be a clone of the Maieusis repository. Do not ass
 
 ## Credentials are two separate surfaces
 
-- Scientific Question Scientist, Owner, narrator, topic, and reviewer roles use frontier-model API
-  credentials.
+- In `standard` mode, all scientific model roles use frontier-model API credentials.
 - The Dataset Planner uses the configured local coding-agent host login or subscription
   credential. A Codex or Claude Code login is not an API key for the scientific roles.
 - Keep secrets only in the user's untracked runtime environment, normally
@@ -50,8 +49,8 @@ An initialized project may not be a clone of the Maieusis repository. Do not ass
 ## Required operating sequence
 
 1. Inventory the available PDF filenames, dataset link and documentation, read-only dataset root,
-   inspectable source checkout, coding host, and optional research intent. Report missing inputs
-   without guessing.
+   Maieusis source-integrity checkout, coding host, and optional research intent. Report missing
+   inputs without guessing.
 2. Edit `maieusis.yaml` with explicit model identities and real paths. Keep the Owner and
    independent Reviewer on distinct configured providers as required by preflight.
 3. Run `maieusis check --project maieusis.yaml`. This is the required zero-paid preflight. Resolve
@@ -64,8 +63,8 @@ An initialized project may not be a clone of the Maieusis repository. Do not ass
 6. After approval, run `maieusis run --project maieusis.yaml` without changing the configuration,
    inputs, source checkout, or model routes during that invocation.
 7. Open the run-local `README.md`, `summary.md`, QuestionFamily pages, every family outcome, and the
-   compact and detailed end-user dossiers. If interrupted, inspect with `maieusis status` before
-   using `maieusis resume`.
+   per-family scientific reading guides and complete planning dossiers. If interrupted, inspect
+   with `maieusis status` before using `maieusis resume`.
 
 ## Scientific and authority boundaries
 
