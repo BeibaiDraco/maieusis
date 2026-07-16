@@ -1,5 +1,11 @@
 # Maieusis
 
+[![PyPI package version](https://img.shields.io/pypi/v/maieusis.svg)](https://pypi.org/project/maieusis/)
+[![Supported Python versions](https://img.shields.io/pypi/pyversions/maieusis.svg)](https://pypi.org/project/maieusis/)
+[![GitHub Actions test status](https://github.com/BeibaiDraco/maieusis/actions/workflows/tests.yml/badge.svg?branch=main&event=push)](https://github.com/BeibaiDraco/maieusis/actions/workflows/tests.yml)
+[![Zenodo DOI for Maieusis v0.1.0](https://zenodo.org/badge/DOI/10.5281/zenodo.21388806.svg)](https://doi.org/10.5281/zenodo.21388806)
+[![License: Apache-2.0](https://img.shields.io/pypi/l/maieusis.svg)](LICENSE)
+
 **Data does not come with the right questions attached.**
 
 AI is rapidly improving at executing well-specified analyses. But science
@@ -112,11 +118,12 @@ maieusis check --project maieusis.yaml   # no paid model calls
 maieusis run --project maieusis.yaml     # paid; run only after approval
 ```
 
-Until the v0.1.0 package is available from PyPI, follow the
-[source-install route](docs/INSTALLATION.md#install-from-source). The current
-standard configuration uses distinct OpenAI and Anthropic API providers so
-Question Owner work and independent review do not share a provider. See
-[configuration](docs/CONFIGURATION.md) before the first paid run.
+Maieusis v0.1.0 is available from [PyPI](https://pypi.org/project/maieusis/0.1.0/).
+The [source-install route](docs/INSTALLATION.md#install-from-source) remains
+available for contributors. The current standard configuration uses distinct
+OpenAI and Anthropic API providers so Question Owner work and independent
+review do not share a provider. See [configuration](docs/CONFIGURATION.md)
+before the first paid run.
 
 ## Why this is different
 
@@ -287,11 +294,19 @@ Maieusis is licensed under Apache-2.0. Copyright 2026 Yunlong Xu. Software
 authors are [Draco (Yunlong) Xu](https://orcid.org/0000-0003-2589-7232) and
 [Brent Doiron](https://orcid.org/0000-0002-6916-5511).
 
-Use [CITATION.cff](CITATION.cff) for the exact software citation. A
-version-specific Zenodo software DOI will be added after the immutable v0.1.0
-GitHub release is archived; no DOI is invented in advance. A technical report
-is planned after the software release and will receive a separate DOI and
-preferred citation.
+For reproducible use of this release, cite the version-specific software
+record:
+
+> Xu, Y., & Doiron, B. (2026). *Maieusis* (Version v0.1.0) [Computer
+> software]. Zenodo. https://doi.org/10.5281/zenodo.21388806
+
+The version DOI is
+[`10.5281/zenodo.21388806`](https://doi.org/10.5281/zenodo.21388806). The
+concept DOI [`10.5281/zenodo.21388805`](https://doi.org/10.5281/zenodo.21388805)
+represents Maieusis across versions. GitHub's **Cite this repository** panel
+reads [CITATION.cff](CITATION.cff); see the [citation guide](docs/CITATION.md)
+for which DOI to use. A separate technical report is planned and will be added
+as the preferred citation after it is published.
 
 See [LICENSE](LICENSE), [NOTICE](NOTICE), [AUTHORS.md](AUTHORS.md),
 [CONTRIBUTING.md](CONTRIBUTING.md), and [SECURITY.md](SECURITY.md).

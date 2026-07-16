@@ -113,9 +113,48 @@ def test_citation_metadata_names_only_the_two_software_authors() -> None:
         "https://orcid.org/0000-0003-2589-7232",
         "https://orcid.org/0000-0002-6916-5511",
     ]
-    assert "doi" not in citation
+    assert citation["doi"] == "10.5281/zenodo.21388806"
     assert "preferred-citation" not in citation
     assert all("email" not in author for author in citation["authors"])
+
+
+def test_public_citation_surfaces_bind_the_released_version_and_concept_dois() -> None:
+    docs_root = _public_roots()[0]
+    readme_path = docs_root / "README.md"
+    if not readme_path.is_file():
+        readme_path = ROOT / "README.md"
+    readme = readme_path.read_text(encoding="utf-8")
+    guide = (docs_root / "CITATION.md").read_text(encoding="utf-8")
+    index = (docs_root / "INDEX.md").read_text(encoding="utf-8")
+
+    version_doi = "10.5281/zenodo.21388806"
+    concept_doi = "10.5281/zenodo.21388805"
+    expected_citation = (
+        "Xu, Y., & Doiron, B. (2026). *Maieusis* (Version v0.1.0) [Computer software]. Zenodo."
+    )
+    readme_prose = " ".join(readme.replace("\n> ", " ").split())
+    guide_prose = " ".join(guide.replace("\n> ", " ").split())
+
+    for text in (readme, guide):
+        assert version_doi in text
+        assert concept_doi in text
+    assert expected_citation in readme_prose
+    assert expected_citation in guide_prose
+    assert "use this when reporting work performed with Maieusis v0.1.0" in guide_prose
+    assert "without identifying a particular version" in guide_prose
+    assert "[Citation guide](CITATION.md)" in index
+    assert "package is available from PyPI" not in readme
+    assert "DOI will be added" not in readme
+
+    badges = (
+        "https://img.shields.io/pypi/v/maieusis.svg",
+        "https://img.shields.io/pypi/pyversions/maieusis.svg",
+        "https://github.com/BeibaiDraco/maieusis/actions/workflows/tests.yml/badge.svg?branch=main&event=push",
+        "https://zenodo.org/badge/DOI/10.5281/zenodo.21388806.svg",
+        "https://img.shields.io/pypi/l/maieusis.svg",
+    )
+    assert all(badge in readme for badge in badges)
+    assert "https://pypi.org/project/maieusis/0.1.0/" in readme
 
 
 def test_public_source_tree_contains_no_raw_papers_or_private_release_records() -> None:

@@ -1,5 +1,7 @@
 cff-version: 1.2.0
-message: "If you use Maieusis, please cite the software release described here."
+message: >-
+  If you use Maieusis v0.1.0, please cite this software release using its
+  version-specific DOI.
 type: software
 title: "Maieusis"
 abstract: >-
@@ -18,6 +20,7 @@ authors:
     orcid: "https://orcid.org/0000-0002-6916-5511"
 version: "0.1.0"
 date-released: 2026-07-16
+doi: "10.5281/zenodo.21388806"
 license: "Apache-2.0"
 repository-code: "https://github.com/BeibaiDraco/maieusis"
 keywords:
