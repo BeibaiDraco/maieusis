@@ -28,6 +28,8 @@ matches what you want to do.
   labels do—and do not—mean.
 - [Limitations](LIMITATIONS.md): scientific, operational, and scope limits of
   the Research Preview.
+- [Citation guide](CITATION.md): the exact v0.1.0 software citation and the
+  difference between the version and concept DOIs.
 - [Related-work positioning](positioning/POSITIONING.md): the narrow
   task-design comparison behind the positioning figure.
 

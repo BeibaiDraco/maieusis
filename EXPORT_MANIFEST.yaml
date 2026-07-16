@@ -2,8 +2,8 @@
 schema_version: 2
 distribution: maieusis
 version: 0.1.0
-tree_digest: f9ee47443d6c2b63a82ea2cd4b2e1bee3f0407e4b3dd7dda1f55c9d529ec37cb
-file_count: 381
+tree_digest: da95c0129d9066a054f4e02287ef6f6a3ebb65a15c2e20ea681389cfbe0cb5b6
+file_count: 382
 projection_sources:
   - source: curated public contract tests
     destination: tests
@@ -82,7 +82,7 @@ files:
   - path: CHANGELOG.md
     sha256: 4fdc3c583efeddc9e01588449c75a9a0add76f4e97af111aae6724f896041686
   - path: CITATION.cff
-    sha256: b1d2647960fe07962bd3478f255a53af65990d08f49d1394db6faa8923f63262
+    sha256: 105a68b2fffe84e7183594522111e37bb6446ef83e5349d276a887fd84d1e075
   - path: CODE_OF_CONDUCT.md
     sha256: 8d71c2ce03b5f42fd3cb91813aa6cb064969058318c9f666c079fdbebe7eb869
   - path: CONTRIBUTING.md
@@ -96,7 +96,7 @@ files:
   - path: NOTICE
     sha256: ded3ee67a56e5408af5882247ffeb12f5b941924b41ca89a686b9cd4cb58bad8
   - path: README.md
-    sha256: 77252b362414d51c63452090663ca466c85e30e67059e620b9574a7459c9273f
+    sha256: 83a703c3c2100a93171189160ec42bb7ac545f2a6e4d33cce9532485cda43c76
   - path: SECURITY.md
     sha256: 34be1bd7a4ed3f5c0092f6c43d58b3477731af273de7d6809f10273f02952efa
   - path: THIRD_PARTY_NOTICES.md
@@ -295,10 +295,12 @@ files:
     sha256: d1ff8455fb5d9e99c2098bdd67cd1200aa3e420b2740f19527e31a790424dd58
   - path: docs/ARCHITECTURE.md
     sha256: 01423dcae9b1c503b78aca44698be05dedf2e36602d78b704a0ebf98791407d3
+  - path: docs/CITATION.md
+    sha256: 59ca77e3abd93b5cb2ffeea4bbb525addbd37a03cb551e02c13e4be9b0a684e8
   - path: docs/CONFIGURATION.md
     sha256: 4cb78520e4b82423183d795586122859db479643bb61475c88bbed656da86345
   - path: docs/INDEX.md
-    sha256: d92ea49cc48663e086f3bb4a451e7da3b625eadb65c8ac91104f22b95ce55d47
+    sha256: d42d379b17b502fcefe4a300e335e80f9de50e01d797303b1dcd1f805a5416bd
   - path: docs/INPUTS_AND_OUTPUTS.md
     sha256: df7fd3392a38193f6a1bf54f1e785ca32668d2d7d122c566d1adf9464f9c5f8e
   - path: docs/INSTALLATION.md
@@ -818,4 +820,4 @@ files:
   - path: tests/test_context_firewall.py
     sha256: fbcdf013f945e8efdf4e9d73c14e2eba4a42fc1a2636d4ba0f93f9fb28ff2efb
   - path: tests/test_release_metadata.py
-    sha256: 61918d46037ec9d18706b70925e528d74a874764a9101115c5cb1cfe29cebdc5
+    sha256: 096d1c5683c1029240cea12a0a0b216987c470d90dece31c9b9ea74cc3850342
