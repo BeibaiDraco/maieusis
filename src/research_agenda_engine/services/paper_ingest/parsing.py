@@ -97,17 +97,58 @@ class DoclingPdfProvider(PdfParsingProvider):
         except Exception as exc:  # pragma: no cover - depends on optional external parser
             raise PdfParsingError(f"Docling failed to parse {pdf_path.name}: {exc}") from exc
 
-        parsed = PopplerTextPdfProvider(
-            parser_name="docling+poppler_text",
+        # Docling's OWN text, grouped by its OWN page attribution. Until 2026-08-04 this method
+        # exported that markdown, used it ONLY to compute a hash for metadata, and returned the
+        # POPPLER parse stamped `parser_kind = DOCLING` -- so a caller reading `parser_kind` saw
+        # the better parser while every downstream stage read the worse text. Measured across the
+        # 25-PDF climate corpus: poppler median hyphen-break density 1.30 per 1000 chars against
+        # docling 0.03, cleaner on 20 of 25. On the older two-column papers poppler interleaves
+        # three columns line by line and breaks words across them ("ves pene- / trate to
+        # successively lower altitudes"), which is why citation markers could not be found and why
+        # an extracted "sentence" was a fragment.
+        #
+        # The stated reason for discarding it -- "page-level evidence verification" -- was not a
+        # real constraint: docling attributes every text item to a page (238 of 238 on
+        # 11-baldwin-dunkerton-2001, pages 1-6). Grouping by that page number reproduces exactly the
+        # one-block-per-page shape and the `{paper_id}-p{page:04d}` id scheme, so evidence spans,
+        # block counts and every downstream resolution check are untouched and only the words change.
+        by_page: dict[int, list[str]] = {}
+        for item, _level in document.iterate_items():
+            text = str(getattr(item, "text", "") or "").strip()
+            if not text:
+                continue
+            provenance = getattr(item, "prov", None) or []
+            page_no = getattr(provenance[0], "page_no", None) if provenance else None
+            if page_no is None:
+                continue
+            by_page.setdefault(int(page_no), []).append(text)
+        if not by_page:
+            raise PdfParsingError(
+                f"Docling parsed {pdf_path.name} but attributed no text to any page"
+            )
+        last_page = max(by_page)
+        page_texts = ["\n".join(by_page.get(number, [])) for number in range(1, last_page + 1)]
+        return _parsed_paper_from_pages(
+            paper_id=paper_id,
+            pdf_path=pdf_path,
+            page_texts=page_texts,
+            parser_name=self.parser_name,
             parser_version=self.parser_version,
+            parser_kind=ParserKind.DOCLING,
             extra_metadata={
                 "docling_markdown_sha256": stable_hash(markdown),
                 "docling_config": self.config,
                 "docling_do_ocr": self.do_ocr,
+                **self.extra_metadata,
+            }
+            if hasattr(self, "extra_metadata")
+            else {
+                "docling_markdown_sha256": stable_hash(markdown),
+                "docling_config": self.config,
+                "docling_do_ocr": self.do_ocr,
             },
-        ).parse(pdf_path, paper_id=paper_id)
-        parsed.parser_kind = ParserKind.DOCLING
-        return parsed
+            expected_page_count=last_page,
+        )
 
     @staticmethod
     def _resolve_version() -> str:
@@ -147,49 +188,74 @@ class PopplerTextPdfProvider(PdfParsingProvider):
             raw_pages = raw_pages[:-1]
         if page_count and len(raw_pages) < page_count:
             raw_pages.extend([""] * (page_count - len(raw_pages)))
-        pages = [
-            ParsedPaperPage(page_number=index + 1, text=page_text.strip())
-            for index, page_text in enumerate(raw_pages)
-        ]
-        if not pages and page_count:
-            pages = [ParsedPaperPage(page_number=index + 1, text="") for index in range(page_count)]
-
-        blocks = [
-            ParsedPaperBlock(
-                block_id=f"{paper_id}-p{page.page_number:04d}",
-                page_number=page.page_number,
-                text=page.text or " ",
-                block_type=BlockType.PAGE_TEXT,
-                section_title=_guess_page_section(page.text),
-                source_path=pdf_path.as_posix(),
-            )
-            for page in pages
-            if page.text.strip()
-        ]
-        sections = _build_sections_from_blocks(blocks)
-        return ParsedPaper(
+        return _parsed_paper_from_pages(
             paper_id=paper_id,
-            source_pdf=pdf_path.as_posix(),
-            source_sha256=sha256_file(pdf_path),
+            pdf_path=pdf_path,
+            page_texts=raw_pages,
             parser_name=self.parser_name,
             parser_version=self.parser_version,
             parser_kind=self.parser_kind,
-            parser_config_hash=stable_hash(
-                {
-                    "parser": self.parser_name,
-                    "version": self.parser_version,
-                    "metadata": self.extra_metadata,
-                }
-            ),
-            pages=pages,
-            sections=sections,
-            blocks=blocks,
-            metadata={
-                "expected_page_count": page_count,
-                "source_filename": pdf_path.name,
-                **self.extra_metadata,
-            },
+            extra_metadata=self.extra_metadata,
+            expected_page_count=page_count,
         )
+
+
+def _parsed_paper_from_pages(
+    *,
+    paper_id: str,
+    pdf_path: Path,
+    page_texts: list[str],
+    parser_name: str,
+    parser_version: str,
+    parser_kind: ParserKind,
+    extra_metadata: dict[str, Any],
+    expected_page_count: int,
+) -> ParsedPaper:
+    """Build the ParsedPaper both parsers return, so their SHAPE cannot drift.
+
+    Extracted rather than duplicated because the docling parser exists to change the TEXT and
+    nothing else. Block granularity stays one block per page and `block_id` stays
+    ``{paper_id}-p{page:04d}`` -- which is what an evidence span points at, so a re-parse with a
+    better parser leaves every downstream id scheme, block count and resolution check untouched
+    and only the words improve.
+    """
+    pages = [
+        ParsedPaperPage(page_number=index + 1, text=(text or "").strip())
+        for index, text in enumerate(page_texts)
+    ]
+    if not pages and expected_page_count:
+        pages = [ParsedPaperPage(page_number=n + 1, text="") for n in range(expected_page_count)]
+    blocks = [
+        ParsedPaperBlock(
+            block_id=f"{paper_id}-p{page.page_number:04d}",
+            page_number=page.page_number,
+            text=page.text or " ",
+            block_type=BlockType.PAGE_TEXT,
+            section_title=_guess_page_section(page.text),
+            source_path=pdf_path.as_posix(),
+        )
+        for page in pages
+        if page.text.strip()
+    ]
+    return ParsedPaper(
+        paper_id=paper_id,
+        source_pdf=pdf_path.as_posix(),
+        source_sha256=sha256_file(pdf_path),
+        parser_name=parser_name,
+        parser_version=parser_version,
+        parser_kind=parser_kind,
+        parser_config_hash=stable_hash(
+            {"parser": parser_name, "version": parser_version, "metadata": extra_metadata}
+        ),
+        pages=pages,
+        sections=_build_sections_from_blocks(blocks),
+        blocks=blocks,
+        metadata={
+            "expected_page_count": expected_page_count,
+            "source_filename": pdf_path.name,
+            **extra_metadata,
+        },
+    )
 
 
 def docling_converter_kwargs(*, do_ocr: bool) -> dict[str, Any]:

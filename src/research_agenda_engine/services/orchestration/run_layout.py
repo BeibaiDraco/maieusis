@@ -1,7 +1,6 @@
 """Fixed ``runs/<id>/`` public artifact layout.
 
-The `maieusis run` driver produces a single deterministic tree per run (locked in
-``docs/plans/2026-07-09-phase5-e2e-execution-plan.md``). This module owns the paths, the
+The `maieusis run` driver produces a single deterministic tree per run. This module owns the paths, the
 dataset-agnostic family slug, and the thin render→write glue over the 5a summary renderers — so the
 driver just hands it the stage artifacts. It writes files; it holds no run logic.
 
@@ -27,6 +26,7 @@ from ...schemas.question_family import QuestionFamily
 from ...schemas.question_pattern import QuestionFormationTrace, QuestionPatternCard
 from ...schemas.question_scientist_context_v2 import EvidenceBasis
 from ...schemas.research_intent import ResearchIntent
+from ...schemas.run_manifest import DiagnosticClass, ProductProcessingState, RunManifest
 from ...schemas.run_outcome import DossierAxis, FamilyRunOutcome, RunTerminal
 from ...schemas.scientific_context import TopicEvidenceBrief
 from ...schemas.shortlist_outcome import FamilyInclusionLabel, FamilyShortlistOutcome
@@ -39,7 +39,9 @@ from ..context.c_summaries import (
 from ..context.research_scope import render_research_scope_summary
 from ..context.topic_summaries import render_retrieval_summary, render_topic_evidence_summary
 from ..dossier.multi_family_coordinator import validate_aggregate_report_text
-from ..dossier.public_text_guard import find_public_markdown_jargon
+from ..dossier.public_text_guard import (
+    find_public_markdown_id_leaks,
+)
 from ..paper_ingest.summaries import (
     render_paper_case_summary,
     render_paperbank_overall_summary,
@@ -80,6 +82,11 @@ class RunPaths:
     @property
     def summary(self) -> Path:
         return self.root / "summary.md"
+
+    @property
+    def interruption_summary(self) -> Path:
+        """A safe outer-interruption page that never overwrites a sealed scientific summary."""
+        return self.root / "run_terminal.md"
 
     @property
     def readme(self) -> Path:
@@ -585,7 +592,7 @@ def _with_front_half_authority_banner(
 # no "novel", no "significant"/"effect"/"execution"/"result-claim" phrasing).
 _LABEL_HEADINGS: dict[FamilyInclusionLabel, str] = {
     FamilyInclusionLabel.INCLUDED_BY_AUTOMATED_REVIEW: (
-        "Included (the automated review passed this — suggested reading)"
+        "Accepted planning dossiers (owner and independent review complete)"
     ),
     FamilyInclusionLabel.REJECTED_SCIENTIFIC: "Not included (scientifically rejected)",
     FamilyInclusionLabel.DIRECT_RECAP: "Not included (a close prior already covers this)",
@@ -694,7 +701,7 @@ def render_run_summary(
         bucket = [o for o in outcomes if o.public_summary_label == label]
         if not bucket:
             continue
-        lines.extend([f"## {heading}", "", f"- Label: `{label.value}`", ""])
+        lines.extend([f"## {heading}", ""])
         for outcome in bucket:
             reason = f" — {outcome.reason}" if outcome.reason else ""
             lines.append(f"- `{outcome.question_family_id}`{reason}")
@@ -717,7 +724,7 @@ def render_run_terminal_summary(terminal: RunTerminal, *, resume_note: str = "")
     user at the config knobs, instead of a crash or a bare 'fail closed'.
     """
     kind = (
-        "did not have enough usable evidence to develop any question"
+        "ended at a shared scientific-context decision before question development"
         if terminal.failure_class == FailureClass.SCIENTIFIC
         else "could not complete a shared setup stage"
     )
@@ -732,15 +739,24 @@ def render_run_terminal_summary(terminal: RunTerminal, *, resume_note: str = "")
     )
     if terminal.reason:
         lines.append(f"- Reason: {terminal.reason}")
-    lines.extend(
-        [
-            "",
-            "## If this looks wrong",
-            "",
-            "Adjust `maieusis.yaml` (papers, dataset link/sample, research interest, providers) and re-run.",
-            "",
-        ]
-    )
+    lines.extend(["", "## If this looks wrong", ""])
+    if terminal.failure_class == FailureClass.SCIENTIFIC:
+        lines.extend(
+            [
+                "Open this run's gate diagnostic first. Add source-backed literature for the named "
+                "gap or revise the research scope; change dataset/provider settings only when that "
+                "diagnostic identifies them.",
+                "",
+            ]
+        )
+    else:
+        lines.extend(
+            [
+                "Adjust `maieusis.yaml` (papers, dataset link/sample, research interest, providers) "
+                "and resume after correcting the reported failure.",
+                "",
+            ]
+        )
     return "\n".join(lines).rstrip() + "\n"
 
 
@@ -752,9 +768,18 @@ def write_run_terminal_summary(
     forbidden = validate_aggregate_report_text(text)
     if forbidden:
         raise ValueError("run summary contains forbidden terms: " + ", ".join(forbidden))
-    jargon = find_public_markdown_jargon(text)
-    if jargon:
-        raise ValueError("run summary contains internal jargon: " + ", ".join(jargon))
+    # Only an escaped internal IDENTIFIER may end the run terminal here. summary.md embeds every
+    # family's reviewer `reason` verbatim and this function is called unguarded on three paths, so
+    # under the combined check one rationale saying "R5-tropic" (or a start-codon "M1V") cost the
+    # run terminal for every family -- a dev-era housekeeping handle outranking the whole closeout.
+    leaks = find_public_markdown_id_leaks(text)
+    if leaks:
+        raise ValueError("run summary contains internal identifiers: " + ", ".join(leaks))
+    # A dev-era handle is deliberately NOT checked here. It discloses nothing, points at no object a
+    # reader could act on, and both of its patterns collide with ordinary science ("CCR5-tropic (R5)",
+    # the start-codon variant "M1V"). `scripts/check_public_markdown.py` still enforces all five over
+    # TEMPLATES and renderer output in CI, which is where a handle really is a defect and where no
+    # reviewer's sentence is at stake.
     paths.summary.parent.mkdir(parents=True, exist_ok=True)
     fd, tmp_name = tempfile.mkstemp(dir=paths.summary.parent, suffix=".md.tmp")
     try:
@@ -764,6 +789,112 @@ def write_run_terminal_summary(
     finally:
         Path(tmp_name).unlink(missing_ok=True)
     return paths.summary
+
+
+def render_run_interruption_summary(
+    manifest: RunManifest,
+    *,
+    diagnostic_class: DiagnosticClass,
+    code: str,
+    public_message: str,
+    resume_valid: bool,
+) -> str:
+    """Render a cause-safe outer terminal from persisted run state.
+
+    Unlike :func:`render_run_terminal_summary`, this projection may be needed after family
+    identities exist. It therefore reports retained counts without claiming that no families were
+    produced or relabelling any family outcome.
+    """
+    reached = [
+        stage.stage.value
+        for stage in manifest.stages
+        if stage.processing_state != ProductProcessingState.NOT_REACHED
+    ]
+    not_reached = [
+        stage.stage.value
+        for stage in manifest.stages
+        if stage.processing_state == ProductProcessingState.NOT_REACHED
+    ]
+    current_stage = reached[-1] if reached else "preflight"
+    dossier_count = sum(bool(family.dossier_path) for family in manifest.families)
+    safe_message = sanitize_family_failure_text(public_message)
+    lines = [
+        "# Run interruption",
+        "",
+        safe_message,
+        "",
+        f"- Reached stage: `{current_stage}`",
+        f"- Outcome class: `{diagnostic_class.value}`",
+        f"- Diagnostic code: `{code}`",
+        f"- Run state: `{manifest.run_state.value}`",
+        f"- Resume valid after correction: `{'yes' if resume_valid else 'no'}`",
+        "",
+        "## Retained work",
+        "",
+        f"- Indexed artifacts retained: {len(manifest.artifacts)}",
+        f"- Paper inputs recorded: {len(manifest.papers)}",
+        f"- Question families recorded: {len(manifest.families)}",
+        f"- Reader dossiers retained: {dossier_count}",
+    ]
+    if not_reached:
+        lines.extend(
+            [
+                "",
+                "## Work not reached",
+                "",
+                *[f"- `{stage}`" for stage in not_reached],
+            ]
+        )
+    lines.extend(
+        [
+            "",
+            "## Next action",
+            "",
+            manifest.next_action,
+            "",
+            "Retained papers, families, dossiers, and diagnostics remain linked from `README.md`.",
+            "",
+        ]
+    )
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def write_run_interruption_summary(
+    paths: RunPaths,
+    manifest: RunManifest,
+    *,
+    diagnostic_class: DiagnosticClass,
+    code: str,
+    public_message: str,
+    resume_valid: bool,
+) -> Path:
+    """Atomically publish the outer-interruption page without replacing ``summary.md``."""
+    text = render_run_interruption_summary(
+        manifest,
+        diagnostic_class=diagnostic_class,
+        code=code,
+        public_message=public_message,
+        resume_valid=resume_valid,
+    )
+    forbidden = validate_aggregate_report_text(text)
+    if forbidden:
+        raise ValueError(
+            "run interruption summary contains forbidden terms: " + ", ".join(forbidden)
+        )
+    leaks = find_public_markdown_id_leaks(text)
+    if leaks:
+        raise ValueError(
+            "run interruption summary contains internal identifiers: " + ", ".join(leaks)
+        )
+    paths.interruption_summary.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp_name = tempfile.mkstemp(dir=paths.interruption_summary.parent, suffix=".md.tmp")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            handle.write(text)
+        os.replace(tmp_name, paths.interruption_summary)
+    finally:
+        Path(tmp_name).unlink(missing_ok=True)
+    return paths.interruption_summary
 
 
 def write_run_summary(
@@ -786,6 +917,10 @@ def write_run_summary(
     # internal identifiers, credentials, local paths, and serialized authority/result fields; it
     # deliberately preserves ordinary scientific prose. Applying it to every reason prevents one
     # family's dirty presentation text from turning final cohort rendering into a shared failure.
+    # Defense in depth for outcomes constructed outside the main driver. Sanitization removes only
+    # internal identifiers, credentials, local paths, and serialized authority/result fields; it
+    # deliberately preserves ordinary scientific prose. Applying it to every reason prevents one
+    # family's dirty presentation text from turning final cohort rendering into a shared failure.
     safe_outcomes = [
         outcome.model_copy(update={"reason": sanitize_family_failure_text(outcome.reason)})
         if outcome.reason
@@ -803,9 +938,18 @@ def write_run_summary(
     forbidden = validate_aggregate_report_text(text)
     if forbidden:
         raise ValueError("run summary contains forbidden terms: " + ", ".join(forbidden))
-    jargon = find_public_markdown_jargon(text)
-    if jargon:
-        raise ValueError("run summary contains internal jargon: " + ", ".join(jargon))
+    # Only an escaped internal IDENTIFIER may end the run terminal here. summary.md embeds every
+    # family's reviewer `reason` verbatim and this function is called unguarded on three paths, so
+    # under the combined check one rationale saying "R5-tropic" (or a start-codon "M1V") cost the
+    # run terminal for every family -- a dev-era housekeeping handle outranking the whole closeout.
+    leaks = find_public_markdown_id_leaks(text)
+    if leaks:
+        raise ValueError("run summary contains internal identifiers: " + ", ".join(leaks))
+    # A dev-era handle is deliberately NOT checked here. It discloses nothing, points at no object a
+    # reader could act on, and both of its patterns collide with ordinary science ("CCR5-tropic (R5)",
+    # the start-codon variant "M1V"). `scripts/check_public_markdown.py` still enforces all five over
+    # TEMPLATES and renderer output in CI, which is where a handle really is a defect and where no
+    # reviewer's sentence is at stake.
     paths.summary.parent.mkdir(parents=True, exist_ok=True)
     fd, tmp_name = tempfile.mkstemp(dir=paths.summary.parent, suffix=".md.tmp")
     try:

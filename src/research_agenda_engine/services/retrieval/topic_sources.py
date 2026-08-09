@@ -14,6 +14,16 @@ from typing import Any
 
 from ...io import load_data
 from ...provenance import stable_hash
+from ...schemas.external_evidence import (
+    ExcerptPersistencePermission,
+    ExternalEvidenceAccessStatus,
+    ExternalEvidenceProvider,
+    ExternalEvidenceRightsAssertion,
+    ExternalEvidenceUrlRole,
+    assert_secret_free_persisted_value,
+    redact_sensitive_urls_from_text,
+    url_contains_sensitive_material,
+)
 from ...schemas.research_intent import ResearchIntent
 from ...schemas.topic_literature import (
     TopicLensSourceFamily,
@@ -167,16 +177,24 @@ class TopicSourceHarvester:
         enabled: bool = True,
         max_records: int = 20,
         elicit_api_key: str = "",
+        openalex_email: str = "",
+        openalex_api_key: str = "",
     ):
         self.http_get_json = http_get_json or _http_get_json
         self.http_post_json = http_post_json or _http_post_json
         self.enabled = enabled
         self.max_records = max_records
         self.elicit_api_key = elicit_api_key or os.getenv("ELICIT_API_KEY", "")
+        self.openalex_email = openalex_email or os.getenv("OPENALEX_EMAIL", "")
+        self.openalex_api_key = openalex_api_key or os.getenv("OPENALEX_API_KEY", "")
 
     def harvest(self, query_plan: TopicSourceQueryPlan) -> TopicSourceTable:
         records: list[TopicSourceRecord] = []
         traces: list[TopicSourceSearchTrace] = []
+        # Identical query TEXT is issued once per provider. The active generic v2 plan already has
+        # one real lineage per provider/scope term; this cache remains for legacy plans and defensive
+        # duplicate containment. OpenAlex and Crossref are genuinely distinct acquisitions.
+        issued: dict[tuple[str, str], list[TopicSourceRecord]] = {}
         for query in query_plan.queries:
             if not self.enabled:
                 traces.append(
@@ -188,8 +206,16 @@ class TopicSourceHarvester:
                     )
                 )
                 continue
+            cache_key = (query.source_family.value, query.query)
+            if cache_key in issued:
+                records.extend(
+                    record.model_copy(update={"query_ids": [query.query_id]})
+                    for record in issued[cache_key]
+                )
+                continue
             try:
                 query_records, trace = self._search_query(query)
+                issued[cache_key] = query_records
                 records.extend(query_records)
                 traces.append(trace)
             except Exception as exc:
@@ -210,6 +236,19 @@ class TopicSourceHarvester:
             )
             records = _select_r5_lane_preserving_records(
                 all_records=records,
+                relevant_records=_dedupe_records(filtered_records),
+                query_plan=query_plan,
+                max_records=self.max_records,
+            )
+        elif query_plan.prompt_version == "generic_topic_evidence_lanes/v2":
+            all_records = _dedupe_records(records)
+            filtered_records = _filter_topic_relevant_records(
+                all_records,
+                query_plan.topic_terms,
+                strict_r5=False,
+            )
+            records = _select_generic_term_balanced_records(
+                all_records=all_records,
                 relevant_records=_dedupe_records(filtered_records),
                 query_plan=query_plan,
                 max_records=self.max_records,
@@ -290,35 +329,43 @@ class TopicSourceHarvester:
             if family == TopicLensSourceFamily.CROSSREF:
                 message = payload.get("message", {})
                 abstract = abstract or _strip_jats(str(message.get("abstract") or ""))
-                updates["url"] = record.url or str(message.get("URL") or "")
+                updates["url"] = record.url or _safe_provider_url(message.get("URL"))
             elif family == TopicLensSourceFamily.OPENALEX:
                 abstract = abstract or _openalex_abstract(payload)
-                updates["openalex_id"] = record.openalex_id or str(payload.get("id") or "")
+                updates["openalex_id"] = record.openalex_id or _safe_provider_url(payload.get("id"))
                 ids = payload.get("ids") or {}
                 updates["pmid"] = record.pmid or _pmid_from_url(str(ids.get("pmid") or ""))
                 primary_location = payload.get("primary_location") or {}
-                updates["url"] = updates.get("url") or str(
-                    primary_location.get("landing_page_url") or payload.get("id") or ""
+                updates["url"] = updates.get("url") or _first_safe_provider_url(
+                    primary_location.get("landing_page_url"), payload.get("id")
                 )
                 updates["cited_by_count"] = record.cited_by_count or _optional_int(
                     payload.get("cited_by_count")
                 )
+                assertions = _openalex_fulltext_rights_assertions(payload)
+                if assertions:
+                    updates["fulltext_rights_assertions"] = _merge_rights_assertions(
+                        record.fulltext_rights_assertions,
+                        assertions,
+                    )
             else:
                 abstract = abstract or str(payload.get("abstract") or "")
-                updates["semantic_scholar_id"] = record.semantic_scholar_id or str(
-                    payload.get("paperId") or ""
+                updates["semantic_scholar_id"] = (
+                    record.semantic_scholar_id or _safe_provider_identifier(payload.get("paperId"))
                 )
                 ids = payload.get("externalIds") or {}
-                updates["pmid"] = record.pmid or str(ids.get("PubMed") or "")
-                updates["url"] = updates.get("url") or str(payload.get("url") or "")
+                updates["pmid"] = record.pmid or _safe_provider_identifier(ids.get("PubMed"))
+                updates["url"] = updates.get("url") or _safe_provider_url(payload.get("url"))
                 if abstract:
                     break
 
-        if not abstract:
+        abstract = _safe_provider_text(abstract).strip()
+        if abstract == "[credential-bearing URL removed]":
+            abstract = ""
+        if not abstract and not updates.get("fulltext_rights_assertions"):
             return record
         updates.update(
             {
-                "snippet": abstract[:800],
                 "confirmed_source_families": sorted(confirmations, key=lambda item: item.value),
                 "metadata_quality_score": max(
                     record.metadata_quality_score,
@@ -332,7 +379,9 @@ class TopicSourceHarvester:
                 ),
             }
         )
-        return record.model_copy(update=updates)
+        if abstract:
+            updates["snippet"] = abstract[:800]
+        return TopicSourceRecord.model_validate({**record.model_dump(mode="python"), **updates})
 
     def _search_query(
         self, query: TopicSourceQuery
@@ -410,37 +459,60 @@ class TopicSourceHarvester:
     def _search_openalex(
         self, query: TopicSourceQuery
     ) -> tuple[list[TopicSourceRecord], TopicSourceSearchTrace]:
+        # `title_and_abstract.search` with an EXACT PHRASE, not plain `search=`. Per OpenAlex's own
+        # documentation, `search=` covers "titles, abstracts, and fulltext" and un-operatored words
+        # are ANDed -- so a bag of words selects for sprawling documents that happen to contain all
+        # of them anywhere, not for the field's focused literature. Restricting to title+abstract
+        # and quoting the phrase is what makes a search for "sudden stratospheric warming" return
+        # the papers that are ABOUT sudden stratospheric warmings.
         params = urllib.parse.urlencode(
             {
-                "search": query.query,
+                "filter": f'title_and_abstract.search:"{query.query}"',
                 "per-page": str(query.max_results),
                 "sort": "relevance_score:desc",
             }
         )
-        url = f"https://api.openalex.org/works?{params}"
-        raw = self.http_get_json(url, {})
+        # Two URLs on purpose. The trace persists `request_url`, and `TopicSourceSearchTrace` refuses
+        # persisted credentials, so the api_key may never appear in the recorded one. This search was
+        # the one OpenAlex caller in the product sending neither credential -- the paper-ingest client
+        # and the preflight probe both authenticate -- so every topic search was billed against the
+        # shared anonymous pool and never reached the operator's own account.
+        public_url = f"https://api.openalex.org/works?{params}"
+        raw = self.http_get_json(public_url + self._openalex_auth_suffix(), {})
         records = [
             _record(
                 source_family=TopicLensSourceFamily.OPENALEX,
                 query=query,
                 title=str(item.get("display_name") or item.get("title") or "").strip(),
                 year=item.get("publication_year"),
-                url=(
-                    (item.get("primary_location") or {}).get("landing_page_url")
-                    or item.get("id")
-                    or ""
+                url=_first_safe_provider_url(
+                    (item.get("primary_location") or {}).get("landing_page_url"),
+                    item.get("id"),
                 ),
                 doi=_normalize_doi(item.get("doi") or ""),
-                openalex_id=str(item.get("id") or ""),
+                openalex_id=_safe_provider_url(item.get("id")),
                 publication_types=[str(item.get("type") or "")],
                 snippet=_openalex_abstract(item),
                 payload=item,
                 relevance_score=float(item.get("relevance_score") or 0.75),
+                fulltext_rights_assertions=_openalex_fulltext_rights_assertions(item),
             )
             for item in raw.get("results", [])
             if str(item.get("display_name") or item.get("title") or "").strip()
         ]
-        return records, _trace(query, url, raw, len(records))
+        return records, _trace(query, public_url, raw, len(records))
+
+    def _openalex_auth_suffix(self) -> str:
+        """Credential query-string suffix, or empty. NEVER include this in a persisted URL."""
+        auth = {
+            key: value
+            for key, value in (
+                ("mailto", self.openalex_email),
+                ("api_key", self.openalex_api_key),
+            )
+            if value
+        }
+        return f"&{urllib.parse.urlencode(auth)}" if auth else ""
 
     def _search_crossref(
         self, query: TopicSourceQuery
@@ -544,7 +616,7 @@ class TopicSourceHarvester:
                 "Authorization": f"Bearer {self.elicit_api_key}",
                 "Accept": "application/json",
                 "Content-Type": "application/json",
-                "User-Agent": "maieusis/0.1.0 (+https://github.com/BeibaiDraco/maieusis)",
+                "User-Agent": "maieusis/0.1.1 (+https://github.com/BeibaiDraco/maieusis)",
             },
         )
         warnings = _elicit_warnings(response.payload)
@@ -989,6 +1061,126 @@ def _is_biomedical_topic(terms: list[str]) -> bool:
     return any(marker in text for marker in markers) or not text.strip()
 
 
+def _openalex_fulltext_rights_assertions(
+    payload: dict[str, Any],
+) -> list[ExternalEvidenceRightsAssertion]:
+    """Map only OpenAlex's explicit best-OA statement, never its primary landing URL."""
+
+    raw_best = payload.get("best_oa_location")
+    best = raw_best if isinstance(raw_best, dict) else {}
+    open_access = payload.get("open_access") or {}
+    if not isinstance(open_access, dict):
+        return []
+
+    # A populated best-location object is the location-specific authority.  A
+    # contradictory work-level ``open_access.is_oa`` flag must never turn a closed,
+    # ambiguous, or missing best location into an OA content assertion.
+    best_is_authoritative = bool(best)
+    location = best if best_is_authoritative else open_access
+    if location.get("is_oa") is not True:
+        return []
+    asserted_url = str(location.get("oa_url") or location.get("pdf_url") or "").strip()
+    # ``landing_page_url`` is useful bibliographic metadata, but is not a content
+    # URL and is therefore intentionally never relabelled as full text.
+    if not asserted_url or url_contains_sensitive_material(asserted_url):
+        return []
+    openalex_id = _safe_provider_url(payload.get("id"))
+    doi = _normalize_doi(payload.get("doi") or "")
+    locator = doi or openalex_id
+    if not locator:
+        return []
+    license_id = str(location.get("license") or "").strip().lower()
+    source_payload_hash = stable_hash(
+        {
+            "openalex_id": openalex_id,
+            "best_oa_location": best,
+            "open_access": open_access,
+        }
+    )
+    assertion_payload = {
+        "provider": ExternalEvidenceProvider.OPENALEX.value,
+        "provider_record_id": openalex_id,
+        "bibliographic_locator": locator,
+        "asserted_url": asserted_url,
+        "source_payload_hash": source_payload_hash,
+    }
+    return [
+        ExternalEvidenceRightsAssertion(
+            assertion_id=f"external-rights-{stable_hash(assertion_payload)[:16]}",
+            provider=ExternalEvidenceProvider.OPENALEX,
+            provider_record_id=openalex_id,
+            bibliographic_locator=locator,
+            asserted_url=asserted_url,
+            url_role=ExternalEvidenceUrlRole.PROVIDER_ASSERTED_OA,
+            access_status=ExternalEvidenceAccessStatus.OPEN_ACCESS,
+            license_id=license_id,
+            persistence_permission=(
+                ExcerptPersistencePermission.SHORT_EXCERPT_ALLOWED
+                if _license_allows_excerpt_persistence(license_id)
+                else ExcerptPersistencePermission.UNKNOWN
+            ),
+            assertion_source_url=openalex_id,
+            source_payload_hash=source_payload_hash,
+        )
+    ]
+
+
+def _merge_rights_assertions(
+    primary: list[ExternalEvidenceRightsAssertion],
+    secondary: list[ExternalEvidenceRightsAssertion],
+) -> list[ExternalEvidenceRightsAssertion]:
+    """Union assertions without detaching them from their original provider payload."""
+
+    merged: dict[str, ExternalEvidenceRightsAssertion] = {}
+    decisions: dict[tuple[str, str, str], tuple[str, str, str, str]] = {}
+    for assertion in [*primary, *secondary]:
+        subject = (
+            assertion.provider.value,
+            assertion.bibliographic_locator.lower(),
+            assertion.asserted_url.lower(),
+        )
+        decision = (
+            assertion.url_role.value,
+            assertion.access_status.value,
+            assertion.persistence_permission.value,
+            assertion.license_id.lower(),
+        )
+        prior = decisions.setdefault(subject, decision)
+        if prior != decision:
+            raise ValueError(
+                "conflicting external-evidence rights assertions for the same provider URL"
+            )
+        merged.setdefault(assertion.assertion_id, assertion)
+    return [merged[key] for key in sorted(merged)]
+
+
+def _license_allows_excerpt_persistence(license_id: str) -> bool:
+    normalized = license_id.strip().lower().replace("_", "-").rstrip("/")
+    exact_labels = {
+        "cc0",
+        "cc0-1.0",
+        "cc-by",
+        "cc-by-1.0",
+        "cc-by-2.0",
+        "cc-by-2.5",
+        "cc-by-3.0",
+        "cc-by-4.0",
+        "pd",
+        "public domain",
+        "public-domain",
+    }
+    if normalized in exact_labels:
+        return True
+    return bool(
+        re.fullmatch(
+            r"https?://creativecommons\.org/(?:"
+            r"licenses/by/(?:1\.0|2\.0|2\.5|3\.0|4\.0)|"
+            r"publicdomain/(?:zero/1\.0|mark/1\.0))",
+            normalized,
+        )
+    )
+
+
 def _record(
     *,
     source_family: TopicLensSourceFamily,
@@ -1009,9 +1201,30 @@ def _record(
     publication_types: list[str] | None = None,
     snippet: str = "",
     relevance_score: float = 0.0,
+    fulltext_rights_assertions: list[ExternalEvidenceRightsAssertion] | None = None,
 ) -> TopicSourceRecord:
+    title = _safe_provider_text(title).strip()
+    venue = _safe_provider_text(venue).strip()
+    authors = [_safe_provider_text(author).strip() for author in (authors or [])]
+    authors = [author for author in authors if author]
+    publication_types = [_safe_provider_text(item).strip() for item in (publication_types or [])]
+    publication_types = [item for item in publication_types if item]
+    snippet = _safe_provider_text(snippet).strip()
+    if snippet == "[credential-bearing URL removed]":
+        snippet = ""
+    url = _safe_provider_url(url)
+    doi = _safe_provider_identifier(doi)
+    pmid = _safe_provider_identifier(pmid)
+    pmcid = _safe_provider_identifier(pmcid)
+    elicit_id = _safe_provider_identifier(elicit_id)
+    openalex_id = _safe_provider_url(openalex_id)
+    semantic_scholar_id = _safe_provider_identifier(semantic_scholar_id)
     locator = doi or pmid or pmcid or elicit_id or openalex_id or semantic_scholar_id or url
     payload_hash = stable_hash(payload)
+    # A provider can still contribute safe bibliographic/abstract material when its only returned
+    # locator is a credential-bearing URL.  Retain that lower-authority material under a stable,
+    # non-reversible response identity; never persist the rejected URL itself.
+    locator = locator or f"{source_family.value}:payload:{payload_hash[:16]}"
     return TopicSourceRecord(
         source_record_id=f"topic-source-record-{stable_hash({'family': source_family, 'locator': locator, 'title': title})[:12]}",
         source_family=source_family,
@@ -1027,14 +1240,15 @@ def _record(
         semantic_scholar_id=semantic_scholar_id,
         source_locator=locator,
         venue=venue,
-        authors=authors or [],
+        authors=authors,
         cited_by_count=cited_by_count,
         confirmed_source_families=[source_family],
-        publication_types=[item for item in (publication_types or []) if item],
+        publication_types=publication_types,
         snippet=snippet[:800],
         relevance_score=relevance_score,
         metadata_quality_score=_metadata_quality(locator, title, year, snippet),
         source_payload_hash=payload_hash,
+        fulltext_rights_assertions=fulltext_rights_assertions or [],
     )
 
 
@@ -1056,17 +1270,17 @@ def _trace(
         trace_id=_trace_id(query, response),
         source_family=query.source_family,
         query_id=query.query_id,
-        request_url=request_url,
+        request_url=_safe_provider_url(request_url),
         request_method=request_method,
         request_body_hash=stable_hash(request_body) if request_body else "",
         http_status=http_status,
         response_hash=stable_hash(response),
         candidate_count=candidate_count,
-        warnings=warnings or [],
-        errors=errors or [],
-        rate_limit_limit=_header_value(headers, "X-RateLimit-Limit"),
-        rate_limit_remaining=_header_value(headers, "X-RateLimit-Remaining"),
-        rate_limit_reset=_header_value(headers, "X-RateLimit-Reset"),
+        warnings=[_safe_provider_text(item) for item in (warnings or [])],
+        errors=[_safe_provider_text(item) for item in (errors or [])],
+        rate_limit_limit=_safe_provider_text(_header_value(headers, "X-RateLimit-Limit")),
+        rate_limit_remaining=_safe_provider_text(_header_value(headers, "X-RateLimit-Remaining")),
+        rate_limit_reset=_safe_provider_text(_header_value(headers, "X-RateLimit-Reset")),
     )
 
 
@@ -1128,6 +1342,62 @@ def _select_r5_lane_preserving_records(
         selected.setdefault(_dedupe_key(record), record)
 
     for record in all_records:
+        if len(selected) >= max_records:
+            break
+        selected.setdefault(_dedupe_key(record), record)
+
+    return sorted(selected.values(), key=lambda item: (-_record_quality(item), item.title.lower()))
+
+
+def _select_generic_term_balanced_records(
+    *,
+    all_records: list[TopicSourceRecord],
+    relevant_records: list[TopicSourceRecord],
+    query_plan: TopicSourceQueryPlan,
+    max_records: int,
+) -> list[TopicSourceRecord]:
+    """Represent scope-term acquisition before filling the cap by the existing quality order.
+
+    This is a retention rule, not a relevance verdict. Only content-bearing records are entitled to
+    a term-first slot; semantic importance and the eight scientific dimensions remain model review.
+    """
+
+    if not all_records or max_records <= 0:
+        return []
+    term_by_query = {query.query_id: query.query for query in query_plan.queries}
+    terms: list[str] = []
+    for query in query_plan.queries:
+        if query.query not in terms:
+            terms.append(query.query)
+    relevant_keys = {_dedupe_key(record) for record in relevant_records}
+    selected: dict[str, TopicSourceRecord] = {}
+
+    # One deterministic round across scope terms. If the cap is smaller than the term set, this is
+    # the dataset-agnostic round-robin boundary. A duplicate work may have several term lineages but
+    # consumes only one record slot; try the next distinct candidate for that term when available.
+    for term in terms:
+        if len(selected) >= max_records:
+            break
+        candidates = sorted(
+            (
+                record
+                for record in all_records
+                if _record_has_content_evidence(record)
+                and any(term_by_query.get(query_id) == term for query_id in record.query_ids)
+            ),
+            key=lambda item: (
+                _dedupe_key(item) not in relevant_keys,
+                -_record_quality(item),
+                item.title.lower(),
+            ),
+        )
+        for record in candidates:
+            key = _dedupe_key(record)
+            if key not in selected:
+                selected[key] = record
+                break
+
+    for record in [*relevant_records, *all_records]:
         if len(selected) >= max_records:
             break
         selected.setdefault(_dedupe_key(record), record)
@@ -1339,8 +1609,53 @@ def _merge_records(existing: TopicSourceRecord, record: TopicSourceRecord) -> To
         )
         + min(0.1, 0.025 * (len(confirmations) - 1)),
         "relevance_score": max(primary.relevance_score, secondary.relevance_score),
+        "fulltext_rights_assertions": _merge_rights_assertions(
+            primary.fulltext_rights_assertions,
+            secondary.fulltext_rights_assertions,
+        ),
     }
-    return primary.model_copy(update=update)
+    return TopicSourceRecord.model_validate({**primary.model_dump(mode="python"), **update})
+
+
+def _safe_provider_url(value: object) -> str:
+    """Return a provider URL only when it is safe to persist.
+
+    This is intentionally a credential filter, not an OA or scientific-quality decision.  Ordinary
+    query URLs remain intact; signed/token-bearing URLs are omitted so the surrounding record can
+    still retain safe metadata and abstract text.
+    """
+
+    rendered = str(value or "").strip()
+    if rendered.lower().startswith(("http://", "https://")) and url_contains_sensitive_material(
+        rendered
+    ):
+        return ""
+    return rendered
+
+
+def _safe_provider_text(value: object) -> str:
+    """Retain provider prose while redacting only embedded credential-bearing URLs."""
+
+    return redact_sensitive_urls_from_text(str(value or ""))
+
+
+def _safe_provider_identifier(value: object) -> str:
+    """Retain an opaque provider identifier only when it carries no credential material."""
+
+    rendered = str(value or "").strip()
+    try:
+        assert_secret_free_persisted_value(rendered, path="provider_identifier")
+    except ValueError:
+        return ""
+    return rendered
+
+
+def _first_safe_provider_url(*values: object) -> str:
+    for value in values:
+        safe = _safe_provider_url(value)
+        if safe:
+            return safe
+    return ""
 
 
 def _record_quality(record: TopicSourceRecord) -> float:
@@ -1374,16 +1689,51 @@ def _record_needs_abstract_enrichment(record: TopicSourceRecord) -> bool:
     return len(snippet.split()) < 8
 
 
+def _record_has_content_evidence(record: TopicSourceRecord) -> bool:
+    """Whether the raw provider row contains text beyond title/publication metadata."""
+
+    if _record_is_secondary_publication_artifact(record):
+        return False
+    text_tokens = re.findall(r"[a-z]+", record.snippet.casefold())
+    if not text_tokens:
+        return False
+    metadata_text = " ".join(
+        [
+            record.title,
+            record.doi,
+            record.pmid,
+            record.openalex_id,
+            record.semantic_scholar_id,
+            record.url,
+            record.venue,
+            *record.publication_types,
+            str(record.year or ""),
+        ]
+    ).casefold()
+    metadata_tokens = set(re.findall(r"[a-z]+", metadata_text)) | {
+        "abstract",
+        "author",
+        "authors",
+        "citation",
+        "doi",
+        "issue",
+        "journal",
+        "metadata",
+        "pages",
+        "pmid",
+        "published",
+        "publisher",
+        "title",
+        "url",
+        "venue",
+        "volume",
+        "year",
+    }
+    return any(token not in metadata_tokens for token in text_tokens)
+
+
 def _retrieval_record_is_secondary_artifact(record: TopicSourceRecord) -> bool:
-    title = record.title.lower().strip()
-    if (
-        title.startswith("decision letter:")
-        or title.startswith("author response:")
-        or title.startswith("reviewer #")
-        or title.startswith("elife assessment:")
-        or "(public review)" in title
-        or "public review:" in title
-    ):
+    if _record_is_secondary_publication_artifact(record):
         return True
     if "10.3389/conf." in record.doi.lower():
         return True
@@ -1400,6 +1750,20 @@ def _retrieval_record_is_secondary_artifact(record: TopicSourceRecord) -> bool:
             "dance/movement",
             "embryonic stem",
         ]
+    )
+
+
+def _record_is_secondary_publication_artifact(record: TopicSourceRecord) -> bool:
+    """Domain-neutral structural rows that cannot consume a term-first evidence slot."""
+
+    title = record.title.lower().strip()
+    return (
+        title.startswith("decision letter:")
+        or title.startswith("author response:")
+        or title.startswith("reviewer #")
+        or title.startswith("elife assessment:")
+        or "(public review)" in title
+        or "public review:" in title
     )
 
 

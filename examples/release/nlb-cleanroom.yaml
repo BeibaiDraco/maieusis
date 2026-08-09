@@ -1,0 +1,108 @@
+# NOT A STARTING POINT. This is a byte-qualification profile for the release cleanroom, reduced on
+# purpose to two families by two variants so the published package can be proved to have run
+# untouched. It demonstrates nothing about scientific breadth and will not reproduce the published
+# demonstrations, which used six families.
+#
+# To run Maieusis for science, use the profile `maieusis init` writes into your project.
+#
+# Release-qualification leg 3 of 3: NLB MC_Maze-S, Claude Code planner, fresh 12-PDF PaperBank.
+version: maieusis_project_config/v1
+mode: standard
+
+paperbank:
+  inbox_dir: /ABSOLUTE/PATH/TO/NLB/PAPERS
+  extraction: {provider: openai, model: "gpt-5.6-luna"}
+  parser: poppler_text
+  evidence_mode: source_span
+  max_workers: 4
+  cited_literature: true
+  select_key_citations: true
+  external_reference_fallback: true
+  min_local_reference_count: 10
+  crossref_mailto: ""
+  openalex_email: ""
+  citation_prompt_char_budget: 180000
+
+dataset:
+  seed:
+    dataset_id: dandi-000140-nlb-mc-maze-s
+    link: https://dandiarchive.org/dandiset/000140
+    docs:
+      - /ABSOLUTE/PATH/TO/CLEAN_PUBLIC_RC_CHECKOUT/demos/nlb/DATASET_NOTES.md
+  inspection_runtime:
+    dataset_root: /ABSOLUTE/PATH/TO/NLB/DATASET
+    dataset_access_mode: external_readonly
+    inspection_python: /ABSOLUTE/PATH/TO/NLB/INSPECTION/VENV/bin/python
+    inspection_command: ""
+    inspection_pythonpath: ""
+    inspection_extra_env:
+      PYNWB_NO_CACHE_DIR: "1"
+      PYTHONDONTWRITEBYTECODE: "1"
+    source_tree_root: /ABSOLUTE/PATH/TO/CLEAN_PUBLIC_RC_CHECKOUT
+    max_turns: 60
+    timeout_seconds: 2400
+  allowed_inspection_resources:
+    - local NLB MC Maze dataset files and metadata
+    - DANDI 000140 documentation
+    - dataset repository code
+  official_online_resources:
+    - https://dandiarchive.org/dandiset/000140
+    - https://neurallatents.github.io/
+    - https://neurallatents.github.io/datasets.html
+
+research_intent:
+  mode: topic_conditioned
+  topic_terms:
+    - neural population geometry
+    - dynamical systems models
+    - neural dynamics
+    - neural population code
+    - neural co-variability
+    - neural manifolds
+    - representational geometry
+    - neural circuit models
+  topic_description: ""
+  seed_question: ""
+  novelty_distance: adjacent
+
+models:
+  pattern: {provider: openai, model: "gpt-5.6-sol"}
+  questioner: {provider: openai, model: "gpt-5.6-sol"}
+  narrator: {provider: openai, model: "gpt-5.6-luna"}
+  topic: {provider: openai, model: "gpt-5.6-terra"}
+  owner: {provider: openai, model: "gpt-5.6-terra"}
+  reviewer: {provider: anthropic, model: "claude-sonnet-5"}
+  novelty_reviewer: {provider: openai, model: "gpt-5.6-terra"}
+  coding_host: claude_code
+  coding_model: claude-opus-4-8
+  coding_reasoning_effort: high
+  allow_pro_model: true
+
+literature:
+  enabled: true
+  openalex_email: ""
+  fulltext_enrichment: true
+  source_profile: public
+
+novelty:
+  enabled: true
+  direct_recap_threshold: 0.9
+  close_prior_threshold: 0.7
+  max_candidates: 5
+  web_grounding:
+    enabled: true
+    scout: {provider: anthropic, model: "claude-sonnet-5"}
+    max_searches_per_scout: 3
+    max_leads_per_scout: 5
+    max_output_tokens: 21000
+    rate_card: anthropic_direct_web_search_20250305
+    hard_run_tool_spend_ceiling_micro_usd: 1000000
+
+run:
+  output_root: /ABSOLUTE/PATH/TO/QUALIFICATION/RUNS/nlb
+  shortlist_path: null
+  target_family_ids: []
+  max_families: 2
+  variants_per_family: 2
+  max_parallel_family_workers: 2
+  max_revise_rounds: 3

@@ -16,6 +16,10 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from ..enums import EvidenceMaturity
 from .dataset import EvidenceRequest
+from .external_evidence import (
+    ExternalEvidenceRightsAssertion,
+    assert_secret_free_persisted_value,
+)
 from .paper_case import PaperType
 
 
@@ -146,6 +150,20 @@ class TopicSourceRecord(BaseModel):
     relevance_score: float = 0.0
     metadata_quality_score: float = 0.0
     source_payload_hash: str = ""
+    fulltext_rights_assertions: list[ExternalEvidenceRightsAssertion] = Field(default_factory=list)
+
+    @model_validator(mode="before")
+    @classmethod
+    def refuse_persisted_credentials(cls, value: Any) -> Any:
+        """Reject credential material before nested source data can be serialized.
+
+        Topic-source rows are written to YAML and later copied into model prompts.  Scan the raw
+        mapping rather than only parsed URL fields so a signed locator, provider snippet, or nested
+        rights assertion cannot survive through an otherwise-valid record.
+        """
+
+        assert_secret_free_persisted_value(value, path=cls.__name__)
+        return value
 
     @model_validator(mode="after")
     def require_locator_or_url(self) -> TopicSourceRecord:
@@ -160,7 +178,16 @@ class TopicSourceRecord(BaseModel):
             or self.source_locator
         ):
             raise ValueError("TopicSourceRecord requires at least one locator")
+        assertion_ids = [item.assertion_id for item in self.fulltext_rights_assertions]
+        if len(assertion_ids) != len(set(assertion_ids)):
+            raise ValueError("TopicSourceRecord fulltext rights assertion IDs must be unique")
         return self
+
+    @property
+    def eligible_fulltext_rights_assertions(self) -> list[ExternalEvidenceRightsAssertion]:
+        """Explicit source-bound assertions that may authorize a short excerpt."""
+
+        return [item for item in self.fulltext_rights_assertions if item.authorizes_short_excerpt]
 
 
 class TopicSourceSearchTrace(BaseModel):
@@ -181,6 +208,12 @@ class TopicSourceSearchTrace(BaseModel):
     rate_limit_remaining: str = ""
     rate_limit_reset: str = ""
 
+    @model_validator(mode="before")
+    @classmethod
+    def refuse_persisted_credentials(cls, value: Any) -> Any:
+        assert_secret_free_persisted_value(value, path=cls.__name__)
+        return value
+
 
 class TopicSourceTable(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -192,6 +225,13 @@ class TopicSourceTable(BaseModel):
     search_traces: list[TopicSourceSearchTrace] = Field(default_factory=list)
     max_records: int = Field(default=20, ge=1, le=100)
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+    @model_validator(mode="before")
+    @classmethod
+    def refuse_persisted_credentials(cls, value: Any) -> Any:
+        # Defense in depth for deserializers receiving already-constructed/bypassed child models.
+        assert_secret_free_persisted_value(value, path=cls.__name__)
+        return value
 
     @model_validator(mode="after")
     def enforce_record_cap(self) -> TopicSourceTable:

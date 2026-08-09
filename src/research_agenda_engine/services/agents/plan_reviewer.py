@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from ...assets import resolve_asset
 from ...provenance import stable_hash
+from ...providers.models.base import DEFAULT_EFFORT, DEFAULT_THINKING
 from ...providers.scientific_agents import (
     ScientificAgentProvider,
     ScientificAgentSession,
@@ -34,7 +35,7 @@ from .reviewer_base import (
     build_scientific_reviewer_provider_from_env,
 )
 
-PLAN_FIDELITY_REVIEWER_PROMPT_VERSION = "plan_fidelity_reviewer/v4"
+PLAN_FIDELITY_REVIEWER_PROMPT_VERSION = "plan_fidelity_reviewer/v6"
 
 
 class PlanFidelityReviewerTurnInput(BaseModel):
@@ -69,6 +70,8 @@ def build_plan_fidelity_reviewer_provider_from_env(
     provider: Literal["openai", "anthropic"] | None = None,
     allow_pro_model: bool = False,
     project_root: str | Path | None = None,
+    thinking: str = DEFAULT_THINKING,
+    effort: str = DEFAULT_EFFORT,
 ) -> ScientificAgentProvider:
     """Build a live independent plan reviewer provider from runtime env files."""
     return build_scientific_reviewer_provider_from_env(
@@ -78,6 +81,8 @@ def build_plan_fidelity_reviewer_provider_from_env(
         provider=provider,
         allow_pro_model=allow_pro_model,
         project_root=project_root,
+        thinking=thinking,
+        effort=effort,
     )
 
 

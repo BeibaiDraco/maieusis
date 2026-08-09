@@ -59,18 +59,28 @@ def gather_and_fuse_dataset_narrative(
     skipped: dict[str, str] = {}
 
     if seed.link:
-        sources[SourceKind.DOCUMENTATION] = build_documentation_coarse_facts(
-            seed=seed, provider=doc_provider, max_prompt_chars=max_prompt_chars
-        )
+        try:
+            sources[SourceKind.DOCUMENTATION] = build_documentation_coarse_facts(
+                seed=seed, provider=doc_provider, max_prompt_chars=max_prompt_chars
+            )
+        except Exception as exc:
+            # CLIM-07: an unusable Source-A seed degrades LOCALLY, exactly like Sources C and D —
+            # it must never erase safe sibling contributions from the fused proposal narrative.
+            skipped[SourceKind.DOCUMENTATION.value] = f"{type(exc).__name__}: {exc}"
     else:
         skipped[SourceKind.DOCUMENTATION.value] = "inactive: no dataset seed link supplied"
     if seed.docs:
         try:
-            sources[SourceKind.USER_DESCRIPTION] = build_user_description_coarse_facts(
+            facts, doc_exclusions = build_user_description_coarse_facts(
                 seed=seed, provider=doc_provider, max_prompt_chars=max_prompt_chars
             )
+            sources[SourceKind.USER_DESCRIPTION] = facts
         except UnreadableUserDocumentationError as exc:
             skipped[SourceKind.USER_DESCRIPTION.value] = str(exc)
+        else:
+            # CLIM-08: per-document exclusions stay visible even when the source succeeds.
+            for doc_name, reason in doc_exclusions.items():
+                skipped[f"{SourceKind.USER_DESCRIPTION.value}.doc:{doc_name}"] = reason
     else:
         skipped[SourceKind.USER_DESCRIPTION.value] = "inactive: no user docs supplied"
     if local_sample_facts is not None:

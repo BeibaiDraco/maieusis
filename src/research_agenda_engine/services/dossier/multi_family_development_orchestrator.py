@@ -88,6 +88,7 @@ from .development_review_dossier import (
     DEFAULT_REVIEW_GUIDANCE,
     DevelopmentMaterialRevisionDeferred,
     DevelopmentReviewEscalated,
+    DevelopmentReviewIncomplete,
     DevelopmentReviewRejected,
     DevelopmentRevisionBudgetExhausted,
     DevelopmentRevisionTerminal,
@@ -105,6 +106,7 @@ from .generic_family_dossier import (
 from .generic_human_review_override import emit_generic_human_review_override_template
 from .multi_family_coordinator import (
     build_multi_family_dossier_manifest,
+    build_provider_warning_receipt,
     build_queued_family_record,
     render_aggregate_report,
     validate_aggregate_report_text,
@@ -796,6 +798,8 @@ def _run_one_family_with_factory(
                 "available, and this family closed with a provider warning."
             ),
             exc=exc,
+            actor="planner",
+            stage="planner_host_start",
         )
 
 
@@ -848,6 +852,9 @@ def _run_one_family(
             ),
             exc=exc,
             api_failures=1,
+            actor="owner_or_independent_reviewer",
+            stage="owner_reviewer_dialogue",
+            bounded_retry_used=True,
         )
     except CodingAgentProviderUnavailable as exc:
         try:
@@ -868,6 +875,8 @@ def _run_one_family(
             ),
             exc=exc,
             api_failures=1,
+            actor="planner",
+            stage="bounded_planning",
         )
     except PublicDossierRevisionRequired as exc:
         return _dossier_closure_family_result(
@@ -1068,6 +1077,35 @@ def _generic_failed_validation_result(
     )
 
 
+def _record_family_terminal_cause(
+    *,
+    output_root: Path,
+    run_id: str,
+    family: QuestionFamily,
+    status: FamilyDossierStatus,
+    exc: Exception,
+) -> None:
+    """Name the exception class that closed a family, in the private diagnostics tree only.
+
+    Best-effort by design: a diagnostic that cannot be written must never turn a recoverable
+    family warning into a failure. Only the class name and, for a typed provider failure, our own
+    finite failure kind are recorded — never a message, which could quote model or provider text.
+    """
+
+    try:
+        kind = getattr(exc, "kind", None)
+        kind_value = getattr(kind, "value", "")
+        classification = type(exc).__name__ + (f"[{kind_value}]" if kind_value else "")
+        destination = (
+            Path(output_root) / run_id / "private_diagnostics" / "family_terminal_cause.txt"
+        )
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        with destination.open("a", encoding="utf-8") as handle:
+            handle.write(f"{family.question_family_id}\t{status.value}\t{classification}\n")
+    except Exception:
+        return
+
+
 def _recoverable_family_terminal_result(
     *,
     output_root: Path,
@@ -1078,8 +1116,31 @@ def _recoverable_family_terminal_result(
     public_blocker: str,
     exc: Exception,
     api_failures: int = 0,
+    actor: str | None = None,
+    stage: str = "",
+    bounded_retry_used: bool = False,
 ) -> MultiFamilyDevelopmentFamilyResult:
     """Write a digest-bound, public-safe terminal dossier for one recoverable family warning."""
+    # The public blocker is deliberately cause-neutral, but discarding the cause entirely left four
+    # of six families closing as failed_validation with no way to learn why (live-found
+    # 2026-07-25). The classification goes to the private diagnostics tree only, and is built from
+    # host-side identity — an exception class name — so no model or provider text can reach it.
+    _record_family_terminal_cause(
+        output_root=output_root, run_id=run_id, family=family, status=status, exc=exc
+    )
+    # Metadata threading only (CLIM-12): provider-failure call sites identify themselves via
+    # actor/stage and the typed receipt is built outside this red-line module.
+    provider_warning = (
+        build_provider_warning_receipt(
+            actor=actor,
+            stage=stage,
+            exc=exc,
+            api_failures=api_failures,
+            bounded_retry_used=bounded_retry_used,
+        )
+        if actor is not None
+        else None
+    )
     try:
         reloaded = QuestionFamilyBranchManager(output_root, run_id=run_id).load_branch(
             branch.branch_id
@@ -1094,6 +1155,7 @@ def _recoverable_family_terminal_result(
             family_title=family.title,
             status=status,
             blockers=[public_blocker],
+            provider_warning=provider_warning,
         )
     except Exception:
         # Last-resort sibling isolation: the envelope layer can still render a safe family fallback
@@ -1126,6 +1188,16 @@ def _hard_integrity_family_result(
     exc: Exception,
 ) -> MultiFamilyDevelopmentFamilyResult:
     """Close one unsafe family without promoting planner-authored content or stopping siblings."""
+    # Over a hundred distinct integrity boundaries raise into here and the public blocker is one
+    # fixed sentence, so without this the whole family closes with no way to learn which boundary
+    # fired. Its sibling terminal already records the cause; this one did not.
+    _record_family_terminal_cause(
+        output_root=output_root,
+        run_id=run_id,
+        family=family,
+        status=FamilyDossierStatus.HARD_INTEGRITY_TERMINAL,
+        exc=exc,
+    )
     try:
         reloaded = QuestionFamilyBranchManager(output_root, run_id=run_id).load_branch(
             branch.branch_id
@@ -1546,6 +1618,24 @@ def _run_plan_family_with_real_review(
             handoff_manifest_path=handoff_manifest_path,
             branch_manager=branch_manager,
         )
+    except DevelopmentReviewIncomplete as exc:
+        # The only revise-loop terminal that had no handler. A reviewer returning
+        # ``review_complete: false`` is correctly classified upstream and correctly confers no
+        # authority — but with nothing catching the typed terminal it fell to the generic handler
+        # and was labelled failed_validation, telling the reader the PLANNING MATERIAL could not be
+        # validated when in fact the REVIEW never finished. It is an infrastructure outcome, not a
+        # judgement on the plan, and the plan is untouched and re-reviewable.
+        return _revise_loop_terminal_result(
+            output_root=output_root,
+            run_id=run_id,
+            status=FamilyDossierStatus.INFRASTRUCTURE_INCOMPLETE,
+            exc=exc,
+            branch=branch,
+            family=family,
+            source_snapshot_path=source_snapshot_path,
+            handoff_manifest_path=handoff_manifest_path,
+            branch_manager=branch_manager,
+        )
     except DevelopmentReviewEscalated as exc:
         return _revise_loop_terminal_result(
             output_root=output_root,
@@ -1859,6 +1949,12 @@ def _revise_loop_blockers(
         )
     elif status == FamilyDossierStatus.REJECTED:
         blockers.append("A reviewer rejected the plan (honest terminal).")
+    elif status == FamilyDossierStatus.INFRASTRUCTURE_INCOMPLETE:
+        blockers.append(
+            "A reviewer returned an incomplete review artifact, which confers no accept, "
+            "revision, or rejection authority. This says nothing about the plan itself: the "
+            "planning material is untouched and can be reviewed again."
+        )
     if exc.required_changes:
         blockers.append("Requested changes: " + "; ".join(exc.required_changes))
     blockers.append("Downstream compatibility remains unavailable pending explicit authorization.")
@@ -2087,6 +2183,13 @@ def _rejection_outcome_packet(
             _variant_scientific_outcome(variant, grounding=grounding)
             for variant in source_snapshot.variants
         ],
+        # The reason and the alternatives ARE the deliverable of a scientific "no"; a packet
+        # preserving only the subtype enum ships a bare label, which is the shepherd contract's
+        # named failure case. Verbatim, stripped of whitespace only -- no reformatting.
+        terminal_reason=rejection.reason.strip(),
+        alternatives_for_future_data=[
+            item.strip() for item in rejection.alternatives_for_future_data if item.strip()
+        ],
         rejection_message_id=rejection.message_id,
         limitations=[
             "Development-mode only.",
@@ -2137,6 +2240,10 @@ def _escalation_outcome_packet(
             _variant_scientific_outcome(variant, grounding=grounding)
             for variant in source_snapshot.variants
         ],
+        # Wired on the escalation lane too: a field honored on one path and defaulted on the
+        # others reproduces the very defect it was added to remove. An escalation terminal with no
+        # rationale is the same bare label.
+        terminal_reason=escalation.why_agents_cannot_resolve.strip(),
         escalation_message_id=escalation.message_id,
         limitations=[
             "Development-mode only.",

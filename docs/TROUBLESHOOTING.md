@@ -28,7 +28,7 @@ maieusis --help
 If provider, MCP, or PDF imports are missing, reinstall the needed extras:
 
 ```bash
-python -m pip install "maieusis[openai,anthropic,mcp,pdf]==0.1.0"
+python -m pip install "maieusis[openai,anthropic,mcp,pdf]==0.1.1"
 ```
 
 Do not run from inside a different Maieusis source checkout unless that is the
@@ -127,8 +127,12 @@ Check each part separately:
 - `source_tree_root` must be a Maieusis Git checkout with a valid `HEAD`. It is
   the source-integrity surface, not the dataset-code inspection checkout. Use a
   clean checkout unless you intentionally want uncommitted source bytes
-  included in the run identity. If the field is omitted, automatic detection
-  must find a Git checkout from the current environment.
+  included in the run identity. If you installed from the package index you do
+  not have one yet: `git clone https://github.com/BeibaiDraco/maieusis.git`
+  somewhere outside your project and point the field at it. Leaving the field
+  unset falls back to detecting a checkout from the current environment, which
+  in a fresh project directory finds nothing -- and running `git init` in your
+  own project does not help, because the checkout has to be Maieusis.
 
 Do not make the dataset writable merely to pass preflight.
 

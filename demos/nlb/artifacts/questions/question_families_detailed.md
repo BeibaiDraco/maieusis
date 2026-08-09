@@ -5,7 +5,7 @@ This page preserves every proposed family and variant, including options that we
 - Families proposed: 6
 - Authority ceiling: `provisional_inspiration`
 
-## Family 001: Invariant and reconfigured population geometry across reach demands
+## Family 001: Temporal organization of motor population geometry
 
 - Shortlist disposition: **Shortlisted for planning; this is not scientific approval**
 - Proposal review status: `model_generated`
@@ -13,178 +13,172 @@ This page preserves every proposed family and variant, including options that we
 
 ### Scientific background
 
-Tests whether population organization across straight and curved reaching reflects a conserved motor scaffold or demand-specific reconfiguration, while separating regional and temporal forms of invariance.
+Asks whether population geometry during delayed reaching reflects a continuous evolution of one movement representation or a qualitative reorganization between preparation and execution.
 
 ### Shared scientific tension
 
-Similar behavior can coexist with neural remapping, but a static geometric resemblance cannot establish whether motor-cortical population organization is conserved, input-bound, or phase-specific.
+Similar reach behavior could arise from a continuously evolving population trajectory or from distinct preparatory and execution-related organizations; descriptive geometry alone cannot distinguish these accounts.
 
 ### Family structure
 
-- Semantic axes: population_scope; target_contrast; discriminating_observation
-- Distinctions that should not be merged: Regional conservation across straight and curved reaches addresses generalization across behavioral demands.; Preparation-to-execution persistence addresses continuity across task phases; it could fail even if cross-trajectory geometry is conserved within each phase.
-- Proposal-stage uncertainties: Whether reach classes and task phases can be defined comparably.; Whether relational geometry is reliable enough for invariance tests.; Whether observed differences reflect neural organization or behavioral sampling.
-- Dataset assumptions: The release may contain repeated straight and curved reaches.; M1 and PMd activity may be comparable after authoritative region handling.; Exact timing and condition coverage require later verification.
+- Semantic axes: theoretical_tension; discriminating_observation; outcome_meaning
+- Distinctions that should not be merged: Continuous preservation and qualitative regime transition make incompatible predictions about temporal organization.; A transition claim requires localized evidence of changed functional relationships, whereas continuity requires preservation across time.
+- Proposal-stage uncertainties: Exact event timing and temporal coverage require later verification.; It is unknown whether sampling supports reliable distinction between continuous and transition accounts.; The cognitive meaning of preparation and execution cannot be inferred from geometry alone.
+- Dataset assumptions: The dataset may include time-resolved population activity spanning delayed preparation and execution.; Kinematic measurements may support later evaluation of behavioral confounds.
 
 ### Reviewed literature context used by the family
 
-- Hippocampal spatial representations can remap across environments while low-dimensional task-related population organization and temporal relationships are conserved during behavior that generalizes across contexts.
-  - Sources: [Conserved neural population geometry supports behavioral generalization (2024); 10.1101/2024.10.24.620127](https://doi.org/10.1101/2024.10.24.620127)
-- In a context-dependent human action-selection task, successful responses were preceded by a transient high-dimensional neural geometry that supported stable conjunctive subspaces for efficient readout.
-  - Sources: [A transient high-dimensional geometry affords stable conjunctive subspaces for efficient action selection (2024); 10.1038/s41467-024-52777-6](https://doi.org/10.1038/s41467-024-52777-6)
-- Relating neural activity to represented information remains methodologically underdetermined because investigators must specify which activity features matter, how the code operates, and how it contributes to adaptive computation.
-  - Sources: [Peeling the Onion of Brain Representations (2019); 10.1146/annurev-neuro-080317-061906](https://doi.org/10.1146/annurev-neuro-080317-061906)
+- Representational geometry, including representational distance-matrix approaches, provides an intermediate description for comparing neural representations across processing stages and relating representational format to cognitive and computational theories.
+  - Sources: [Representational geometry: integrating cognition, computation, and the brain (2013); 10.1016/j.tics.2013.06.007](https://doi.org/10.1016/j.tics.2013.06.007); [Neural population geometry: An approach for understanding biological and artificial neural networks (2021); 10.1016/j.conb.2021.10.010](https://doi.org/10.1016/j.conb.2021.10.010)
+- Linking population-level geometric descriptions to representational content and cognitive theory remains a central interpretive limitation; geometry can characterize format without by itself establishing a unique computational or cognitive mechanism.
+  - Sources: [Representational geometry: integrating cognition, computation, and the brain (2013); 10.1016/j.tics.2013.06.007](https://doi.org/10.1016/j.tics.2013.06.007); [Neural population geometry: An approach for understanding biological and artificial neural networks (2021); 10.1016/j.conb.2021.10.010](https://doi.org/10.1016/j.conb.2021.10.010)
 
-### Variant 001.001: regional scope test of geometric invariance
+### Variant 001.001: Continuous-organization account
 
 - Shortlist disposition: **Active for planning**
-- Distinction axes: population_scope, target_contrast
-- Distinct from sibling variants: This variant compares invariance across reach classes and regions; it does not ask whether geometry persists across preparation and execution.
+- Distinction axes: theoretical_tension, discriminating_observation, outcome_meaning
+- Distinct from sibling variants: This variant asks whether relational geometry is preserved through a continuous transformation; its sibling instead asks whether a discrete regime transition better explains the temporal organization.
 
 #### Question
 
-Is the population geometry distinguishing reach configurations conserved between straight and curved reaches within M1 and PMd, or selectively reconfigured in one region?
+Does delayed-reach population activity preserve a common task-relevant geometry while continuously transforming from preparation into execution?
 
 #### Scientific tension and why it matters
 
-A conserved geometry could provide a common scaffold for diverse reaches, whereas region-selective reconfiguration could indicate different representational roles for PMd and M1.
+A continuous dynamical account predicts preservation of task relationships through time, whereas a phase-specific account predicts replacement or substantial reorganization of those relationships.
 
-The question tests structure rather than activity magnitude and asks whether apparent geometric conservation has a regional boundary.
+Evidence for preserved relationships would connect time-varying neural activity to an organizing principle rather than treating preparatory and execution activity as unrelated descriptive states.
 
 #### Proposal-stage novelty hypothesis — not a verdict
 
-An adjacent contribution would test conserved geometry in a motor-cortical task contrast while explicitly comparing its regional scope.
+The adjacent contribution would be to test preservation of movement-condition relationships across delayed preparation and execution in a maze-reaching setting rather than merely describing separate low-dimensional trajectories.
 
 #### Relevant literature
 
-- Hippocampal spatial representations can remap across environments while low-dimensional task-related population organization and temporal relationships are conserved during behavior that generalizes across contexts.
-  - Sources: [Conserved neural population geometry supports behavioral generalization (2024); 10.1101/2024.10.24.620127](https://doi.org/10.1101/2024.10.24.620127)
-- Relating neural activity to represented information remains methodologically underdetermined because investigators must specify which activity features matter, how the code operates, and how it contributes to adaptive computation.
-  - Sources: [Peeling the Onion of Brain Representations (2019); 10.1146/annurev-neuro-080317-061906](https://doi.org/10.1146/annurev-neuro-080317-061906)
+- Representational geometry, including representational distance-matrix approaches, provides an intermediate description for comparing neural representations across processing stages and relating representational format to cognitive and computational theories.
+  - Sources: [Representational geometry: integrating cognition, computation, and the brain (2013); 10.1016/j.tics.2013.06.007](https://doi.org/10.1016/j.tics.2013.06.007); [Neural population geometry: An approach for understanding biological and artificial neural networks (2021); 10.1016/j.conb.2021.10.010](https://doi.org/10.1016/j.conb.2021.10.010)
+- Linking population-level geometric descriptions to representational content and cognitive theory remains a central interpretive limitation; geometry can characterize format without by itself establishing a unique computational or cognitive mechanism.
+  - Sources: [Representational geometry: integrating cognition, computation, and the brain (2013); 10.1016/j.tics.2013.06.007](https://doi.org/10.1016/j.tics.2013.06.007); [Neural population geometry: An approach for understanding biological and artificial neural networks (2021); 10.1016/j.conb.2021.10.010](https://doi.org/10.1016/j.conb.2021.10.010)
 
 #### Closest known work
 
-- Hippocampal spatial representations can remap across environments while low-dimensional task-related population organization and temporal relationships are conserved during behavior that generalizes across contexts.
-  - Sources: [Conserved neural population geometry supports behavioral generalization (2024); 10.1101/2024.10.24.620127](https://doi.org/10.1101/2024.10.24.620127)
-- A recent analysis operationalizes geometric stability as split-half reproducibility of pairwise stimulus-distance structure, rather than treating preservation of population centroids as the primary stability criterion.
-  - Sources: [Recurrent circuitry stabilizes representational geometry across neural circuits (2026); 10.21203/rs.3.rs-9581425/v1](https://doi.org/10.21203/rs.3.rs-9581425/v1)
+- Representational geometry, including representational distance-matrix approaches, provides an intermediate description for comparing neural representations across processing stages and relating representational format to cognitive and computational theories.
+  - Sources: [Representational geometry: integrating cognition, computation, and the brain (2013); 10.1016/j.tics.2013.06.007](https://doi.org/10.1016/j.tics.2013.06.007); [Neural population geometry: An approach for understanding biological and artificial neural networks (2021); 10.1016/j.conb.2021.10.010](https://doi.org/10.1016/j.conb.2021.10.010)
+- How stable task-relevant population representations are preserved across contexts when spatial coding remaps remains an open mechanistic question, with current evidence in the supplied set limited to a hippocampal conditioning study and theory-oriented work.
+  - Sources: [Conserved neural population geometry supports behavioral generalization (2024); 10.1101/2024.10.24.620127](https://doi.org/10.1101/2024.10.24.620127); [Neural population geometry and optimal coding of tasks with shared latent structure (2026); 10.1038/s41593-025-02183-y](https://doi.org/10.1038/s41593-025-02183-y)
 
 #### Dataset leverage hypothesis — not a feasibility certification
 
-The broad presence of M1 and PMd activity and straight and curved reaching may allow later planning of region-stratified geometric comparisons.
+The described delayed-reaching structure and paired population and kinematic measurements may allow a later planner to compare task relationships across broad preparatory and movement periods.
 
 #### Competing explanations
 
-- A common reach scaffold is conserved across trajectory classes in both regions.
-- Geometry is reconfigured because straight and curved reaches impose different planning or control demands.
-- Any apparent regional difference reflects unequal measurement reliability or kinematic sampling rather than organization.
+- Apparent continuity is inherited from smooth hand or cursor kinematics rather than neural organization.
+- Preparation and execution use distinct representations that only appear connected after dimensional reduction.
+- A common geometry reflects generic temporal autocorrelation rather than task-relevant structure.
 
 #### Discriminating observation
 
-Reliable preservation of independently estimated relational geometry across trajectory classes in both regions would favor a shared scaffold; selective preservation in one region would favor a regional boundary.
+Task-condition relationships remain predictively comparable across preparation and execution after later planning accounts for measured movement covariates and contrasts them with phase-specific alternatives.
 
 #### What different outcomes would mean
 
-- Positive: Conservation in both regions would support the predictive claim that motor population organization generalizes across reach demands despite changes in activity patterns.
-- Negative: Reliable geometry specific to each trajectory class would argue that the organization is demand-bound rather than invariant.
-- Null: Indeterminate or unreliable geometry would leave conservation unresolved and shift attention to measurement stability and construct definition.
+- Positive: A positive result would support a continuous organizing geometry linking preparation to execution.
+- Negative: A negative result with reliable phase-specific geometries would favor representational reorganization between preparation and execution.
+- Null: An indeterminate result would leave continuity unresolved and constrain claims to phase-local descriptions.
 
 #### Ambiguities
 
-- population geometry
-- conservation
-- straight versus curved reach demand
-- regional boundary
+- common geometry
+- continuous transformation
+- task relevance
+- preparation and execution periods
 
 #### Planning challenges
 
-- Defining comparable behavioral conditions without conflating trajectory shape with other movement properties.
-- Estimating geometry without imposing the predicted structure.
-- Separating biological reconfiguration from finite-sample instability.
+- Later verification of event timing and trial coverage
+- Separating temporal smoothness from geometric preservation
+- Uncertainty and sampling sensitivity of population-geometry estimates
 
 #### Dataset assumptions
 
-- Reach geometry may be recoverable at a scientifically useful level.
-- M1 and PMd populations may support comparable reliability assessment.
-- A later planner must verify condition coverage and region assignments.
+- The release may contain distinguishable delayed-preparation and movement periods.
+- Neural and behavioral measurements may be alignable at sufficient temporal resolution.
+- A later planner must verify repeated condition coverage.
 
 
-### Variant 001.002: temporal scope test of geometric invariance
+### Variant 001.002: Regime-transition account
 
 - Shortlist disposition: **Active for planning**
-- Distinction axes: population_scope, discriminating_observation
-- Distinct from sibling variants: This variant tests preservation across preparation and execution; its decisive observation is cross-phase correspondence rather than cross-trajectory regional conservation.
+- Distinction axes: theoretical_tension, discriminating_observation, outcome_meaning
+- Distinct from sibling variants: This variant requires evidence for a qualitative change in dynamical regime and behavioral meaning, not merely preservation of geometry through a continuous trajectory.
 
 #### Question
 
-Does reach-related relational geometry persist from preparation into movement execution, and is such temporal persistence shared by PMd and M1?
+Is delayed reaching organized by a qualitative population-dynamics transition from movement preparation to execution rather than by one continuous regime?
 
 #### Scientific tension and why it matters
 
-Preparation may establish an enduring geometric scaffold for execution, or preparatory and movement activity may occupy scientifically distinct organizations.
+A regime-transition account predicts a localized change in how population state relates to forthcoming versus ongoing movement, while a single-regime account predicts gradual evolution without a discriminating transition.
 
-Temporal persistence would constrain theories linking preparatory state organization to movement generation without treating temporal continuity as causal proof.
+Identifying a transition tied to changing behavioral meaning would constrain dynamical accounts more strongly than observing curved latent trajectories alone.
 
 #### Proposal-stage novelty hypothesis — not a verdict
 
-The question extends geometric invariance to the preparation-to-execution boundary and compares its regional scope.
+The question transfers a controlled regime-transition test to delayed maze reaching while requiring correspondence with changing movement-related meaning.
 
 #### Relevant literature
 
-- Hippocampal spatial representations can remap across environments while low-dimensional task-related population organization and temporal relationships are conserved during behavior that generalizes across contexts.
-  - Sources: [Conserved neural population geometry supports behavioral generalization (2024); 10.1101/2024.10.24.620127](https://doi.org/10.1101/2024.10.24.620127)
-- In a context-dependent human action-selection task, successful responses were preceded by a transient high-dimensional neural geometry that supported stable conjunctive subspaces for efficient readout.
-  - Sources: [A transient high-dimensional geometry affords stable conjunctive subspaces for efficient action selection (2024); 10.1038/s41467-024-52777-6](https://doi.org/10.1038/s41467-024-52777-6)
-- Relating neural activity to represented information remains methodologically underdetermined because investigators must specify which activity features matter, how the code operates, and how it contributes to adaptive computation.
-  - Sources: [Peeling the Onion of Brain Representations (2019); 10.1146/annurev-neuro-080317-061906](https://doi.org/10.1146/annurev-neuro-080317-061906)
+- Representational geometry, including representational distance-matrix approaches, provides an intermediate description for comparing neural representations across processing stages and relating representational format to cognitive and computational theories.
+  - Sources: [Representational geometry: integrating cognition, computation, and the brain (2013); 10.1016/j.tics.2013.06.007](https://doi.org/10.1016/j.tics.2013.06.007); [Neural population geometry: An approach for understanding biological and artificial neural networks (2021); 10.1016/j.conb.2021.10.010](https://doi.org/10.1016/j.conb.2021.10.010)
+- Linking population-level geometric descriptions to representational content and cognitive theory remains a central interpretive limitation; geometry can characterize format without by itself establishing a unique computational or cognitive mechanism.
+  - Sources: [Representational geometry: integrating cognition, computation, and the brain (2013); 10.1016/j.tics.2013.06.007](https://doi.org/10.1016/j.tics.2013.06.007); [Neural population geometry: An approach for understanding biological and artificial neural networks (2021); 10.1016/j.conb.2021.10.010](https://doi.org/10.1016/j.conb.2021.10.010)
 
 #### Closest known work
 
-- Hippocampal spatial representations can remap across environments while low-dimensional task-related population organization and temporal relationships are conserved during behavior that generalizes across contexts.
-  - Sources: [Conserved neural population geometry supports behavioral generalization (2024); 10.1101/2024.10.24.620127](https://doi.org/10.1101/2024.10.24.620127)
-- In a context-dependent human action-selection task, successful responses were preceded by a transient high-dimensional neural geometry that supported stable conjunctive subspaces for efficient readout.
-  - Sources: [A transient high-dimensional geometry affords stable conjunctive subspaces for efficient action selection (2024); 10.1038/s41467-024-52777-6](https://doi.org/10.1038/s41467-024-52777-6)
+- Representational geometry, including representational distance-matrix approaches, provides an intermediate description for comparing neural representations across processing stages and relating representational format to cognitive and computational theories.
+  - Sources: [Representational geometry: integrating cognition, computation, and the brain (2013); 10.1016/j.tics.2013.06.007](https://doi.org/10.1016/j.tics.2013.06.007); [Neural population geometry: An approach for understanding biological and artificial neural networks (2021); 10.1016/j.conb.2021.10.010](https://doi.org/10.1016/j.conb.2021.10.010)
 
 #### Dataset leverage hypothesis — not a feasibility certification
 
-Delayed reaching and activity from PMd and M1 may permit later assessment of whether reach relationships are preserved across broad task phases.
+The broad delayed-task narrative and time-resolved spiking and movement measurements could support later inspection of whether a candidate transition separates preparatory from execution-related relationships.
 
 #### Competing explanations
 
-- Preparation and execution share a relational scaffold whose population patterns transform without losing reach relationships.
-- Execution reorganizes geometry because movement-related feedback and control dominate.
-- Apparent persistence is inherited from stable behavioral differences rather than neural organization.
+- An apparent transition is caused by movement onset or another measured behavioral change rather than a neural processing regime.
+- Population dynamics evolve continuously but appear discontinuous because of sampling or model constraints.
+- Different trial contexts are pooled, producing an artificial state transition.
 
 #### Discriminating observation
 
-Cross-phase preservation of independently estimated reach relationships, beyond within-phase reliability and behavioral similarity, would favor a persistent scaffold; reliable phase-specific structures would favor reorganization.
+A reproducible change in population organization coincides with a change from predicting forthcoming movement to tracking ongoing movement and outperforms a continuous single-regime interpretation without being reducible to measured kinematics alone.
 
 #### What different outcomes would mean
 
-- Positive: Temporal preservation would support a predictive account in which preparation establishes organization retained during execution.
-- Negative: A reliable loss or inversion of reach relationships would support phase-specific population codes.
-- Null: Weak or inconsistent cross-phase correspondence would prevent choosing between persistence and reorganization.
+- Positive: A positive result would support a phase transition in the functional meaning of motor population dynamics.
+- Negative: A negative result would weaken the regime-transition account and favor continuous or condition-specific alternatives.
+- Null: An ambiguous transition estimate would leave the number and meaning of dynamical regimes unresolved.
 
 #### Ambiguities
 
-- preparation
-- execution
-- relational geometry
-- temporal persistence
+- qualitative transition
+- dynamical regime
+- movement preparation
+- functional meaning
 
 #### Planning challenges
 
-- Defining task phases from proposal-level information.
-- Avoiding circular selection of reach dimensions.
-- Controlling phase-dependent reliability and movement covariation.
+- Avoiding circular definition and validation of a transition
+- Verifying task-event timing
+- Distinguishing neural transition structure from movement onset and other covariates
 
 #### Dataset assumptions
 
-- A later planner may be able to identify comparable preparatory and movement periods.
-- Reach conditions may repeat sufficiently for reliability checks.
-- Temporal and behavioral coverage must be verified downstream.
+- The recordings may span both delayed preparation and movement execution.
+- Behavioral measurements may permit tests of motor covariates.
+- A later planner must establish whether temporal and trial coverage supports transition claims.
 
-## Family 002: Selective population coupling between PMd and M1
+## Family 002: Population geometry across straight and curved reaches
 
 - Shortlist disposition: **Shortlisted for planning; this is not scientific approval**
 - Proposal review status: `model_generated`
@@ -192,173 +186,178 @@ Cross-phase preservation of independently estimated reach relationships, beyond 
 
 ### Scientific background
 
-Asks whether PMd–M1 relationships are organized around reach-relevant dimensions rather than generic shared activity, with separate behavioral-demand and temporal-progression variants.
+Examines whether motor population representations preserve reusable movement structure across straight and curved maze contexts or remap in a context-specific manner.
 
 ### Shared scientific tension
 
-Cross-region association may reflect selective coordination of task-relevant dimensions, but it may instead arise from dominant local fluctuations, shared inputs, movement covariation, or generic predictability.
+Stable task-relevant representations may support generalization across trajectory contexts, but apparent stability could reflect shared kinematics, while remapping could reflect either useful context specialization or incidental differences.
 
 ### Family structure
 
-- Semantic axes: target_contrast; discriminating_observation; outcome_meaning
-- Distinctions that should not be merged: Task-dimension specificity can exist without temporal reorganization.; Temporal reorganization concerns changing coordination across phases even if each phase contains reach-relevant alignment.
-- Proposal-stage uncertainties: Whether M1 and PMd are jointly observed with suitable temporal comparability.; How reach-relevant dimensions should be independently defined.; Which matched controls can distinguish selective organization from shared drive.
-- Dataset assumptions: Cross-region population activity may support associational comparisons.; Behavioral measures may help characterize shared-input alternatives.; No causal or anatomical transmission claim is assumed.
+- Semantic axes: theoretical_tension; target_contrast; discriminating_observation; outcome_meaning
+- Distinctions that should not be merged: Conserved geometry and adaptive remapping are alternative organizations with different transfer predictions.; Cross-context reuse and context-specific predictive value imply different functional meanings.
+- Proposal-stage uncertainties: The granularity and balance of trajectory contexts are unknown.; Shared and context-specific kinematic factors require later operationalization.; Cross-context transfer must not be interpreted as biological mechanism by itself.
+- Dataset assumptions: The release may permit comparison of straight and curved reaches.; Neural and movement observations may be jointly usable after later verification.
 
 ### Reviewed literature context used by the family
 
-- In a context-dependent human action-selection task, successful responses were preceded by a transient high-dimensional neural geometry that supported stable conjunctive subspaces for efficient readout.
-  - Sources: [A transient high-dimensional geometry affords stable conjunctive subspaces for efficient action selection (2024); 10.1038/s41467-024-52777-6](https://doi.org/10.1038/s41467-024-52777-6)
-- Relating neural activity to represented information remains methodologically underdetermined because investigators must specify which activity features matter, how the code operates, and how it contributes to adaptive computation.
-  - Sources: [Peeling the Onion of Brain Representations (2019); 10.1146/annurev-neuro-080317-061906](https://doi.org/10.1146/annurev-neuro-080317-061906)
+- Analytic work links linear-readout generalization for tasks sharing latent structure to population statistics including dimensionality, factorization, and correlation structure.
+  - Sources: [Neural population geometry and optimal coding of tasks with shared latent structure (2026); 10.1038/s41593-025-02183-y](https://doi.org/10.1038/s41593-025-02183-y)
+- How stable task-relevant population representations are preserved across contexts when spatial coding remaps remains an open mechanistic question, with current evidence in the supplied set limited to a hippocampal conditioning study and theory-oriented work.
+  - Sources: [Conserved neural population geometry supports behavioral generalization (2024); 10.1101/2024.10.24.620127](https://doi.org/10.1101/2024.10.24.620127); [Neural population geometry and optimal coding of tasks with shared latent structure (2026); 10.1038/s41593-025-02183-y](https://doi.org/10.1038/s41593-025-02183-y)
+- Linking population-level geometric descriptions to representational content and cognitive theory remains a central interpretive limitation; geometry can characterize format without by itself establishing a unique computational or cognitive mechanism.
+  - Sources: [Representational geometry: integrating cognition, computation, and the brain (2013); 10.1016/j.tics.2013.06.007](https://doi.org/10.1016/j.tics.2013.06.007); [Neural population geometry: An approach for understanding biological and artificial neural networks (2021); 10.1016/j.conb.2021.10.010](https://doi.org/10.1016/j.conb.2021.10.010)
 
-### Variant 002.001: task-dimension specificity test
+### Variant 002.001: Cross-context invariance branch
 
 - Shortlist disposition: **Active for planning**
-- Distinction axes: target_contrast, discriminating_observation
-- Distinct from sibling variants: This variant asks which dimensions coordinate the regions across reach classes, not whether coordination changes over task time.
+- Distinction axes: target_contrast, discriminating_observation, outcome_meaning
+- Distinct from sibling variants: This variant treats cross-context predictive reuse as the critical outcome; the sibling treats context-dependent remapping and its possible behavioral relevance as the focal outcome.
 
 #### Question
 
-Are PMd–M1 population relationships selectively aligned with dimensions distinguishing straight from curved reaches, rather than with dominant local variability alone?
+Is a task-relevant population geometry conserved across straight and curved reaches in a way that supports cross-context prediction of movement?
 
 #### Scientific tension and why it matters
 
-Region-to-region association is scientifically meaningful only if it is specific to reach-relevant structure rather than a generic consequence of local variance.
+A reusable-code account predicts preserved relational structure and cross-context readout, whereas a context-specific account predicts limited transfer even when broad movement variables are shared.
 
-A specificity test would refine broad claims of interregional coordination without interpreting predictive alignment as causal transmission.
+The question links geometric stability to predictive generalization rather than equating visual similarity of latent spaces with functional reuse.
 
 #### Proposal-stage novelty hypothesis — not a verdict
 
-The contribution would contrast reach-relevant cross-region alignment with generic local population structure in motor cortex.
+The adjacent contribution would test whether geometry associated with reaching is conserved across barrier-dependent trajectory contexts and whether that conservation predicts cross-context movement readout.
 
 #### Relevant literature
 
-- Relating neural activity to represented information remains methodologically underdetermined because investigators must specify which activity features matter, how the code operates, and how it contributes to adaptive computation.
-  - Sources: [Peeling the Onion of Brain Representations (2019); 10.1146/annurev-neuro-080317-061906](https://doi.org/10.1146/annurev-neuro-080317-061906)
-- In a context-dependent human action-selection task, successful responses were preceded by a transient high-dimensional neural geometry that supported stable conjunctive subspaces for efficient readout.
-  - Sources: [A transient high-dimensional geometry affords stable conjunctive subspaces for efficient action selection (2024); 10.1038/s41467-024-52777-6](https://doi.org/10.1038/s41467-024-52777-6)
+- Analytic work links linear-readout generalization for tasks sharing latent structure to population statistics including dimensionality, factorization, and correlation structure.
+  - Sources: [Neural population geometry and optimal coding of tasks with shared latent structure (2026); 10.1038/s41593-025-02183-y](https://doi.org/10.1038/s41593-025-02183-y)
+- How stable task-relevant population representations are preserved across contexts when spatial coding remaps remains an open mechanistic question, with current evidence in the supplied set limited to a hippocampal conditioning study and theory-oriented work.
+  - Sources: [Conserved neural population geometry supports behavioral generalization (2024); 10.1101/2024.10.24.620127](https://doi.org/10.1101/2024.10.24.620127); [Neural population geometry and optimal coding of tasks with shared latent structure (2026); 10.1038/s41593-025-02183-y](https://doi.org/10.1038/s41593-025-02183-y)
+- Linking population-level geometric descriptions to representational content and cognitive theory remains a central interpretive limitation; geometry can characterize format without by itself establishing a unique computational or cognitive mechanism.
+  - Sources: [Representational geometry: integrating cognition, computation, and the brain (2013); 10.1016/j.tics.2013.06.007](https://doi.org/10.1016/j.tics.2013.06.007); [Neural population geometry: An approach for understanding biological and artificial neural networks (2021); 10.1016/j.conb.2021.10.010](https://doi.org/10.1016/j.conb.2021.10.010)
 
 #### Closest known work
 
-- In a context-dependent human action-selection task, successful responses were preceded by a transient high-dimensional neural geometry that supported stable conjunctive subspaces for efficient readout.
-  - Sources: [A transient high-dimensional geometry affords stable conjunctive subspaces for efficient action selection (2024); 10.1038/s41467-024-52777-6](https://doi.org/10.1038/s41467-024-52777-6)
-- Relating neural activity to represented information remains methodologically underdetermined because investigators must specify which activity features matter, how the code operates, and how it contributes to adaptive computation.
-  - Sources: [Peeling the Onion of Brain Representations (2019); 10.1146/annurev-neuro-080317-061906](https://doi.org/10.1146/annurev-neuro-080317-061906)
+- How stable task-relevant population representations are preserved across contexts when spatial coding remaps remains an open mechanistic question, with current evidence in the supplied set limited to a hippocampal conditioning study and theory-oriented work.
+  - Sources: [Conserved neural population geometry supports behavioral generalization (2024); 10.1101/2024.10.24.620127](https://doi.org/10.1101/2024.10.24.620127); [Neural population geometry and optimal coding of tasks with shared latent structure (2026); 10.1038/s41593-025-02183-y](https://doi.org/10.1038/s41593-025-02183-y)
+- Analytic work links linear-readout generalization for tasks sharing latent structure to population statistics including dimensionality, factorization, and correlation structure.
+  - Sources: [Neural population geometry and optimal coding of tasks with shared latent structure (2026); 10.1038/s41593-025-02183-y](https://doi.org/10.1038/s41593-025-02183-y)
 
 #### Dataset leverage hypothesis — not a feasibility certification
 
-Broadly joint M1 and PMd recordings and reach-geometry variation may support later planning of selective-alignment comparisons.
+The described straight and curved reaches with paired spiking and movement measurements may allow later planning of context-transfer comparisons.
 
 #### Competing explanations
 
-- PMd–M1 coordination is concentrated in reach-geometry dimensions.
-- Cross-region association is dominated by generic high-variance local modes.
-- Shared movement or sensory variables produce apparent selective alignment.
+- Cross-context prediction is driven by shared hand or cursor kinematics rather than conserved neural organization.
+- Apparent invariance arises from an overly coarse trajectory classification.
+- Separate context-specific codes contain similar information without sharing geometry.
 
 #### Discriminating observation
 
-Cross-region correspondence that is stronger for independently defined reach-geometry dimensions than for matched local or behavioral controls would favor selective organization.
+A representation characterized in one broad trajectory context predicts task-relevant movement relationships in the other beyond matched kinematic similarity and generic decoding baselines.
 
 #### What different outcomes would mean
 
-- Positive: Selective alignment would support a predictive account of coordinated task-relevant population structure across PMd and M1.
-- Negative: Association confined to dominant generic modes would weaken a reach-specific coordination interpretation.
-- Null: Comparable or unstable focal and control relationships would leave selectivity unresolved.
+- Positive: A positive result would support reusable population organization across trajectory contexts.
+- Negative: A negative result would favor context-specific organization or stronger dependence on trajectory-specific inputs.
+- Null: A null result would leave open whether weak transfer reflects genuine remapping or inadequate representational estimation.
 
 #### Ambiguities
 
-- selective coupling
-- reach-relevant dimension
-- dominant local variability
-- coordination
+- conserved geometry
+- context
+- generalization
+- task-relevant movement relationship
 
 #### Planning challenges
 
-- Defining focal dimensions independently of the cross-region test.
-- Constructing comparable controls.
-- Avoiding causal language from prediction or alignment.
+- Defining comparable straight and curved conditions
+- Separating geometric reuse from shared kinematics
+- Controlling uncertainty in cross-context estimates
 
 #### Dataset assumptions
 
-- M1 and PMd may be jointly observable on comparable events.
-- Reach classes may permit independent definition of task-relevant dimensions.
-- Later planning must verify joint coverage and reliability.
+- Straight and curved reaches may have adequate repeated coverage.
+- Paired kinematic measurements may permit matched comparisons.
+- A later planner must verify whether train and test organization is suitable for scientific transfer tests.
 
 
-### Variant 002.002: temporal reorganization test
+### Variant 002.002: Adaptive-remapping branch
 
-- Shortlist disposition: **Active for planning**
-- Distinction axes: target_contrast, outcome_meaning
-- Distinct from sibling variants: This variant's outcome is phase-dependent reorganization of regional coordination; the sibling's outcome is reach-dimension specificity aggregated within a chosen phase.
+- Shortlist disposition: **Not carried into planning — deferred: a close prior sits near this variant and a distinguishing revision is required first. No content-bearing prior in the pack directly tests whether neural-population geometry remaps between straight and curved reaches specifically because of barrier-dependent demands after accounting for shared movement covariates. However, content-bearing PMd obstacle-avoidance evidence shows that intended movement selection and target direction are represented during indirect-reaching planning and improve trajectory decoding, while M1 evidence supports substantially preserved population modes across varied motor tasks. The proposed question must therefore make its adaptive-remapping claim distinguishable from trajectory-selection encoding and from an invariant manifold with context-dependent activity. Compared against: https://doi.org/10.1155/2017/2182843; https://doi.org/10.1038/s41467-018-06560-z; https://doi.org/10.1523/jneurosci.17-18-07119.1997 To distinguish it: Specify a comparison that separates barrier presence or barrier-dependent demand from intended path selection, such as matched curved trajectories with and without a barrier-related constraint, or conditions that vary barrier demand while holding target, intended route class, and relevant trajectory features as closely as possible. To distinguish it: Require the proposed context-specific geometric component to predict a barrier-relevant consequence after accounting not only for shared movement covariates but also for target direction, intended movement selection, trajectory curvature, speed, and obstacle-related biomechanical or uncertainty variables implicated by obstacle-avoidance planning. To distinguish it: Distinguish a change in population geometry from context-dependent recruitment or activity within otherwise preserved task-general modes; the adaptive claim should require evidence that a barrier-specific component adds explanatory value beyond preserved shared population structure. To distinguish it: Define the positive-result interpretation so that it supports adaptive remapping only when the barrier-specific geometric effect is not equally explained by indirect-trajectory planning or kinematic/biomechanical path asymmetry.**
+- Distinction axes: theoretical_tension, target_contrast, outcome_meaning
+- Distinct from sibling variants: This variant asks whether context-specific geometric change adds predictive information about barrier-related demands; it does not require cross-context reuse, which defines the sibling.
 
 #### Question
 
-Does the specificity of PMd–M1 population coordination change from reach preparation to execution, rather than remaining a stationary shared-activity relationship?
+Does population geometry remap between straight and curved reaches in a manner that selectively represents barrier-dependent movement demands?
 
 #### Scientific tension and why it matters
 
-Interregional coordination may be dynamically reorganized as computation moves from planning to movement, or it may reflect a stable common drive throughout the trial.
+Context-dependent geometric change could be adaptive specialization for barrier-related demands, or it could be inherited from differing trajectories and measurement variability without additional functional meaning.
 
-The temporal form tests whether selective organization is phase-dependent while preserving an associational, noncausal claim level.
+The question tests whether remapping carries context-specific predictive value rather than assuming that invariance is always the more functional organization.
 
 #### Proposal-stage novelty hypothesis — not a verdict
 
-The question targets temporal reorganization of selective PMd–M1 population relationships within delayed reaching.
+The contribution would be to distinguish adaptive context-specific reorganization from kinematically inherited differences in a motor population setting.
 
 #### Relevant literature
 
-- In a context-dependent human action-selection task, successful responses were preceded by a transient high-dimensional neural geometry that supported stable conjunctive subspaces for efficient readout.
-  - Sources: [A transient high-dimensional geometry affords stable conjunctive subspaces for efficient action selection (2024); 10.1038/s41467-024-52777-6](https://doi.org/10.1038/s41467-024-52777-6)
-- Relating neural activity to represented information remains methodologically underdetermined because investigators must specify which activity features matter, how the code operates, and how it contributes to adaptive computation.
-  - Sources: [Peeling the Onion of Brain Representations (2019); 10.1146/annurev-neuro-080317-061906](https://doi.org/10.1146/annurev-neuro-080317-061906)
+- How stable task-relevant population representations are preserved across contexts when spatial coding remaps remains an open mechanistic question, with current evidence in the supplied set limited to a hippocampal conditioning study and theory-oriented work.
+  - Sources: [Conserved neural population geometry supports behavioral generalization (2024); 10.1101/2024.10.24.620127](https://doi.org/10.1101/2024.10.24.620127); [Neural population geometry and optimal coding of tasks with shared latent structure (2026); 10.1038/s41593-025-02183-y](https://doi.org/10.1038/s41593-025-02183-y)
+- Representational geometry, including representational distance-matrix approaches, provides an intermediate description for comparing neural representations across processing stages and relating representational format to cognitive and computational theories.
+  - Sources: [Representational geometry: integrating cognition, computation, and the brain (2013); 10.1016/j.tics.2013.06.007](https://doi.org/10.1016/j.tics.2013.06.007); [Neural population geometry: An approach for understanding biological and artificial neural networks (2021); 10.1016/j.conb.2021.10.010](https://doi.org/10.1016/j.conb.2021.10.010)
+- Linking population-level geometric descriptions to representational content and cognitive theory remains a central interpretive limitation; geometry can characterize format without by itself establishing a unique computational or cognitive mechanism.
+  - Sources: [Representational geometry: integrating cognition, computation, and the brain (2013); 10.1016/j.tics.2013.06.007](https://doi.org/10.1016/j.tics.2013.06.007); [Neural population geometry: An approach for understanding biological and artificial neural networks (2021); 10.1016/j.conb.2021.10.010](https://doi.org/10.1016/j.conb.2021.10.010)
 
 #### Closest known work
 
-- In a context-dependent human action-selection task, successful responses were preceded by a transient high-dimensional neural geometry that supported stable conjunctive subspaces for efficient readout.
-  - Sources: [A transient high-dimensional geometry affords stable conjunctive subspaces for efficient action selection (2024); 10.1038/s41467-024-52777-6](https://doi.org/10.1038/s41467-024-52777-6)
-- Pattern precedents distinguish selective cross-system organization from generic prediction.
+- How stable task-relevant population representations are preserved across contexts when spatial coding remaps remains an open mechanistic question, with current evidence in the supplied set limited to a hippocampal conditioning study and theory-oriented work.
+  - Sources: [Conserved neural population geometry supports behavioral generalization (2024); 10.1101/2024.10.24.620127](https://doi.org/10.1101/2024.10.24.620127); [Neural population geometry and optimal coding of tasks with shared latent structure (2026); 10.1038/s41593-025-02183-y](https://doi.org/10.1038/s41593-025-02183-y)
 
 #### Dataset leverage hypothesis — not a feasibility certification
 
-The delayed-reaching narrative and two recorded regions may allow later planning of phase-resolved coordination tests.
+Broad barrier-related contexts, trajectory types, and movement measurements may provide a proposal surface for testing whether context-specific geometry predicts aspects of curved versus straight movement.
 
 #### Competing explanations
 
-- PMd–M1 coordination shifts from preparatory dimensions to movement-related dimensions.
-- A stationary shared drive explains cross-region association in all phases.
-- Phase differences arise from changing measurement reliability or behavioral variance.
+- Geometric differences are fully inherited from distinct hand paths or velocities.
+- Differences reflect unequal sampling or reliability across trajectory types.
+- One invariant representation is observed through context-dependent temporal warping rather than true remapping.
 
 #### Discriminating observation
 
-A reliable change in which independently defined dimensions carry cross-region correspondence, beyond matched phase-specific controls, would favor dynamic reorganization.
+Context-specific geometric components predict barrier-related trajectory distinctions beyond shared movement covariates, while an invariant-only account fails to explain those distinctions.
 
 #### What different outcomes would mean
 
-- Positive: Phase-specific selectivity would support an associational account of dynamically reconfigured interregional coordination.
-- Negative: Stable correspondence dominated by the same generic modes would favor a stationary shared-activity account.
-- Null: Unreliable or non-specific phase differences would not distinguish reconfiguration from estimation noise.
+- Positive: A positive result would support adaptive remapping as a candidate organizational feature of maze-constrained movement.
+- Negative: A negative result would weaken adaptive-specialization claims and favor invariant or kinematically inherited accounts.
+- Null: An inconclusive result would preserve uncertainty between weak remapping and insufficient condition reliability.
 
 #### Ambiguities
 
-- preparation-to-execution transition
-- coordination specificity
-- stationarity
-- shared drive
+- adaptive remapping
+- barrier-dependent demand
+- context-specific component
+- invariant representation
 
 #### Planning challenges
 
-- Establishing comparable temporal phases.
-- Separating temporal reorganization from changing signal quality.
-- Defining independent regional dimensions without circularity.
+- Separating barrier context from trajectory kinematics
+- Assessing reliability under potentially unbalanced conditions
+- Avoiding post hoc selection of geometric components
 
 #### Dataset assumptions
 
-- Broad task timing may permit phase comparisons after verification.
-- M1 and PMd signals may overlap on the same behavioral events.
-- A later planner must assess whether phase-specific controls are supportable.
+- Barrier-related straight and curved contexts may be distinguishable.
+- Behavioral measurements may capture major embodied covariates.
+- Later planning must verify trial-level context coverage.
 
-## Family 003: Preparatory population dynamics as operating regimes for movement
+## Family 003: Shared and selective population organization across M1 and PMd
 
 - Shortlist disposition: **Shortlisted for planning; this is not scientific approval**
 - Proposal review status: `model_generated`
@@ -366,345 +365,180 @@ A reliable change in which independently defined dimensions carry cross-region c
 
 ### Scientific background
 
-Tests whether preparatory dynamics set movement-specific operating conditions, separating trajectory-class boundary tests from trial-level behavioral-consequence tests.
+Asks whether M1 and PMd express broadly shared movement geometry or complementary, selectively organized representations during delayed reaching.
 
 ### Shared scientific tension
 
-Preparatory trajectories may establish movement-generating operating conditions, but descriptive dynamics could instead reflect elapsed time, impending movement, or behaviorally irrelevant population variation.
+Regional activity may reflect a common motor representation expressed across both areas or complementary organizations emphasizing different aspects of preparation and movement; regional decodability alone cannot decide between them.
 
 ### Family structure
 
-- Semantic axes: target_contrast; discriminating_observation; claim_level; outcome_meaning
-- Distinctions that should not be merged: The first variant locates a condition-level dynamical boundary between preparation and execution.; The second evaluates whether preparatory geometry predicts trial-level movement beyond magnitude; either result can occur independently of the first.
-- Proposal-stage uncertainties: Whether preparatory timing and movement onset are recoverable.; Whether movement variation supports trial-level predictive questions.; Whether pre-movement behavior can be assessed as an alternative explanation.
-- Dataset assumptions: Delayed reaching may support preparation-versus-execution contrasts.; Behavioral trajectories may be sufficiently informative for later outcome definition.; Exact validation design belongs to downstream planning.
+- Semantic axes: population_scope; theoretical_tension; target_contrast; discriminating_observation; outcome_meaning
+- Distinctions that should not be merged: Shared relational geometry and complementary regional specialization make different predictions about cross-region correspondence.; Regional specialization requires role-selective observations, not merely imperfect cross-region alignment.
+- Proposal-stage uncertainties: Regional metadata require documented correction and reconciliation.; Comparable regional population and trial coverage are not established.; Cross-region predictive correspondence would remain associational rather than causal.
+- Dataset assumptions: M1 and PMd populations may be compared after metadata verification.; The common task design may provide regionally matched observations.
 
 ### Reviewed literature context used by the family
 
-- In a context-dependent human action-selection task, successful responses were preceded by a transient high-dimensional neural geometry that supported stable conjunctive subspaces for efficient readout.
-  - Sources: [A transient high-dimensional geometry affords stable conjunctive subspaces for efficient action selection (2024); 10.1038/s41467-024-52777-6](https://doi.org/10.1038/s41467-024-52777-6)
-- Relating neural activity to represented information remains methodologically underdetermined because investigators must specify which activity features matter, how the code operates, and how it contributes to adaptive computation.
-  - Sources: [Peeling the Onion of Brain Representations (2019); 10.1146/annurev-neuro-080317-061906](https://doi.org/10.1146/annurev-neuro-080317-061906)
+- Neural population codes can contain structurally distinct activity patterns that convey similar stimulus-related information, so similarity for decoding need not coincide with superficial similarity of spike patterns.
+  - Sources: [A thesaurus for a neural population code (2015); 10.7554/elife.06134](https://doi.org/10.7554/elife.06134)
+- Representational geometry, including representational distance-matrix approaches, provides an intermediate description for comparing neural representations across processing stages and relating representational format to cognitive and computational theories.
+  - Sources: [Representational geometry: integrating cognition, computation, and the brain (2013); 10.1016/j.tics.2013.06.007](https://doi.org/10.1016/j.tics.2013.06.007); [Neural population geometry: An approach for understanding biological and artificial neural networks (2021); 10.1016/j.conb.2021.10.010](https://doi.org/10.1016/j.conb.2021.10.010)
+- Linking population-level geometric descriptions to representational content and cognitive theory remains a central interpretive limitation; geometry can characterize format without by itself establishing a unique computational or cognitive mechanism.
+  - Sources: [Representational geometry: integrating cognition, computation, and the brain (2013); 10.1016/j.tics.2013.06.007](https://doi.org/10.1016/j.tics.2013.06.007); [Neural population geometry: An approach for understanding biological and artificial neural networks (2021); 10.1016/j.conb.2021.10.010](https://doi.org/10.1016/j.conb.2021.10.010)
 
-### Variant 003.001: trajectory-class boundary test
+### Variant 003.001: Shared-geometry branch
 
 - Shortlist disposition: **Active for planning**
-- Distinction axes: target_contrast, discriminating_observation
-- Distinct from sibling variants: This variant asks when straight and curved reach regimes diverge at the population level; it does not require trial-level variation in movement quality.
+- Distinction axes: population_scope, target_contrast, outcome_meaning
+- Distinct from sibling variants: This variant asks whether the two regions preserve the same relational movement code; its sibling asks whether their geometries are selectively organized around different temporal or behavioral roles.
 
 #### Question
 
-Do straight and curved reaches recruit distinct preparatory population operating regimes, or do they diverge only after movement begins?
+Do M1 and PMd express a shared population geometry for reach trajectories despite possible differences in local activity patterns?
 
 #### Scientific tension and why it matters
 
-Movement geometry may be configured during preparation, or trajectory-specific neural organization may emerge only through execution-related inputs and feedback.
+A shared-code account predicts comparable task relationships across regions, whereas regional specialization predicts distinct geometries even when both regions encode movement information.
 
-Locating the divergence at preparation versus execution constrains dynamical accounts without asserting a particular circuit mechanism.
+Finding shared relational organization would suggest that superficially different activity patterns can carry semantically equivalent motor structure across cortical populations.
 
 #### Proposal-stage novelty hypothesis — not a verdict
 
-The question tests a boundary condition for preparatory reconfiguration using reach-trajectory demands.
+The question applies semantic-equivalence reasoning to broad M1–PMd motor population geometry without requiring identical neural patterns.
 
 #### Relevant literature
 
-- In a context-dependent human action-selection task, successful responses were preceded by a transient high-dimensional neural geometry that supported stable conjunctive subspaces for efficient readout.
-  - Sources: [A transient high-dimensional geometry affords stable conjunctive subspaces for efficient action selection (2024); 10.1038/s41467-024-52777-6](https://doi.org/10.1038/s41467-024-52777-6)
-- Relating neural activity to represented information remains methodologically underdetermined because investigators must specify which activity features matter, how the code operates, and how it contributes to adaptive computation.
-  - Sources: [Peeling the Onion of Brain Representations (2019); 10.1146/annurev-neuro-080317-061906](https://doi.org/10.1146/annurev-neuro-080317-061906)
+- Neural population codes can contain structurally distinct activity patterns that convey similar stimulus-related information, so similarity for decoding need not coincide with superficial similarity of spike patterns.
+  - Sources: [A thesaurus for a neural population code (2015); 10.7554/elife.06134](https://doi.org/10.7554/elife.06134)
+- Representational geometry, including representational distance-matrix approaches, provides an intermediate description for comparing neural representations across processing stages and relating representational format to cognitive and computational theories.
+  - Sources: [Representational geometry: integrating cognition, computation, and the brain (2013); 10.1016/j.tics.2013.06.007](https://doi.org/10.1016/j.tics.2013.06.007); [Neural population geometry: An approach for understanding biological and artificial neural networks (2021); 10.1016/j.conb.2021.10.010](https://doi.org/10.1016/j.conb.2021.10.010)
+- Linking population-level geometric descriptions to representational content and cognitive theory remains a central interpretive limitation; geometry can characterize format without by itself establishing a unique computational or cognitive mechanism.
+  - Sources: [Representational geometry: integrating cognition, computation, and the brain (2013); 10.1016/j.tics.2013.06.007](https://doi.org/10.1016/j.tics.2013.06.007); [Neural population geometry: An approach for understanding biological and artificial neural networks (2021); 10.1016/j.conb.2021.10.010](https://doi.org/10.1016/j.conb.2021.10.010)
 
 #### Closest known work
 
-- In a context-dependent human action-selection task, successful responses were preceded by a transient high-dimensional neural geometry that supported stable conjunctive subspaces for efficient readout.
-  - Sources: [A transient high-dimensional geometry affords stable conjunctive subspaces for efficient action selection (2024); 10.1038/s41467-024-52777-6](https://doi.org/10.1038/s41467-024-52777-6)
-- Dynamical pattern precedents motivate controlled contrasts with independent consequences.
+- Neural population codes can contain structurally distinct activity patterns that convey similar stimulus-related information, so similarity for decoding need not coincide with superficial similarity of spike patterns.
+  - Sources: [A thesaurus for a neural population code (2015); 10.7554/elife.06134](https://doi.org/10.7554/elife.06134)
+- Representational geometry, including representational distance-matrix approaches, provides an intermediate description for comparing neural representations across processing stages and relating representational format to cognitive and computational theories.
+  - Sources: [Representational geometry: integrating cognition, computation, and the brain (2013); 10.1016/j.tics.2013.06.007](https://doi.org/10.1016/j.tics.2013.06.007); [Neural population geometry: An approach for understanding biological and artificial neural networks (2021); 10.1016/j.conb.2021.10.010](https://doi.org/10.1016/j.conb.2021.10.010)
 
 #### Dataset leverage hypothesis — not a feasibility certification
 
-Delayed straight and curved reaches may allow a later planner to compare when trajectory-class organization becomes distinguishable.
+The stated M1 and PMd recordings under a common delayed-reaching design may allow later comparison of relational population structure across regions.
 
 #### Competing explanations
 
-- Trajectory-specific operating regimes are established during preparation.
-- A common preparatory regime branches only during execution.
-- Apparent preparatory separation reflects subtle pre-movement behavior or timing differences.
+- Apparent cross-region similarity is inherited from common movement covariates.
+- A flexible alignment procedure creates similarity between genuinely distinct representations.
+- Both regions are task-modulated but encode different content that coarse condition labels obscure.
 
 #### Discriminating observation
 
-Reliable trajectory-class separation in preparatory population organization that anticipates later path differences would favor advance configuration; separation emerging only during movement would favor execution-driven divergence.
+Task-condition relationships correspond across M1 and PMd and support matched cross-region prediction beyond generic shared kinematic structure and appropriately constrained references.
 
 #### What different outcomes would mean
 
-- Positive: Preparatory divergence would support a predictive account in which upcoming reach geometry is configured before movement.
-- Negative: Reliable divergence confined to execution would weaken claims that preparation contains trajectory-specific operating regimes.
-- Null: Weak or temporally unstable separation would leave the onset of trajectory-specific organization unresolved.
+- Positive: A positive result would support shared representational organization across motor and premotor populations.
+- Negative: A negative result would favor region-selective geometry or insufficient comparability across recordings.
+- Null: A null result would leave semantic equivalence unresolved because absence of alignment may reflect sampling or measurement differences.
 
 #### Ambiguities
 
-- operating regime
-- preparation
-- trajectory-specific organization
-- advance configuration
+- shared geometry
+- semantic equivalence
+- region
+- matched task relationship
 
 #### Planning challenges
 
-- Distinguishing preparation from covert movement.
-- Avoiding analyses that presuppose regime separation.
-- Accounting for timing and kinematic differences.
+- Reconciling regional metadata before interpretation
+- Matching population sampling and reliability
+- Avoiding overly flexible cross-region alignment
 
 #### Dataset assumptions
 
-- Delayed reaching may expose a preparatory interval.
-- Straight and curved reaches may be distinguishable before planning.
-- A later planner must verify event timing and behavioral coverage.
+- M1 and PMd assignments may be reconciled using official documentation.
+- Comparable task contexts may be represented in both regions.
+- Later planning must verify coordinated coverage and measurement quality.
 
 
-### Variant 003.002: independent behavioral-consequence test
+### Variant 003.002: Complementary-specialization branch
 
 - Shortlist disposition: **Active for planning**
-- Distinction axes: claim_level, outcome_meaning
-- Distinct from sibling variants: This variant makes a trial-level predictive claim about later movement and directly contrasts geometry with magnitude; the sibling tests the timing of condition-level divergence.
+- Distinction axes: population_scope, theoretical_tension, discriminating_observation
+- Distinct from sibling variants: This variant requires region-specific relationships to preparation and execution; the sibling instead requires preservation of a common relational code across regions.
 
 #### Question
 
-Does trial-to-trial proximity to a reach-specific preparatory population state predict subsequent movement trajectory more strongly than preparatory activity magnitude?
+Are M1 and PMd population geometries selectively organized around complementary preparatory and movement-related information?
 
 #### Scientific tension and why it matters
 
-A preparatory state may be functionally consequential through its geometric location, whereas apparent preparation–behavior associations may be explained by overall activation or generic readiness.
+Complementary regional organization predicts different task-relevant emphases across preparation and execution, while a broad shared-code account predicts that regional differences are primarily magnitude or sampling differences.
 
-This variant demands an independent behavioral consequence and contrasts structural state with magnitude.
-
-#### Proposal-stage novelty hypothesis — not a verdict
-
-The contribution would test whether reach-specific state geometry, rather than activation magnitude, predicts ensuing trajectory expression.
-
-#### Relevant literature
-
-- In a context-dependent human action-selection task, successful responses were preceded by a transient high-dimensional neural geometry that supported stable conjunctive subspaces for efficient readout.
-  - Sources: [A transient high-dimensional geometry affords stable conjunctive subspaces for efficient action selection (2024); 10.1038/s41467-024-52777-6](https://doi.org/10.1038/s41467-024-52777-6)
-- Relating neural activity to represented information remains methodologically underdetermined because investigators must specify which activity features matter, how the code operates, and how it contributes to adaptive computation.
-  - Sources: [Peeling the Onion of Brain Representations (2019); 10.1146/annurev-neuro-080317-061906](https://doi.org/10.1146/annurev-neuro-080317-061906)
-
-#### Closest known work
-
-- In a context-dependent human action-selection task, successful responses were preceded by a transient high-dimensional neural geometry that supported stable conjunctive subspaces for efficient readout.
-  - Sources: [A transient high-dimensional geometry affords stable conjunctive subspaces for efficient action selection (2024); 10.1038/s41467-024-52777-6](https://doi.org/10.1038/s41467-024-52777-6)
-- Relating neural activity to represented information remains methodologically underdetermined because investigators must specify which activity features matter, how the code operates, and how it contributes to adaptive computation.
-  - Sources: [Peeling the Onion of Brain Representations (2019); 10.1146/annurev-neuro-080317-061906](https://doi.org/10.1146/annurev-neuro-080317-061906)
-
-#### Dataset leverage hypothesis — not a feasibility certification
-
-Neural activity paired broadly with hand or cursor trajectories may allow later planning of trial-level predictive comparisons.
-
-#### Competing explanations
-
-- Geometric proximity to a reach-specific preparatory state predicts the subsequent trajectory.
-- Overall preparatory activity or generic readiness predicts behavior equally well.
-- The relationship is induced by pre-movement behavioral differences or temporal autocorrelation.
-
-#### Discriminating observation
-
-Out-of-sample trial-level prediction from independently defined geometric state that exceeds matched magnitude and behavioral controls would favor a structurally consequential preparatory state.
-
-#### What different outcomes would mean
-
-- Positive: A specific predictive relationship would support the claim that preparatory geometry carries behaviorally relevant organization.
-- Negative: Prediction explained by magnitude or measured behavior would favor generic readiness or embodied-state accounts.
-- Null: No reliable prediction would leave open whether preparatory geometry is consequential or merely poorly estimated.
-
-#### Ambiguities
-
-- state proximity
-- movement trajectory quality
-- generic readiness
-- behavioral consequence
-
-#### Planning challenges
-
-- Defining movement outcomes independently of neural geometry.
-- Preventing leakage between state definition and prediction.
-- Handling limited trial-level sampling and temporal dependence.
-
-#### Dataset assumptions
-
-- Trial-level neural and movement observations may be linkable.
-- Movement trajectories may vary meaningfully within reach classes.
-- Later planning must establish appropriate validation and control opportunities.
-
-## Family 004: Behavioral-state explanations for motor-cortical population variability
-
-- Shortlist disposition: **Shortlisted for planning; this is not scientific approval**
-- Proposal review status: `model_generated`
-- Authority ceiling: `provisional_inspiration`
-
-### Scientific background
-
-Reclassifies apparently unexplained M1 and PMd variability by testing multidimensional behavioral-state explanations, with distinct regional-distribution and task-subspace-overlap variants.
-
-### Shared scientific tension
-
-Population variability may reflect intrinsic neural dynamics or latent readiness, but it may also encode measured movement, gaze, or other embodied state; predictability alone does not determine its scientific meaning.
-
-### Family structure
-
-- Semantic axes: population_scope; target_contrast; discriminating_observation; outcome_meaning
-- Distinctions that should not be merged: Regional distribution concerns where behavioral-state structure appears.; Subspace overlap concerns what that structure means relative to task coding and can differ independently of regional prevalence.
-- Proposal-stage uncertainties: Whether behavioral modalities are jointly and sufficiently observed.; Whether measured behavior adequately approximates embodied state.; Whether task and behavioral dimensions can be estimated independently.
-- Dataset assumptions: Neural and behavioral signals may be temporally relatable.; M1 and PMd comparisons may be possible after region verification.; Residual activity must not automatically be labeled intrinsic noise.
-
-### Reviewed literature context used by the family
-
-- Relating neural activity to represented information remains methodologically underdetermined because investigators must specify which activity features matter, how the code operates, and how it contributes to adaptive computation.
-  - Sources: [Peeling the Onion of Brain Representations (2019); 10.1146/annurev-neuro-080317-061906](https://doi.org/10.1146/annurev-neuro-080317-061906)
-- In a context-dependent human action-selection task, successful responses were preceded by a transient high-dimensional neural geometry that supported stable conjunctive subspaces for efficient readout.
-  - Sources: [A transient high-dimensional geometry affords stable conjunctive subspaces for efficient action selection (2024); 10.1038/s41467-024-52777-6](https://doi.org/10.1038/s41467-024-52777-6)
-
-### Variant 004.001: regional distribution test
-
-- Shortlist disposition: **Active for planning**
-- Distinction axes: population_scope, outcome_meaning
-- Distinct from sibling variants: This variant asks where behavior-associated variability is distributed across M1 and PMd, not whether it aligns with reach-task geometry.
-
-#### Question
-
-Is population variability associated with multidimensional behavioral state distributed similarly across PMd and M1, or selectively concentrated in one region?
-
-#### Scientific tension and why it matters
-
-Behavior-related population structure may be broadly distributed across motor cortex or regionally specialized, while incomplete behavioral measurement can make residual variance look intrinsic.
-
-The question reframes nuisance variance as a candidate representation and tests its anatomical scope without inferring neural causation of behavior.
+Selective organization would refine regional specialization claims from differences in activity level to differences in population-level representational role.
 
 #### Proposal-stage novelty hypothesis — not a verdict
 
-An adjacent contribution would compare the regional distribution of multidimensional movement- and gaze-associated population dimensions in a reaching task.
+The adjacent contribution would compare regional selectivity at the level of geometry and temporal meaning rather than relying on regional decoding magnitude.
 
 #### Relevant literature
 
-- Relating neural activity to represented information remains methodologically underdetermined because investigators must specify which activity features matter, how the code operates, and how it contributes to adaptive computation.
-  - Sources: [Peeling the Onion of Brain Representations (2019); 10.1146/annurev-neuro-080317-061906](https://doi.org/10.1146/annurev-neuro-080317-061906)
+- Representational geometry, including representational distance-matrix approaches, provides an intermediate description for comparing neural representations across processing stages and relating representational format to cognitive and computational theories.
+  - Sources: [Representational geometry: integrating cognition, computation, and the brain (2013); 10.1016/j.tics.2013.06.007](https://doi.org/10.1016/j.tics.2013.06.007); [Neural population geometry: An approach for understanding biological and artificial neural networks (2021); 10.1016/j.conb.2021.10.010](https://doi.org/10.1016/j.conb.2021.10.010)
+- Linking population-level geometric descriptions to representational content and cognitive theory remains a central interpretive limitation; geometry can characterize format without by itself establishing a unique computational or cognitive mechanism.
+  - Sources: [Representational geometry: integrating cognition, computation, and the brain (2013); 10.1016/j.tics.2013.06.007](https://doi.org/10.1016/j.tics.2013.06.007); [Neural population geometry: An approach for understanding biological and artificial neural networks (2021); 10.1016/j.conb.2021.10.010](https://doi.org/10.1016/j.conb.2021.10.010)
+- Neural population codes can contain structurally distinct activity patterns that convey similar stimulus-related information, so similarity for decoding need not coincide with superficial similarity of spike patterns.
+  - Sources: [A thesaurus for a neural population code (2015); 10.7554/elife.06134](https://doi.org/10.7554/elife.06134)
 
 #### Closest known work
 
-- Relating neural activity to represented information remains methodologically underdetermined because investigators must specify which activity features matter, how the code operates, and how it contributes to adaptive computation.
-  - Sources: [Peeling the Onion of Brain Representations (2019); 10.1146/annurev-neuro-080317-061906](https://doi.org/10.1146/annurev-neuro-080317-061906)
-- Pattern precedents show that measured behavior can explain activity otherwise labeled spontaneous or noisy.
+- Representational geometry, including representational distance-matrix approaches, provides an intermediate description for comparing neural representations across processing stages and relating representational format to cognitive and computational theories.
+  - Sources: [Representational geometry: integrating cognition, computation, and the brain (2013); 10.1016/j.tics.2013.06.007](https://doi.org/10.1016/j.tics.2013.06.007); [Neural population geometry: An approach for understanding biological and artificial neural networks (2021); 10.1016/j.conb.2021.10.010](https://doi.org/10.1016/j.conb.2021.10.010)
+- Linking population-level geometric descriptions to representational content and cognitive theory remains a central interpretive limitation; geometry can characterize format without by itself establishing a unique computational or cognitive mechanism.
+  - Sources: [Representational geometry: integrating cognition, computation, and the brain (2013); 10.1016/j.tics.2013.06.007](https://doi.org/10.1016/j.tics.2013.06.007); [Neural population geometry: An approach for understanding biological and artificial neural networks (2021); 10.1016/j.conb.2021.10.010](https://doi.org/10.1016/j.conb.2021.10.010)
 
 #### Dataset leverage hypothesis — not a feasibility certification
 
-The broad availability of hand, cursor, eye, and velocity measurements alongside M1 and PMd activity may support later planning of multidimensional state comparisons.
+Broad M1 and PMd spiking measurements and delayed movement structure may support later tests of whether regional geometries differ in preparatory versus movement-related prediction.
 
 #### Competing explanations
 
-- Behavior-associated dimensions are distributed across both PMd and M1.
-- Behavioral-state representation is selectively stronger or differently structured in one region.
-- Apparent regional differences reflect measurement sensitivity, unmeasured state, or task covariation.
+- Regional differences arise from unequal sampling or metadata errors rather than organization.
+- Both regions share one geometry but differ in signal strength or timing.
+- Observed selectivity is explained by region-specific sensitivity to measured kinematics.
 
 #### Discriminating observation
 
-Reliable behavior-associated population structure in both regions versus selective structure in one region, evaluated against simpler state summaries and matched reliability checks, would distinguish distributed from localized accounts.
+PMd and M1 show reproducibly different geometric relationships to forthcoming versus ongoing movement that cannot be reduced to global activity magnitude, sampling differences, or measured kinematics.
 
 #### What different outcomes would mean
 
-- Positive: Distributed structure would support an associational account of embodied state represented across motor-cortical levels.
-- Negative: Reliable regional selectivity would support a localized or differentiated organization rather than a common global state.
-- Null: Poor or inconsistent prediction would leave open intrinsic variability, unmeasured behavior, and insufficient reliability.
+- Positive: A positive result would support complementary population-level roles for premotor and motor cortex.
+- Negative: A negative result would weaken complementary-role claims and favor broadly shared organization or non-geometric regional differences.
+- Null: An equivocal result would restrict conclusions to regional association without resolving selectivity.
 
 #### Ambiguities
 
-- behavioral state
-- distributed representation
-- intrinsic variability
+- complementary role
+- preparatory information
+- movement-related information
 - regional selectivity
 
 #### Planning challenges
 
-- Avoiding temporal autocorrelation inflation.
-- Determining whether available behavior captures relevant state.
-- Comparing regions with potentially different reliability.
+- Correcting and reconciling anatomical metadata
+- Establishing comparable regional reliability
+- Separating geometry from signal magnitude and movement covariates
 
 #### Dataset assumptions
 
-- Multiple behavioral modalities may be temporally comparable with neural activity.
-- M1 and PMd may permit region-level reliability assessment.
-- Later planning must verify missingness and temporal alignment.
+- Regional labels may be made interpretable after documented reconciliation.
+- Recordings may span relevant delayed and movement periods.
+- A later planner must verify region-specific condition coverage.
 
-
-### Variant 004.002: task-state geometric overlap test
-
-- Shortlist disposition: **Active for planning**
-- Distinction axes: target_contrast, discriminating_observation
-- Distinct from sibling variants: This variant tests the relationship between behavioral-state and reach-demand dimensions; it can show overlap or separation regardless of their regional distribution.
-
-#### Question
-
-Do behavioral-state-associated neural dimensions overlap with or remain geometrically distinct from dimensions distinguishing reach demands?
-
-#### Scientific tension and why it matters
-
-Behavior-associated variability could constitute part of the task representation, or it could be an orthogonal state component that modulates neural activity without carrying reach-demand structure.
-
-Separating overlap from independence clarifies whether behavior is the explanatory construct of interest or an alternative explanation for apparent task coding.
-
-#### Proposal-stage novelty hypothesis — not a verdict
-
-The question tests the geometric relationship between multidimensional embodied state and reach-related representations rather than treating behavior uniformly as nuisance.
-
-#### Relevant literature
-
-- Relating neural activity to represented information remains methodologically underdetermined because investigators must specify which activity features matter, how the code operates, and how it contributes to adaptive computation.
-  - Sources: [Peeling the Onion of Brain Representations (2019); 10.1146/annurev-neuro-080317-061906](https://doi.org/10.1146/annurev-neuro-080317-061906)
-- In a context-dependent human action-selection task, successful responses were preceded by a transient high-dimensional neural geometry that supported stable conjunctive subspaces for efficient readout.
-  - Sources: [A transient high-dimensional geometry affords stable conjunctive subspaces for efficient action selection (2024); 10.1038/s41467-024-52777-6](https://doi.org/10.1038/s41467-024-52777-6)
-
-#### Closest known work
-
-- In a context-dependent human action-selection task, successful responses were preceded by a transient high-dimensional neural geometry that supported stable conjunctive subspaces for efficient readout.
-  - Sources: [A transient high-dimensional geometry affords stable conjunctive subspaces for efficient action selection (2024); 10.1038/s41467-024-52777-6](https://doi.org/10.1038/s41467-024-52777-6)
-- Relating neural activity to represented information remains methodologically underdetermined because investigators must specify which activity features matter, how the code operates, and how it contributes to adaptive computation.
-  - Sources: [Peeling the Onion of Brain Representations (2019); 10.1146/annurev-neuro-080317-061906](https://doi.org/10.1146/annurev-neuro-080317-061906)
-
-#### Dataset leverage hypothesis — not a feasibility certification
-
-Joint neural and broad behavioral measurements may allow later comparison of independently defined behavioral-state and reach-demand dimensions.
-
-#### Competing explanations
-
-- Behavior-associated and reach-demand dimensions substantially overlap.
-- Behavioral state occupies a separable subspace that modulates but does not encode reach demands.
-- Observed overlap is induced by reach-dependent movement or gaze patterns.
-
-#### Discriminating observation
-
-Cross-validated alignment between independently defined behavioral and reach-demand dimensions, compared with matched controls and condition-balanced behavior, would distinguish integration from separability.
-
-#### What different outcomes would mean
-
-- Positive: Specific overlap would support an associational account in which embodied state is integral to the observed task representation.
-- Negative: Reliable geometric separation would support distinct task and state components of population activity.
-- Null: Unstable alignment would leave the relation between behavioral state and task geometry underdetermined.
-
-#### Ambiguities
-
-- subspace overlap
-- task representation
-- embodied state
-- modulation
-
-#### Planning challenges
-
-- Independent definition of behavioral and task dimensions.
-- Behavioral differences intrinsic to reach classes.
-- Reliability and dimensionality matching.
-
-#### Dataset assumptions
-
-- Reach-demand contrasts and behavioral-state measurements may coexist.
-- Repeated observations may allow independent estimation.
-- A later planner must determine whether confound controls are supportable.
-
-## Family 005: Structure of neural co-variability relative to movement-relevant readouts
+## Family 004: Functional meaning of motor-population co-variability
 
 - Shortlist disposition: **Shortlisted for planning; this is not scientific approval**
 - Proposal review status: `model_generated`
@@ -712,170 +546,182 @@ Cross-validated alignment between independently defined behavioral and reach-dem
 
 ### Scientific background
 
-Tests whether the orientation of population co-variability, rather than its aggregate magnitude, is related to movement-relevant information, with distinct within-region and cross-region targets.
+Tests whether the consequences of neural co-variability depend on its alignment with movement-relevant or context-relevant dimensions rather than on aggregate variability magnitude.
 
 ### Shared scientific tension
 
-Large or small shared variability is not inherently beneficial or harmful; its consequence may depend on alignment with independently defined movement-relevant or interregional dimensions.
+Changes in overall population variability may be descriptively prominent but functionally uninformative if only particular covariance components align with task-relevant geometry.
 
 ### Family structure
 
-- Semantic axes: target_contrast; claim_level; population_scope; outcome_meaning
-- Distinctions that should not be merged: Behavioral-readout alignment tests whether variability structure relates to movement.; Cross-region alignment tests whether variability is selectively coordinated between PMd and M1; neither result entails the other.
-- Proposal-stage uncertainties: Whether repeated conditions permit reliable co-variability estimation.; How movement-relevant directions can be independently defined.; Whether M1–PMd joint observation and matched controls are supportable.
-- Dataset assumptions: Neural populations may contain repeated-event variability.; Behavioral measures may support readout and confound definitions.; No feasibility or causal-coupling conclusion is implied.
+- Semantic axes: target_contrast; discriminating_observation; outcome_meaning
+- Distinctions that should not be merged: Alignment with continuous movement and selective alignment with maze context concern different candidate functions.; Context-selective alignment requires a matched generic-movement comparator not required by the movement-alignment branch.
+- Proposal-stage uncertainties: Reliable co-variability estimation may be limited by sampling.; Task-relevant dimensions require independent definition during planning.; Trajectory context and movement kinematics may be strongly confounded.
+- Dataset assumptions: Repeated population observations may permit covariance analysis.; Paired movement measurements may permit candidate alignment tests.
 
 ### Reviewed literature context used by the family
 
-- Relating neural activity to represented information remains methodologically underdetermined because investigators must specify which activity features matter, how the code operates, and how it contributes to adaptive computation.
-  - Sources: [Peeling the Onion of Brain Representations (2019); 10.1146/annurev-neuro-080317-061906](https://doi.org/10.1146/annurev-neuro-080317-061906)
-- In a context-dependent human action-selection task, successful responses were preceded by a transient high-dimensional neural geometry that supported stable conjunctive subspaces for efficient readout.
-  - Sources: [A transient high-dimensional geometry affords stable conjunctive subspaces for efficient action selection (2024); 10.1038/s41467-024-52777-6](https://doi.org/10.1038/s41467-024-52777-6)
+- Analytic work links linear-readout generalization for tasks sharing latent structure to population statistics including dimensionality, factorization, and correlation structure.
+  - Sources: [Neural population geometry and optimal coding of tasks with shared latent structure (2026); 10.1038/s41593-025-02183-y](https://doi.org/10.1038/s41593-025-02183-y)
+- How stable task-relevant population representations are preserved across contexts when spatial coding remaps remains an open mechanistic question, with current evidence in the supplied set limited to a hippocampal conditioning study and theory-oriented work.
+  - Sources: [Conserved neural population geometry supports behavioral generalization (2024); 10.1101/2024.10.24.620127](https://doi.org/10.1101/2024.10.24.620127); [Neural population geometry and optimal coding of tasks with shared latent structure (2026); 10.1038/s41593-025-02183-y](https://doi.org/10.1038/s41593-025-02183-y)
+- As neural recordings scale in neuron count faster than trial count, inference of population geometry—particularly dimensionality estimated with PCA—requires explicit consideration of sampling and experimental-design uncertainty.
+  - Sources: [A predictive theory of experimental design for inferring neural population geometry in large-scale recordings (2026); 10.64898/2026.07.19.739385](https://doi.org/10.64898/2026.07.19.739385)
+- Linking population-level geometric descriptions to representational content and cognitive theory remains a central interpretive limitation; geometry can characterize format without by itself establishing a unique computational or cognitive mechanism.
+  - Sources: [Representational geometry: integrating cognition, computation, and the brain (2013); 10.1016/j.tics.2013.06.007](https://doi.org/10.1016/j.tics.2013.06.007); [Neural population geometry: An approach for understanding biological and artificial neural networks (2021); 10.1016/j.conb.2021.10.010](https://doi.org/10.1016/j.conb.2021.10.010)
 
-### Variant 005.001: within-region behavioral-readout alignment test
+### Variant 004.001: Movement-alignment branch
 
 - Shortlist disposition: **Active for planning**
-- Distinction axes: target_contrast, claim_level
-- Distinct from sibling variants: This variant evaluates alignment with a movement-relevant readout within each region; it does not treat the other cortical region as the target.
+- Distinction axes: target_contrast, discriminating_observation, outcome_meaning
+- Distinct from sibling variants: This variant defines functional relevance by alignment with continuous movement representation; the sibling defines it by alignment with trajectory-context distinctions.
 
 #### Question
 
-Within M1 and PMd, does alignment of trial-to-trial co-variability with a reach-relevant dimension predict movement readout better than aggregate co-variability magnitude?
+Does the predictive consequence of motor-population co-variability depend more on alignment with movement-relevant dimensions than on its overall magnitude?
 
 #### Scientific tension and why it matters
 
-Shared variability may matter because of its orientation relative to a readout, not because of its total strength.
+A magnitude account predicts that aggregate variability governs movement prediction, whereas a structural account predicts that only variability aligned with movement-relevant directions has substantial consequences.
 
-The question replaces a magnitude heuristic with a structural test tied to an independent behavioral consequence.
+The question replaces a coarse variability claim with a structural criterion connecting co-variability to movement representation.
 
 #### Proposal-stage novelty hypothesis — not a verdict
 
-The contribution would compare structural alignment and magnitude as predictors of movement readout within motor-cortical regions.
+The contribution would be an alignment-based test of motor-population variability in delayed maze reaching rather than another aggregate variability description.
 
 #### Relevant literature
 
-- Relating neural activity to represented information remains methodologically underdetermined because investigators must specify which activity features matter, how the code operates, and how it contributes to adaptive computation.
-  - Sources: [Peeling the Onion of Brain Representations (2019); 10.1146/annurev-neuro-080317-061906](https://doi.org/10.1146/annurev-neuro-080317-061906)
-- In a context-dependent human action-selection task, successful responses were preceded by a transient high-dimensional neural geometry that supported stable conjunctive subspaces for efficient readout.
-  - Sources: [A transient high-dimensional geometry affords stable conjunctive subspaces for efficient action selection (2024); 10.1038/s41467-024-52777-6](https://doi.org/10.1038/s41467-024-52777-6)
+- Analytic work links linear-readout generalization for tasks sharing latent structure to population statistics including dimensionality, factorization, and correlation structure.
+  - Sources: [Neural population geometry and optimal coding of tasks with shared latent structure (2026); 10.1038/s41593-025-02183-y](https://doi.org/10.1038/s41593-025-02183-y)
+- As neural recordings scale in neuron count faster than trial count, inference of population geometry—particularly dimensionality estimated with PCA—requires explicit consideration of sampling and experimental-design uncertainty.
+  - Sources: [A predictive theory of experimental design for inferring neural population geometry in large-scale recordings (2026); 10.64898/2026.07.19.739385](https://doi.org/10.64898/2026.07.19.739385)
+- Linking population-level geometric descriptions to representational content and cognitive theory remains a central interpretive limitation; geometry can characterize format without by itself establishing a unique computational or cognitive mechanism.
+  - Sources: [Representational geometry: integrating cognition, computation, and the brain (2013); 10.1016/j.tics.2013.06.007](https://doi.org/10.1016/j.tics.2013.06.007); [Neural population geometry: An approach for understanding biological and artificial neural networks (2021); 10.1016/j.conb.2021.10.010](https://doi.org/10.1016/j.conb.2021.10.010)
 
 #### Closest known work
 
-- Pattern precedents distinguish consequential covariance alignment from aggregate correlation.
-- In a context-dependent human action-selection task, successful responses were preceded by a transient high-dimensional neural geometry that supported stable conjunctive subspaces for efficient readout.
-  - Sources: [A transient high-dimensional geometry affords stable conjunctive subspaces for efficient action selection (2024); 10.1038/s41467-024-52777-6](https://doi.org/10.1038/s41467-024-52777-6)
+- Analytic work links linear-readout generalization for tasks sharing latent structure to population statistics including dimensionality, factorization, and correlation structure.
+  - Sources: [Neural population geometry and optimal coding of tasks with shared latent structure (2026); 10.1038/s41593-025-02183-y](https://doi.org/10.1038/s41593-025-02183-y)
+- As neural recordings scale in neuron count faster than trial count, inference of population geometry—particularly dimensionality estimated with PCA—requires explicit consideration of sampling and experimental-design uncertainty.
+  - Sources: [A predictive theory of experimental design for inferring neural population geometry in large-scale recordings (2026); 10.64898/2026.07.19.739385](https://doi.org/10.64898/2026.07.19.739385)
 
 #### Dataset leverage hypothesis — not a feasibility certification
 
-Repeated reaching with neural populations and movement measurements may allow later planning of regional co-variability and readout comparisons.
+Repeated population activity paired with hand, cursor, and velocity measurements may allow later planning of movement-relevant alignment comparisons.
 
 #### Competing explanations
 
-- Co-variability aligned with reach-relevant dimensions limits or facilitates readout depending on orientation.
-- Aggregate shared-variability magnitude is the relevant predictor.
-- Both apparent relationships reflect sampling reliability or movement heterogeneity.
+- Aggregate variability magnitude alone explains predictive differences.
+- Estimated alignment reflects limited sampling or dimensionality-estimation error.
+- Movement-aligned covariance is inherited from kinematic heterogeneity rather than neural organization.
 
 #### Discriminating observation
 
-Alignment that predicts held-out movement readout after accounting for magnitude and reliability would favor the structural account; magnitude-only prediction would favor the coarse account.
+Movement prediction varies with the orientation of co-variability relative to independently characterized movement-relevant structure after accounting for aggregate magnitude.
 
 #### What different outcomes would mean
 
-- Positive: A specific alignment relationship would support a predictive claim that co-variability structure is behaviorally consequential.
-- Negative: Magnitude predicting readout without an alignment contribution would support a coarser variability account.
-- Null: Neither reliable relationship would leave co-variability consequence unresolved rather than proving irrelevance.
+- Positive: A positive result would support structural alignment as more informative than global variability magnitude.
+- Negative: A negative result would favor magnitude-based or alternative non-alignment accounts.
+- Null: A null result would leave open whether alignment is irrelevant or too uncertain to estimate in this setting.
 
 #### Ambiguities
 
 - co-variability
-- reach-relevant dimension
-- movement readout
-- consequential alignment
+- movement-relevant dimension
+- alignment
+- predictive consequence
 
 #### Planning challenges
 
-- Independent estimation of readout and variability directions.
-- Avoiding overfitting in covariance estimates.
-- Matching reliability across regions and conditions.
+- Obtaining independent characterizations of task-relevant structure
+- Sampling sensitivity of covariance estimates
+- Avoiding circular alignment and outcome evaluation
 
 #### Dataset assumptions
 
-- Repeated comparable reaches may support co-variability estimation.
-- Movement measures may define an independent readout.
-- Later planning must test sampling sufficiency and validation options.
+- Repeated trials may support some co-variability characterization.
+- Movement measurements may define candidate task-relevant relationships.
+- A later planner must test reliability and independence requirements.
 
 
-### Variant 005.002: cross-region variability-alignment test
+### Variant 004.002: Context-alignment branch
 
 - Shortlist disposition: **Active for planning**
-- Distinction axes: population_scope, outcome_meaning
-- Distinct from sibling variants: This variant defines scientific relevance through cross-region association and matched local controls, whereas the sibling defines it through prediction of movement readout.
+- Distinction axes: target_contrast, discriminating_observation, outcome_meaning
+- Distinct from sibling variants: This variant requires selectivity for straight-versus-curved context beyond generic movement alignment, a stronger and scientifically different outcome than movement alignment alone.
 
 #### Question
 
-Is PMd or M1 co-variability selectively aligned with population dimensions associated with the other region, beyond alignment with dominant local modes?
+Is population co-variability selectively aligned with dimensions that distinguish straight from curved reach contexts, beyond alignment with generic movement dimensions?
 
 #### Scientific tension and why it matters
 
-Co-variability may be organized for selective interregional coordination, or cross-region correspondence may be a by-product of dominant local fluctuations and shared inputs.
+Context-selective alignment would imply structured support for maze-dependent control, whereas generic movement alignment or global covariance could explain the same aggregate variability.
 
-The question identifies which components of variability participate in cross-region association while avoiding causal routing claims.
+This asks whether covariance structure reflects context-dependent computational demands rather than only movement production in general.
 
 #### Proposal-stage novelty hypothesis — not a verdict
 
-The adjacent contribution is a motor-cortical comparison of cross-region-aligned variability against dominant local modes.
+The adjacent contribution would compare context-selective and generic movement alignment within one delayed-reaching paradigm.
 
 #### Relevant literature
 
-- Relating neural activity to represented information remains methodologically underdetermined because investigators must specify which activity features matter, how the code operates, and how it contributes to adaptive computation.
-  - Sources: [Peeling the Onion of Brain Representations (2019); 10.1146/annurev-neuro-080317-061906](https://doi.org/10.1146/annurev-neuro-080317-061906)
+- Analytic work links linear-readout generalization for tasks sharing latent structure to population statistics including dimensionality, factorization, and correlation structure.
+  - Sources: [Neural population geometry and optimal coding of tasks with shared latent structure (2026); 10.1038/s41593-025-02183-y](https://doi.org/10.1038/s41593-025-02183-y)
+- How stable task-relevant population representations are preserved across contexts when spatial coding remaps remains an open mechanistic question, with current evidence in the supplied set limited to a hippocampal conditioning study and theory-oriented work.
+  - Sources: [Conserved neural population geometry supports behavioral generalization (2024); 10.1101/2024.10.24.620127](https://doi.org/10.1101/2024.10.24.620127); [Neural population geometry and optimal coding of tasks with shared latent structure (2026); 10.1038/s41593-025-02183-y](https://doi.org/10.1038/s41593-025-02183-y)
+- Linking population-level geometric descriptions to representational content and cognitive theory remains a central interpretive limitation; geometry can characterize format without by itself establishing a unique computational or cognitive mechanism.
+  - Sources: [Representational geometry: integrating cognition, computation, and the brain (2013); 10.1016/j.tics.2013.06.007](https://doi.org/10.1016/j.tics.2013.06.007); [Neural population geometry: An approach for understanding biological and artificial neural networks (2021); 10.1016/j.conb.2021.10.010](https://doi.org/10.1016/j.conb.2021.10.010)
 
 #### Closest known work
 
-- Pattern precedents motivate matched within-system or local-mode controls for cross-system association.
-- Relating neural activity to represented information remains methodologically underdetermined because investigators must specify which activity features matter, how the code operates, and how it contributes to adaptive computation.
-  - Sources: [Peeling the Onion of Brain Representations (2019); 10.1146/annurev-neuro-080317-061906](https://doi.org/10.1146/annurev-neuro-080317-061906)
+- Analytic work links linear-readout generalization for tasks sharing latent structure to population statistics including dimensionality, factorization, and correlation structure.
+  - Sources: [Neural population geometry and optimal coding of tasks with shared latent structure (2026); 10.1038/s41593-025-02183-y](https://doi.org/10.1038/s41593-025-02183-y)
+- How stable task-relevant population representations are preserved across contexts when spatial coding remaps remains an open mechanistic question, with current evidence in the supplied set limited to a hippocampal conditioning study and theory-oriented work.
+  - Sources: [Conserved neural population geometry supports behavioral generalization (2024); 10.1101/2024.10.24.620127](https://doi.org/10.1101/2024.10.24.620127); [Neural population geometry and optimal coding of tasks with shared latent structure (2026); 10.1038/s41593-025-02183-y](https://doi.org/10.1038/s41593-025-02183-y)
 
 #### Dataset leverage hypothesis — not a feasibility certification
 
-Broadly concurrent M1 and PMd population observations may support later planning of cross-region versus local structural comparisons.
+The broad straight-versus-curved contrast and kinematic measurements may allow later planning of matched context and generic-movement reference dimensions.
 
 #### Competing explanations
 
-- A restricted component of variability is selectively associated across PMd and M1.
-- Cross-region association follows dominant local modes without selectivity.
-- Shared behavioral drive or dimensionality constraints explain apparent cross-region alignment.
+- Context alignment is entirely explained by differences in hand paths or velocity.
+- Apparent selectivity results from unequal reliability across trajectory contexts.
+- Covariance is broadly distributed and any alignment emerges from post hoc dimension selection.
 
 #### Discriminating observation
 
-Cross-region-associated dimensions that differ reliably from dominant local modes and survive matched behavioral and dimensionality controls would favor selective organization.
+Co-variability aligns more strongly with independently specified context-discriminating structure than with matched generic movement references and adds context prediction beyond aggregate magnitude.
 
 #### What different outcomes would mean
 
-- Positive: Selective cross-region alignment would support an associational claim about structured coordination of population variability.
-- Negative: Correspondence restricted to dominant local modes would favor generic shared variability.
-- Null: Unstable or control-equivalent alignment would leave selective coordination unresolved.
+- Positive: A positive result would support context-selective organization of motor-population co-variability.
+- Negative: A negative result would favor generic movement alignment, magnitude-only effects, or no stable context-selective covariance structure.
+- Null: An inconclusive result would prevent distinguishing absent selectivity from unreliable covariance estimation.
 
 #### Ambiguities
 
-- cross-region-associated dimension
-- selectivity
-- dominant local mode
-- shared input
+- context-selective alignment
+- generic movement dimension
+- maze-dependent control
+- matched reference
 
 #### Planning challenges
 
-- Ensuring joint observation on comparable events.
-- Constructing matched local controls.
-- Avoiding causal or anatomical interpretation of prediction.
+- Separating context from correlated kinematics
+- Ensuring reference dimensions are empirically matched
+- High uncertainty in covariance orientation
 
 #### Dataset assumptions
 
-- M1 and PMd activity may be jointly comparable.
-- Behavioral measurements may support shared-input controls.
-- A later planner must verify exact joint coverage.
+- Straight and curved contexts may be separable at trial level.
+- Behavioral measurements may support matched movement references.
+- A later planner must establish sufficient repeated coverage.
 
-## Family 006: Which geometric stability supports generalization in reaching?
+## Family 005: Degeneracy and semantic equivalence in motor population codes
 
 - Shortlist disposition: **Shortlisted for planning; this is not scientific approval**
 - Proposal review status: `model_generated`
@@ -883,179 +729,356 @@ Cross-region-associated dimensions that differ reliably from dominant local mode
 
 ### Scientific background
 
-Separates two meanings of stable neural geometry: reproducible relational structure within conditions and transferable geometry across reach demands, avoiding duplication of the close prior on generic geometry–behavior coupling.
+Investigates whether structurally different population states can carry similar movement meaning and whether such degeneracy reflects robustness or hidden task distinctions.
 
 ### Shared scientific tension
 
-Geometric stability can mean reproducibility within a condition or transfer across conditions; either may coexist with centroid change, and only the latter directly addresses generalization across reach demands.
+Different neural activity patterns may be semantically equivalent for movement, but apparent equivalence could instead result from coarse behavioral measurement or unobserved distinctions in task context.
 
 ### Family structure
 
-- Semantic axes: target_contrast; population_scope; discriminating_observation; outcome_meaning
-- Distinctions that should not be merged: Within-condition relational reproducibility versus centroid stability is a measurement-level distinction with regional scope.; Cross-demand transfer is a generalization claim that requires reliable within-condition geometry but is not implied by it.
-- Proposal-stage uncertainties: Whether repeated observations support independent stability estimates.; How centroid and relational measures can be compared fairly.; Whether straight and curved reaches provide a sufficiently controlled generalization contrast.
-- Dataset assumptions: Reach-related population geometry may be estimable in M1 and PMd.; The task may provide repeated trajectory classes.; Exact condition coverage and reliability require downstream inspection.
+- Semantic axes: target_contrast; outcome_meaning; discriminating_observation; claim_level
+- Distinctions that should not be merged: Movement-level equivalence and hidden context coding set different semantic criteria for synonymy.; The hidden-context branch can reject full equivalence even when immediate movement predictions match.
+- Proposal-stage uncertainties: Behavioral equivalence requires later definition.; Unmeasured or unresolved task factors could create false synonymy.; The stability of distinct neural patterns is unknown.
+- Dataset assumptions: Paired neural and movement data may allow behaviorally matched comparisons.; Trajectory contexts may provide a test of hidden representational distinctions.
 
 ### Reviewed literature context used by the family
 
-- A recent analysis operationalizes geometric stability as split-half reproducibility of pairwise stimulus-distance structure, rather than treating preservation of population centroids as the primary stability criterion.
-  - Sources: [Recurrent circuitry stabilizes representational geometry across neural circuits (2026); 10.21203/rs.3.rs-9581425/v1](https://doi.org/10.21203/rs.3.rs-9581425/v1)
-- A cross-area visual-discrimination analysis has already tested whether within-session reproducibility of representational distance geometry relates to neural-behavioral coupling, reporting a positive association for geometric stability and no corresponding association for centroid drift.
-  - Sources: [Recurrent circuitry stabilizes representational geometry across neural circuits (2026); 10.21203/rs.3.rs-9581425/v1](https://doi.org/10.21203/rs.3.rs-9581425/v1)
-- Hippocampal spatial representations can remap across environments while low-dimensional task-related population organization and temporal relationships are conserved during behavior that generalizes across contexts.
-  - Sources: [Conserved neural population geometry supports behavioral generalization (2024); 10.1101/2024.10.24.620127](https://doi.org/10.1101/2024.10.24.620127)
-- Relating neural activity to represented information remains methodologically underdetermined because investigators must specify which activity features matter, how the code operates, and how it contributes to adaptive computation.
-  - Sources: [Peeling the Onion of Brain Representations (2019); 10.1146/annurev-neuro-080317-061906](https://doi.org/10.1146/annurev-neuro-080317-061906)
+- Neural population codes can contain structurally distinct activity patterns that convey similar stimulus-related information, so similarity for decoding need not coincide with superficial similarity of spike patterns.
+  - Sources: [A thesaurus for a neural population code (2015); 10.7554/elife.06134](https://doi.org/10.7554/elife.06134)
+- Analytic work links linear-readout generalization for tasks sharing latent structure to population statistics including dimensionality, factorization, and correlation structure.
+  - Sources: [Neural population geometry and optimal coding of tasks with shared latent structure (2026); 10.1038/s41593-025-02183-y](https://doi.org/10.1038/s41593-025-02183-y)
+- How stable task-relevant population representations are preserved across contexts when spatial coding remaps remains an open mechanistic question, with current evidence in the supplied set limited to a hippocampal conditioning study and theory-oriented work.
+  - Sources: [Conserved neural population geometry supports behavioral generalization (2024); 10.1101/2024.10.24.620127](https://doi.org/10.1101/2024.10.24.620127); [Neural population geometry and optimal coding of tasks with shared latent structure (2026); 10.1038/s41593-025-02183-y](https://doi.org/10.1038/s41593-025-02183-y)
 
-### Variant 006.001: within-condition stability-definition test
+### Variant 005.001: Movement-equivalence branch
 
-- Shortlist disposition: **Active for planning**
-- Distinction axes: target_contrast, population_scope
-- Distinct from sibling variants: This variant compares relational reproducibility with centroid stability within conditions and across regions; it does not test transfer to a different reach demand.
+- Shortlist disposition: **Not carried into planning — deferred: a close prior sits near this variant and a distinguishing revision is required first. No content-bearing prior in the bounded pack directly tests whether structurally distinct neural population states encode behaviorally equivalent reach trajectories. However, prior work separately establishes accurate trajectory decoding from neural ensembles and motor equivalence during reaching at the muscle/M-mode level. The proposed question must more sharply separate a neural representational degeneracy claim from established downstream motor-equivalence phenomena and specify what behavioral/contextual equivalence would rule out latent task-state differences. Compared against: https://doi.org/10.1523/jneurosci.1463-08.2008; https://doi.org/10.1123/mcj.17.2.145; https://doi.org/10.1101/2020.11.13.382192 To distinguish it: Define the neural population and recording/measurement level at which states are deemed structurally distinct, and distinguish this claim from muscle-, joint-, or effector-level motor equivalence. To distinguish it: Specify the behavioral equivalence class beyond gross reach trajectory, including endpoint, full kinematics, movement time/speed, force or dynamics where relevant, target/goal, and trial-history or planning variables that could make neural states meaningfully different. To distinguish it: Require that neural-state differences remain after controlling or conditioning on contextual and temporal variables, so that an apparent many-state/one-trajectory relation cannot be attributed to unmeasured task states. To distinguish it: State a discriminating prediction that separates genuine semantic equivalence from ordinary trajectory decodability: distinct neural states must generalize comparably to held-out reaches while retaining their distinction under matched behavioral and planning conditions. To distinguish it: Clarify whether a negative result means neural states become similar after full behavioral/contextual matching, rather than merely that a chosen decoder lacks sensitivity to differences.**
+- Distinction axes: outcome_meaning, discriminating_observation, claim_level
+- Distinct from sibling variants: This variant defines semantic equivalence by similar realized movement despite different neural states; the sibling asks whether those states instead preserve hidden trajectory-context identity.
 
 #### Question
 
-Do M1 and PMd differ in whether relational reach geometry is reproducible despite shifts in population centroids?
+Can structurally distinct motor-population states predict similar reach trajectories, indicating a degenerate population code for movement?
 
 #### Scientific tension and why it matters
 
-Stable pairwise relationships may survive changes in average population patterns, but this dissociation may have different regional scope.
+A degenerate-code account permits different population patterns to carry similar movement meaning, whereas a one-to-one representational account predicts that behaviorally similar reaches occupy similar neural states.
 
-The question clarifies what stability means in motor populations and tests regional boundaries rather than repeating the established geometry–behavior association.
+Demonstrating semantic equivalence would distinguish informational meaning from superficial spike-pattern similarity and refine interpretations of motor manifolds.
 
 #### Proposal-stage novelty hypothesis — not a verdict
 
-The novelty lies in a regional motor-cortical dissociation between relational reproducibility and centroid stability, not in re-testing whether geometric stability predicts behavior generally.
+The contribution would test semantic equivalence in a motor population setting using reach behavior as the proposed shared meaning.
 
 #### Relevant literature
 
-- A recent analysis operationalizes geometric stability as split-half reproducibility of pairwise stimulus-distance structure, rather than treating preservation of population centroids as the primary stability criterion.
-  - Sources: [Recurrent circuitry stabilizes representational geometry across neural circuits (2026); 10.21203/rs.3.rs-9581425/v1](https://doi.org/10.21203/rs.3.rs-9581425/v1)
-- A cross-area visual-discrimination analysis has already tested whether within-session reproducibility of representational distance geometry relates to neural-behavioral coupling, reporting a positive association for geometric stability and no corresponding association for centroid drift.
-  - Sources: [Recurrent circuitry stabilizes representational geometry across neural circuits (2026); 10.21203/rs.3.rs-9581425/v1](https://doi.org/10.21203/rs.3.rs-9581425/v1)
-- Relating neural activity to represented information remains methodologically underdetermined because investigators must specify which activity features matter, how the code operates, and how it contributes to adaptive computation.
-  - Sources: [Peeling the Onion of Brain Representations (2019); 10.1146/annurev-neuro-080317-061906](https://doi.org/10.1146/annurev-neuro-080317-061906)
+- Neural population codes can contain structurally distinct activity patterns that convey similar stimulus-related information, so similarity for decoding need not coincide with superficial similarity of spike patterns.
+  - Sources: [A thesaurus for a neural population code (2015); 10.7554/elife.06134](https://doi.org/10.7554/elife.06134)
+- Representational geometry, including representational distance-matrix approaches, provides an intermediate description for comparing neural representations across processing stages and relating representational format to cognitive and computational theories.
+  - Sources: [Representational geometry: integrating cognition, computation, and the brain (2013); 10.1016/j.tics.2013.06.007](https://doi.org/10.1016/j.tics.2013.06.007); [Neural population geometry: An approach for understanding biological and artificial neural networks (2021); 10.1016/j.conb.2021.10.010](https://doi.org/10.1016/j.conb.2021.10.010)
+- Linking population-level geometric descriptions to representational content and cognitive theory remains a central interpretive limitation; geometry can characterize format without by itself establishing a unique computational or cognitive mechanism.
+  - Sources: [Representational geometry: integrating cognition, computation, and the brain (2013); 10.1016/j.tics.2013.06.007](https://doi.org/10.1016/j.tics.2013.06.007); [Neural population geometry: An approach for understanding biological and artificial neural networks (2021); 10.1016/j.conb.2021.10.010](https://doi.org/10.1016/j.conb.2021.10.010)
 
 #### Closest known work
 
-- A recent analysis operationalizes geometric stability as split-half reproducibility of pairwise stimulus-distance structure, rather than treating preservation of population centroids as the primary stability criterion.
-  - Sources: [Recurrent circuitry stabilizes representational geometry across neural circuits (2026); 10.21203/rs.3.rs-9581425/v1](https://doi.org/10.21203/rs.3.rs-9581425/v1)
-- A cross-area visual-discrimination analysis has already tested whether within-session reproducibility of representational distance geometry relates to neural-behavioral coupling, reporting a positive association for geometric stability and no corresponding association for centroid drift.
-  - Sources: [Recurrent circuitry stabilizes representational geometry across neural circuits (2026); 10.21203/rs.3.rs-9581425/v1](https://doi.org/10.21203/rs.3.rs-9581425/v1)
+- Neural population codes can contain structurally distinct activity patterns that convey similar stimulus-related information, so similarity for decoding need not coincide with superficial similarity of spike patterns.
+  - Sources: [A thesaurus for a neural population code (2015); 10.7554/elife.06134](https://doi.org/10.7554/elife.06134)
 
 #### Dataset leverage hypothesis — not a feasibility certification
 
-M1 and PMd reach-related population observations may allow later planning of reliability-focused comparisons between relational and centroid-based stability.
+Paired spiking and multiple movement measurements may allow a later planner to identify behaviorally similar reaches associated with different population states.
 
 #### Competing explanations
 
-- Relational geometry is reproducible in both regions despite centroid shifts.
-- One region preserves relational structure while the other reorganizes it.
-- Apparent dissociation is produced by unequal reliability or estimator sensitivity.
+- Behavioral similarity is too coarsely measured and hides meaningful movement differences.
+- Distinct neural states reflect time, context, or recording variability rather than equivalent coding.
+- A shared low-dimensional state exists but appears different because of nuisance population activity.
 
 #### Discriminating observation
 
-Reliable relational structure alongside unstable centroids, compared across regions with matched reliability assessment, would demonstrate a region-specific or shared dissociation between stability definitions.
+Distinct population patterns retain similar out-of-sample predictions for a sufficiently rich description of reach behavior and remain equivalent after later planning tests plausible contextual and temporal distinctions.
 
 #### What different outcomes would mean
 
-- Positive: A reproducible relational structure despite centroid change would support a descriptive claim that motor representations can be stable at one geometric level while changing at another.
-- Negative: Coupled instability of both relational structure and centroids would weaken the proposed dissociation.
-- Null: If neither measure is reliable, the meaning and regional scope of stability would remain unresolved.
+- Positive: A positive result would support degeneracy or semantic equivalence in motor population coding.
+- Negative: A negative result would favor a tighter correspondence between neural-state structure and movement meaning.
+- Null: A null result would leave equivalence unresolved if behavioral measurements cannot exclude hidden distinctions.
 
 #### Ambiguities
 
-- geometric stability
-- centroid shift
-- relational reproducibility
-- representational change
+- structurally distinct
+- semantically equivalent
+- similar reach
+- degenerate code
 
 #### Planning challenges
 
-- Obtaining independent reliability estimates.
-- Ensuring stability measures are comparably sensitive.
-- Avoiding claims of recurrent stabilization from descriptive dissociation.
+- Defining behavioral equivalence without circularity
+- Distinguishing nuisance variability from alternative codes
+- Ensuring apparent neural differences are reliable
 
 #### Dataset assumptions
 
-- Repeated reach conditions may permit split-sample reliability assessment.
-- M1 and PMd may support comparable geometry estimates.
-- Later planning must evaluate sampling and region metadata.
+- Movement measurements may be rich enough to compare behavioral similarity.
+- Repeated reaches may include behaviorally comparable examples.
+- A later planner must verify whether hidden task distinctions can be evaluated.
 
 
-### Variant 006.002: cross-demand generalization test
+### Variant 005.002: Hidden-context branch
 
 - Shortlist disposition: **Active for planning**
-- Distinction axes: discriminating_observation, outcome_meaning
-- Distinct from sibling variants: This variant treats transfer across reach demands as the decisive outcome; the sibling only asks whether two within-condition stability definitions dissociate across regions.
+- Distinction axes: target_contrast, outcome_meaning, discriminating_observation
+- Distinct from sibling variants: This variant treats retained trajectory context as evidence against full semantic equivalence, whereas the sibling treats matched movement meaning as the primary evidence for degeneracy.
 
 #### Question
 
-Does reproducible relational geometry within a reach class transfer across straight and curved reaches, or is within-condition stability compatible with demand-specific remapping?
+Do population states that appear equivalent for immediate movement preserve distinct information about straight versus curved reach context?
 
 #### Scientific tension and why it matters
 
-Reliable geometry within each condition may reflect robust but condition-bound coding; generalization requires preservation of relationships across changed movement demands.
+Patterns with similar immediate movement prediction may be genuinely synonymous or may encode different contextual structure that becomes visible only under a trajectory-context contrast.
 
-The question separates measurement reproducibility from scientific generalization and establishes an explicit boundary condition for invariance.
+The question tests the boundary of semantic equivalence and guards against declaring neural patterns synonymous from a single readout.
 
 #### Proposal-stage novelty hypothesis — not a verdict
 
-The contribution would test whether within-condition relational stability predicts cross-demand transfer in reaching, beyond the close prior's within-session coupling question.
+The contribution would ask whether apparent motor-code degeneracy conceals context-specific information relevant to maze-constrained reaching.
 
 #### Relevant literature
 
-- A recent analysis operationalizes geometric stability as split-half reproducibility of pairwise stimulus-distance structure, rather than treating preservation of population centroids as the primary stability criterion.
-  - Sources: [Recurrent circuitry stabilizes representational geometry across neural circuits (2026); 10.21203/rs.3.rs-9581425/v1](https://doi.org/10.21203/rs.3.rs-9581425/v1)
-- Hippocampal spatial representations can remap across environments while low-dimensional task-related population organization and temporal relationships are conserved during behavior that generalizes across contexts.
-  - Sources: [Conserved neural population geometry supports behavioral generalization (2024); 10.1101/2024.10.24.620127](https://doi.org/10.1101/2024.10.24.620127)
-- A cross-area visual-discrimination analysis has already tested whether within-session reproducibility of representational distance geometry relates to neural-behavioral coupling, reporting a positive association for geometric stability and no corresponding association for centroid drift.
-  - Sources: [Recurrent circuitry stabilizes representational geometry across neural circuits (2026); 10.21203/rs.3.rs-9581425/v1](https://doi.org/10.21203/rs.3.rs-9581425/v1)
+- Neural population codes can contain structurally distinct activity patterns that convey similar stimulus-related information, so similarity for decoding need not coincide with superficial similarity of spike patterns.
+  - Sources: [A thesaurus for a neural population code (2015); 10.7554/elife.06134](https://doi.org/10.7554/elife.06134)
+- Analytic work links linear-readout generalization for tasks sharing latent structure to population statistics including dimensionality, factorization, and correlation structure.
+  - Sources: [Neural population geometry and optimal coding of tasks with shared latent structure (2026); 10.1038/s41593-025-02183-y](https://doi.org/10.1038/s41593-025-02183-y)
+- How stable task-relevant population representations are preserved across contexts when spatial coding remaps remains an open mechanistic question, with current evidence in the supplied set limited to a hippocampal conditioning study and theory-oriented work.
+  - Sources: [Conserved neural population geometry supports behavioral generalization (2024); 10.1101/2024.10.24.620127](https://doi.org/10.1101/2024.10.24.620127); [Neural population geometry and optimal coding of tasks with shared latent structure (2026); 10.1038/s41593-025-02183-y](https://doi.org/10.1038/s41593-025-02183-y)
 
 #### Closest known work
 
-- A recent analysis operationalizes geometric stability as split-half reproducibility of pairwise stimulus-distance structure, rather than treating preservation of population centroids as the primary stability criterion.
-  - Sources: [Recurrent circuitry stabilizes representational geometry across neural circuits (2026); 10.21203/rs.3.rs-9581425/v1](https://doi.org/10.21203/rs.3.rs-9581425/v1)
-- Hippocampal spatial representations can remap across environments while low-dimensional task-related population organization and temporal relationships are conserved during behavior that generalizes across contexts.
-  - Sources: [Conserved neural population geometry supports behavioral generalization (2024); 10.1101/2024.10.24.620127](https://doi.org/10.1101/2024.10.24.620127)
-- A cross-area visual-discrimination analysis has already tested whether within-session reproducibility of representational distance geometry relates to neural-behavioral coupling, reporting a positive association for geometric stability and no corresponding association for centroid drift.
-  - Sources: [Recurrent circuitry stabilizes representational geometry across neural circuits (2026); 10.21203/rs.3.rs-9581425/v1](https://doi.org/10.21203/rs.3.rs-9581425/v1)
+- Neural population codes can contain structurally distinct activity patterns that convey similar stimulus-related information, so similarity for decoding need not coincide with superficial similarity of spike patterns.
+  - Sources: [A thesaurus for a neural population code (2015); 10.7554/elife.06134](https://doi.org/10.7554/elife.06134)
+- Analytic work links linear-readout generalization for tasks sharing latent structure to population statistics including dimensionality, factorization, and correlation structure.
+  - Sources: [Neural population geometry and optimal coding of tasks with shared latent structure (2026); 10.1038/s41593-025-02183-y](https://doi.org/10.1038/s41593-025-02183-y)
 
 #### Dataset leverage hypothesis — not a feasibility certification
 
-Straight and curved reaching may provide a later-plannable demand contrast for separating reliability from transfer.
+Straight and curved trajectory contexts paired with neural and kinematic measurements may permit later comparison of immediate movement equivalence against retained context information.
 
 #### Competing explanations
 
-- Within-condition stable geometry transfers across reach demands.
-- Each reach class has reliable but distinct relational geometry.
-- Apparent transfer reflects shared kinematics or low-resolution condition definitions.
+- Context information merely reflects residual kinematic differences.
+- Apparent neural subgroups arise from sampling noise rather than stable coding alternatives.
+- The patterns are truly synonymous and context can only be decoded from unrelated nuisance activity.
 
 #### Discriminating observation
 
-Strong within-condition reproducibility combined with either preserved or reorganized cross-condition relationships would distinguish transferable geometry from stable demand-specific geometry.
+Population patterns matched for immediate movement prediction remain systematically separable by trajectory context and that separation generalizes beyond the observations used to define it.
 
 #### What different outcomes would mean
 
-- Positive: Transfer would support a predictive account of a common geometric scaffold across reach demands.
-- Negative: Reliable within-condition but weak cross-condition correspondence would support stable demand-specific remapping.
-- Null: Low within-condition reproducibility would make cross-demand transfer uninterpretable rather than disproving invariance.
+- Positive: A positive result would show that apparent movement equivalence masks context-specific representational content.
+- Negative: A negative result would strengthen the interpretation that the distinct patterns are genuinely synonymous for the measured task.
+- Null: An uncertain result would leave the semantic boundary dependent on unverified behavioral and contextual resolution.
 
 #### Ambiguities
 
-- transfer
-- within-condition stability
-- demand-specific remapping
-- common scaffold
+- immediate movement meaning
+- hidden context information
+- synonymous pattern
+- context generalization
 
 #### Planning challenges
 
-- Separating transfer from shared movement features.
-- Matching condition reliability.
-- Defining cross-condition correspondence without imposing alignment.
+- Matching movement while preserving a context contrast
+- Avoiding information leakage between matching and evaluation
+- Determining whether context labels capture distinct computational demands
 
 #### Dataset assumptions
 
-- Straight and curved reach classes may contain repeated observations.
-- Condition-specific geometry may be estimable independently.
-- A later planner must verify whether meaningful cross-demand comparison is possible.
+- Comparable movement segments may occur across trajectory contexts.
+- Context and movement measurements may support matching.
+- A later planner must verify sufficient overlap and repeated coverage.
+
+## Family 006: Functional meaning of motor-manifold form
+
+- Shortlist disposition: **Shortlisted for planning; this is not scientific approval**
+- Proposal review status: `model_generated`
+- Authority ceiling: `provisional_inspiration`
+
+### Scientific background
+
+Compares whether simple versus curved population-manifold structure is associated with reusable movement readout or context-specific trajectory organization.
+
+### Shared scientific tension
+
+Motor population activity may occupy an approximately simple reusable structure or a nonlinear context-dependent manifold, but geometric complexity alone does not establish computational function.
+
+### Family structure
+
+- Semantic axes: theoretical_tension; target_contrast; discriminating_observation; outcome_meaning
+- Distinctions that should not be merged: Simple shared geometry and nonlinear context-specific geometry imply different representational benefits.; Cross-context kinematic generalization and added context prediction are distinct functional outcomes.
+- Proposal-stage uncertainties: Data scale may not support stable discrimination among manifold forms.; Simple, low-dimensional, linear, curved, and nonlinear are not interchangeable constructs.; Any link from geometric form to computation remains predictive rather than mechanistically unique.
+- Dataset assumptions: Population and movement measurements may permit candidate geometric comparisons.; Trajectory contexts may provide discriminating observations after later coverage checks.
+
+### Reviewed literature context used by the family
+
+- Analytic work links linear-readout generalization for tasks sharing latent structure to population statistics including dimensionality, factorization, and correlation structure.
+  - Sources: [Neural population geometry and optimal coding of tasks with shared latent structure (2026); 10.1038/s41593-025-02183-y](https://doi.org/10.1038/s41593-025-02183-y)
+- Representational geometry, including representational distance-matrix approaches, provides an intermediate description for comparing neural representations across processing stages and relating representational format to cognitive and computational theories.
+  - Sources: [Representational geometry: integrating cognition, computation, and the brain (2013); 10.1016/j.tics.2013.06.007](https://doi.org/10.1016/j.tics.2013.06.007); [Neural population geometry: An approach for understanding biological and artificial neural networks (2021); 10.1016/j.conb.2021.10.010](https://doi.org/10.1016/j.conb.2021.10.010)
+- Linking population-level geometric descriptions to representational content and cognitive theory remains a central interpretive limitation; geometry can characterize format without by itself establishing a unique computational or cognitive mechanism.
+  - Sources: [Representational geometry: integrating cognition, computation, and the brain (2013); 10.1016/j.tics.2013.06.007](https://doi.org/10.1016/j.tics.2013.06.007); [Neural population geometry: An approach for understanding biological and artificial neural networks (2021); 10.1016/j.conb.2021.10.010](https://doi.org/10.1016/j.conb.2021.10.010)
+- As neural recordings scale in neuron count faster than trial count, inference of population geometry—particularly dimensionality estimated with PCA—requires explicit consideration of sampling and experimental-design uncertainty.
+  - Sources: [A predictive theory of experimental design for inferring neural population geometry in large-scale recordings (2026); 10.64898/2026.07.19.739385](https://doi.org/10.64898/2026.07.19.739385)
+
+### Variant 006.001: Simple reusable-manifold branch
+
+- Shortlist disposition: **Active for planning**
+- Distinction axes: theoretical_tension, discriminating_observation, outcome_meaning
+- Distinct from sibling variants: This variant assigns functional value to a simple shared geometry through cross-context kinematic generalization; the sibling assigns value to nonlinear geometry through context-specific trajectory prediction.
+
+#### Question
+
+Does an approximately simple population geometry support reusable prediction of reach kinematics across trajectory contexts?
+
+#### Scientific tension and why it matters
+
+A reusable-readout account predicts that a comparatively simple shared organization supports cross-context movement prediction, whereas a context-dependent account predicts that such simplicity discards important trajectory-specific structure.
+
+The question ties geometric simplicity to a falsifiable predictive consequence rather than assuming that low dimensionality or linearity is inherently functional.
+
+#### Proposal-stage novelty hypothesis — not a verdict
+
+The contribution would test whether simple motor geometry corresponds to reusable kinematic prediction across maze contexts.
+
+#### Relevant literature
+
+- Analytic work links linear-readout generalization for tasks sharing latent structure to population statistics including dimensionality, factorization, and correlation structure.
+  - Sources: [Neural population geometry and optimal coding of tasks with shared latent structure (2026); 10.1038/s41593-025-02183-y](https://doi.org/10.1038/s41593-025-02183-y)
+- Representational geometry, including representational distance-matrix approaches, provides an intermediate description for comparing neural representations across processing stages and relating representational format to cognitive and computational theories.
+  - Sources: [Representational geometry: integrating cognition, computation, and the brain (2013); 10.1016/j.tics.2013.06.007](https://doi.org/10.1016/j.tics.2013.06.007); [Neural population geometry: An approach for understanding biological and artificial neural networks (2021); 10.1016/j.conb.2021.10.010](https://doi.org/10.1016/j.conb.2021.10.010)
+- As neural recordings scale in neuron count faster than trial count, inference of population geometry—particularly dimensionality estimated with PCA—requires explicit consideration of sampling and experimental-design uncertainty.
+  - Sources: [A predictive theory of experimental design for inferring neural population geometry in large-scale recordings (2026); 10.64898/2026.07.19.739385](https://doi.org/10.64898/2026.07.19.739385)
+
+#### Closest known work
+
+- Analytic work links linear-readout generalization for tasks sharing latent structure to population statistics including dimensionality, factorization, and correlation structure.
+  - Sources: [Neural population geometry and optimal coding of tasks with shared latent structure (2026); 10.1038/s41593-025-02183-y](https://doi.org/10.1038/s41593-025-02183-y)
+- Representational geometry, including representational distance-matrix approaches, provides an intermediate description for comparing neural representations across processing stages and relating representational format to cognitive and computational theories.
+  - Sources: [Representational geometry: integrating cognition, computation, and the brain (2013); 10.1016/j.tics.2013.06.007](https://doi.org/10.1016/j.tics.2013.06.007); [Neural population geometry: An approach for understanding biological and artificial neural networks (2021); 10.1016/j.conb.2021.10.010](https://doi.org/10.1016/j.conb.2021.10.010)
+
+#### Dataset leverage hypothesis — not a feasibility certification
+
+Population spiking across straight and curved reaches with kinematic measurements may allow a later planner to relate candidate geometric simplicity to cross-context prediction.
+
+#### Competing explanations
+
+- Cross-context prediction depends on shared kinematics but not geometric simplicity.
+- Apparent simplicity is imposed by sampling or the chosen representation method.
+- A nonlinear manifold supports equally reusable readout through a different mapping.
+
+#### Discriminating observation
+
+A pre-specified simple geometric account predicts cross-context movement relationships better than matched complex or context-separate alternatives under uncertainty-aware evaluation.
+
+#### What different outcomes would mean
+
+- Positive: A positive result would support simple shared geometry as a useful intermediate description of reusable motor readout.
+- Negative: A negative result would weaken claims that simple geometry explains generalization and motivate context-dependent or nonlinear alternatives.
+- Null: An inconclusive result would leave manifold form and readout generalization empirically decoupled.
+
+#### Ambiguities
+
+- simple geometry
+- reusable readout
+- linearity
+- cross-context prediction
+
+#### Planning challenges
+
+- Sampling sensitivity of dimensional and geometric estimates
+- Choosing candidate forms without outcome-driven selection
+- Separating linear geometry from linear readout assumptions
+
+#### Dataset assumptions
+
+- Population observations may support comparison of candidate manifold forms.
+- Kinematic measurements may define a cross-context predictive target.
+- Later planning must verify repeated observations and estimate uncertainty.
+
+
+### Variant 006.002: Nonlinear context-manifold branch
+
+- Shortlist disposition: **Active for planning**
+- Distinction axes: theoretical_tension, target_contrast, outcome_meaning
+- Distinct from sibling variants: This variant requires nonlinear structure to add context-specific information beyond simple geometry and kinematic curvature; the sibling instead tests reusable prediction from a simple shared form.
+
+#### Question
+
+Does nonlinear population-manifold structure capture trajectory-context distinctions that are missed by a simple shared geometry?
+
+#### Scientific tension and why it matters
+
+Nonlinearity may encode meaningful context-dependent movement structure, or it may reflect noise, sampling, and smooth embedding of ordinary kinematic variables without added predictive value.
+
+The question makes nonlinear manifold complexity scientifically interpretable only if it discriminates context-specific outcomes beyond simpler alternatives.
+
+#### Proposal-stage novelty hypothesis — not a verdict
+
+The adjacent contribution would require nonlinear motor-manifold structure to explain straight-versus-curved context distinctions beyond a simple shared representation.
+
+#### Relevant literature
+
+- Representational geometry, including representational distance-matrix approaches, provides an intermediate description for comparing neural representations across processing stages and relating representational format to cognitive and computational theories.
+  - Sources: [Representational geometry: integrating cognition, computation, and the brain (2013); 10.1016/j.tics.2013.06.007](https://doi.org/10.1016/j.tics.2013.06.007); [Neural population geometry: An approach for understanding biological and artificial neural networks (2021); 10.1016/j.conb.2021.10.010](https://doi.org/10.1016/j.conb.2021.10.010)
+- Linking population-level geometric descriptions to representational content and cognitive theory remains a central interpretive limitation; geometry can characterize format without by itself establishing a unique computational or cognitive mechanism.
+  - Sources: [Representational geometry: integrating cognition, computation, and the brain (2013); 10.1016/j.tics.2013.06.007](https://doi.org/10.1016/j.tics.2013.06.007); [Neural population geometry: An approach for understanding biological and artificial neural networks (2021); 10.1016/j.conb.2021.10.010](https://doi.org/10.1016/j.conb.2021.10.010)
+- As neural recordings scale in neuron count faster than trial count, inference of population geometry—particularly dimensionality estimated with PCA—requires explicit consideration of sampling and experimental-design uncertainty.
+  - Sources: [A predictive theory of experimental design for inferring neural population geometry in large-scale recordings (2026); 10.64898/2026.07.19.739385](https://doi.org/10.64898/2026.07.19.739385)
+
+#### Closest known work
+
+- Representational geometry, including representational distance-matrix approaches, provides an intermediate description for comparing neural representations across processing stages and relating representational format to cognitive and computational theories.
+  - Sources: [Representational geometry: integrating cognition, computation, and the brain (2013); 10.1016/j.tics.2013.06.007](https://doi.org/10.1016/j.tics.2013.06.007); [Neural population geometry: An approach for understanding biological and artificial neural networks (2021); 10.1016/j.conb.2021.10.010](https://doi.org/10.1016/j.conb.2021.10.010)
+- Linking population-level geometric descriptions to representational content and cognitive theory remains a central interpretive limitation; geometry can characterize format without by itself establishing a unique computational or cognitive mechanism.
+  - Sources: [Representational geometry: integrating cognition, computation, and the brain (2013); 10.1016/j.tics.2013.06.007](https://doi.org/10.1016/j.tics.2013.06.007); [Neural population geometry: An approach for understanding biological and artificial neural networks (2021); 10.1016/j.conb.2021.10.010](https://doi.org/10.1016/j.conb.2021.10.010)
+
+#### Dataset leverage hypothesis — not a feasibility certification
+
+The described trajectory diversity and paired movement observations may support later comparison of simple and nonlinear accounts of population structure.
+
+#### Competing explanations
+
+- Nonlinearity is generated by curved kinematics rather than neural contextual organization.
+- Limited sampling makes a simple structure appear curved or fragmented.
+- A simple shared geometry contains the same predictive information as the nonlinear description.
+
+#### Discriminating observation
+
+A constrained nonlinear description adds reproducible prediction of trajectory context or context-specific movement relationships beyond simple geometry and measured kinematic curvature.
+
+#### What different outcomes would mean
+
+- Positive: A positive result would support nonlinear manifold form as an informative description of context-specific motor organization.
+- Negative: A negative result would favor a simpler shared representation or treat observed curvature as non-functional.
+- Null: A null result would leave nonlinear structure descriptive but without established predictive meaning.
+
+#### Ambiguities
+
+- nonlinear manifold
+- context-specific structure
+- added predictive value
+- kinematic curvature
+
+#### Planning challenges
+
+- Preventing flexible nonlinear models from overfitting
+- Separating neural curvature from movement curvature
+- Quantifying geometric uncertainty under limited sampling
+
+#### Dataset assumptions
+
+- Straight and curved reaches may provide discriminating contexts.
+- Neural and kinematic measurements may support comparison with inherited-input explanations.
+- A later planner must assess whether data scale supports nonlinear claims.

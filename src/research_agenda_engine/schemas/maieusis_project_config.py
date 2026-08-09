@@ -36,7 +36,12 @@ class CodingHost(StrEnum):
 
 
 class CodingReasoningEffort(StrEnum):
-    """Codex CLI reasoning-effort values; Claude Code has no equivalent config surface."""
+    """Coding-host reasoning-effort values.
+
+    Codex accepts every value and REQUIRES one. Claude Code exposes an equivalent CLI
+    surface (``--effort``; verified against the official docs on 2026-07-20) accepting
+    low/medium/high/xhigh; the field is OPTIONAL there and ``None`` keeps the CLI default.
+    """
 
     MINIMAL = "minimal"
     LOW = "low"
@@ -50,11 +55,56 @@ class ConfigDatasetAccessMode(StrEnum):
     EXTERNAL_READONLY = "external_readonly"
 
 
+class ConfigModelThinking(StrEnum):
+    """Whether a role's model reasons before answering. A closed taxonomy, so it is constrained
+    at the source rather than left to prose.
+
+    ``VENDOR_DEFAULT`` is the state this repository was actually in, and it is not the same as any
+    single named value: omitting the parameter runs adaptive thinking on ``claude-sonnet-5`` and NO
+    thinking on ``claude-opus-4-8``. Measured across the operator's capture archive, 249 of 489
+    sonnet-5 replies carry a thinking block against 0 of 204 on opus-4-8. So a constant cannot
+    restate the old behaviour for both, and picking one silently inverts the other.
+    """
+
+    VENDOR_DEFAULT = "vendor_default"
+    ADAPTIVE = "adaptive"
+    DISABLED = "disabled"
+
+
+class ConfigModelEffort(StrEnum):
+    """How much a role's model spends on reasoning and acting. Vendor-neutral names that both
+    adapters map onto their own API.
+
+    ``VENDOR_DEFAULT`` carries the same meaning as its thinking counterpart: send nothing. ``high``
+    happens to be the API default on every model this repository can configure today, but pinning
+    it would still put a key on the wire that was never there, and ``output_config`` is the object
+    that also carries the structured-output format.
+    """
+
+    VENDOR_DEFAULT = "vendor_default"
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    XHIGH = "xhigh"
+    MAX = "max"
+
+
 class ProviderModel(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     provider: str = "openai"  # mock | openai | anthropic (providers/models/factory.py)
     model: str = ""
+    # Reasoning depth was a SILENT VENDOR DEFAULT until this field existed: the adapters sent no
+    # thinking or effort parameter at all, so every role inherited whatever the vendor had chosen
+    # that week. On the 2026-07-31 leg that meant adaptive thinking nobody asked for on the roles
+    # running claude-sonnet-5, and it is where the novelty reviewer's refusals were generated -- the
+    # refusing replies carry a thinking block and no text block, while every reply that parsed
+    # carries a text block. Defaulting to VENDOR_DEFAULT keeps the wire byte-identical on every
+    # model while making the choice exist, visible, and settable; naming a value here instead would
+    # silently switch thinking ON for the claude-opus-4-8 roles, including the reviewer the release
+    # gate requires.
+    thinking: ConfigModelThinking = ConfigModelThinking.VENDOR_DEFAULT
+    effort: ConfigModelEffort = ConfigModelEffort.VENDOR_DEFAULT
 
 
 class PaperBankImportConfig(BaseModel):
@@ -90,6 +140,16 @@ class PaperBankConfig(BaseModel):
     min_local_reference_count: int = Field(default=10, ge=0)
     crossref_mailto: str = ""
     openalex_email: str = ""
+    #: Read each paper's citing sentences with a coding agent instead of the regex extractor.
+    #: OFF by default because it needs a logged-in subscription CLI, which CI and a fresh checkout
+    #: do not have -- but a profile that can spawn one should set it, because the regex it replaces
+    #: covers 5.7% of cited works on an assumption (square-bracket markers) that is false for every
+    #: paper measured, against 91% for the agent. When it is off the artifact says
+    #: `citation_context_reader=regex_fallback` rather than leaving the reader anonymous.
+    citation_contexts_by_agent: bool = False
+    #: Papers read concurrently, one short session each. They do not inform each other, so this is
+    #: pure wall-clock: 70 s per paper three-up against 302 s serial.
+    citation_context_agent_parallel: int = Field(default=4, ge=1, le=16)
     citation_prompt_char_budget: int = Field(default=120_000, ge=1)
     # Optional cross-run paper-half reuse. The source path is operational only: the current PDF
     # filename+byte digests, receipt, config, prompts, models, and outputs remain the identity.
@@ -163,10 +223,28 @@ class ModelsConfig(BaseModel):
     topic: ProviderModel = Field(default_factory=ProviderModel)
     owner: ProviderModel = Field(default_factory=ProviderModel)
     reviewer: ProviderModel = Field(default_factory=lambda: ProviderModel(provider="anthropic"))
+    # The novelty reviewer alone, when it must differ from every other reviewer role. ``None`` means
+    # "use ``reviewer``", so an existing config is unchanged in behaviour AND in every digest.
+    #
+    # It exists because one vendor's safety classifier can make one role unusable while every other
+    # role is fine, and `reviewer` is shared by the front-half gates, the plan reviewer, and four
+    # stage model-identity signatures -- switching it moves all of them, and would also trip the
+    # preflight rule that owner and reviewer must be distinct providers. Measured on the
+    # 2026-07-31 climate leg's own packets: `claude-sonnet-5` lost 50% of reviews to a biosecurity
+    # classifier firing on stratospheric wave-forcing reasoning (25% with thinking disabled), while
+    # `gpt-5.6-terra` lost 0 of 60 and returned the same 50/50 pass-hold split -- i.e. its
+    # robustness was not bought with laxity, unlike `gpt-5.6-luna`, which passed 17 of 22 and
+    # disagreed with BOTH other reviewers in the permissive direction on three variants.
+    #
+    # Deliberately here rather than under ``novelty``: the Stage-D config digest dumps
+    # ``config.novelty`` wholesale, so a field there would move every existing receipt and make a
+    # resume re-pay the run. Nothing dumps ``config.models`` wholesale.
+    novelty_reviewer: ProviderModel | None = None
     coding_host: CodingHost  # REQUIRED typed choice — never the silent FakePlannerHost
     # The coding-agent host is a subscription CLI, not one of the token-API roles above. Its model
     # is nevertheless an explicit scientific-run input and must never fall back to user-global CLI
-    # configuration. Codex additionally exposes a reasoning-effort knob; Claude Code does not.
+    # configuration. Both hosts expose a reasoning-effort knob: Codex requires it; Claude Code
+    # accepts an optional low/medium/high/xhigh value (None keeps the CLI default).
     coding_model: str
     coding_reasoning_effort: CodingReasoningEffort | None = None
     allow_pro_model: bool = False
@@ -184,9 +262,11 @@ class ModelsConfig(BaseModel):
         if self.coding_host == CodingHost.CODEX:
             if self.coding_reasoning_effort is None:
                 raise ValueError("Codex coding_host requires coding_reasoning_effort")
-        elif self.coding_reasoning_effort is not None:
+        elif self.coding_reasoning_effort is CodingReasoningEffort.MINIMAL:
+            # Claude Code's effort surface has no 'minimal' level; fail closed at construction
+            # instead of at CLI spawn time inside a paid run.
             raise ValueError(
-                "coding_reasoning_effort is a Codex-only option and must be omitted for Claude Code"
+                "Claude Code coding_reasoning_effort must be one of low/medium/high/xhigh"
             )
         return self
 
@@ -220,15 +300,111 @@ class LiteratureConfig(BaseModel):
     source_profile: TopicSourceProfile = TopicSourceProfile.PUBLIC
 
 
+class NoveltyWebToolRateCard(StrEnum):
+    """Pinned vendor web-tool price snapshots permitted by strict N-2 grounding.
+
+    This is intentionally a small, closed enum rather than a user-editable decimal price.  The
+    N-2 reservation ceiling is meaningful only when the per-search tool charge is pinned to a
+    reviewable rate-card identity.  It covers the vendor's web-tool fee, *not* model-token spend.
+    """
+
+    ANTHROPIC_DIRECT_WEB_SEARCH_20250305 = "anthropic_direct_web_search_20250305"
+
+
+_NOVELTY_WEB_TOOL_RATE_MICRO_USD: dict[NoveltyWebToolRateCard, int] = {
+    NoveltyWebToolRateCard.ANTHROPIC_DIRECT_WEB_SEARCH_20250305: 10_000,
+}
+
+
+def novelty_web_tool_rate_micro_usd(rate_card: NoveltyWebToolRateCard) -> int:
+    """Return the fixed web-tool fee snapshot for a configured N-2 rate card."""
+
+    return _NOVELTY_WEB_TOOL_RATE_MICRO_USD[rate_card]
+
+
+class NoveltyWebGroundingConfig(BaseModel):
+    """Explicit, default-off configuration for N-2's independent web scout.
+
+    ``scout`` is deliberately separate from ``models.reviewer``.  The reviewer remains the
+    citation-bound N-1 judge; the scout is a narrowly scoped tool user with independently
+    configured provider/model identity.  When this lane is disabled its incomplete placeholder
+    defaults cannot construct a provider or cause egress.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    enabled: bool = False
+    scout: ProviderModel = Field(default_factory=lambda: ProviderModel(provider="anthropic"))
+    max_searches_per_scout: int = Field(default=3, ge=1, le=8)
+    max_leads_per_scout: int = Field(default=5, ge=1, le=8)
+    # `max_tokens` bounds the WHOLE reply, including the model's digestion of the search results
+    # AND — on a thinking model — the thinking block, so a three-search scout carrying fifty-odd
+    # sources runs out mid-answer and returns no parsable structured output at all, losing the
+    # entire paid call. Four of twelve died this way in one live leg (2026-07-25); an explicit
+    # 8_192 was the fix available at the time, and the cap then FROZE the lane at that value.
+    #
+    # The scout on every live profile is `claude-sonnet-5` through `AnthropicWebSearchProvider`,
+    # which is the same non-streaming Anthropic transport that truncated 5 of 408 gate turns at
+    # 8_192 (see `ANTHROPIC_MAX_OUTPUT_TOKENS`). Same vendor, same shared budget, same exposure —
+    # so the bound is that constant's value, which is itself the largest the transport accepts.
+    # Written as a literal because `schemas` never imports `providers` and inverting that layering
+    # for one integer would be worse than the drift; `tests/test_upd2_web_scout_gets_room.py` pins
+    # the two equal instead. Operator-authorized 2026-08-03.
+    #
+    # The DEFAULT deliberately stays at 2_048, and the original comment here was RIGHT that moving
+    # it is release truth rather than a preference -- checked the hard way. Raising it to 21_000
+    # turned 34 `test_release_validation_pair` tests red with "config must keep the frozen
+    # novelty-off profile": the release-pair fixtures OMIT this field, so the schema default is
+    # what the frozen profile pins. Only the CAP was ever the blocker; every real profile sets the
+    # value explicitly, so the raise reaches them without touching what v0.1.0 ran with.
+    max_output_tokens: int = Field(default=2_048, ge=128, le=21_000)
+    rate_card: NoveltyWebToolRateCard = NoveltyWebToolRateCard.ANTHROPIC_DIRECT_WEB_SEARCH_20250305
+    # A hard reservation ceiling for the web-tool fee only.  The separately metered model-token
+    # cost is disclosed by preflight but cannot be represented honestly as a hard total cap.
+    hard_run_tool_spend_ceiling_micro_usd: int = Field(default=500_000, ge=0)
+
+    @property
+    def web_tool_rate_micro_usd(self) -> int:
+        """The fixed per-search fee for the selected, reviewable rate card."""
+
+        return novelty_web_tool_rate_micro_usd(self.rate_card)
+
+    @model_validator(mode="after")
+    def validate_enabled_grounding(self) -> NoveltyWebGroundingConfig:
+        if not self.enabled:
+            return self
+        if not self.scout.provider.strip():
+            raise ValueError("enabled novelty web grounding requires an explicit scout provider")
+        if not self.scout.model.strip():
+            raise ValueError("enabled novelty web grounding requires an explicit scout model")
+        one_scout_reservation = self.max_searches_per_scout * self.web_tool_rate_micro_usd
+        if self.hard_run_tool_spend_ceiling_micro_usd < one_scout_reservation:
+            raise ValueError(
+                "novelty web-tool ceiling cannot fund even one configured scout reservation"
+            )
+        return self
+
+
 class NoveltyConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    # Phase 6-E1: the product does not yet wire a real novelty search. Omitted means honestly off;
-    # explicit true is rejected by preflight until that capability exists.
+    # Backward-compatible and spend-safe default for v0.1 projects that omit the new Card 3 gate.
+    # Serious UPD2 configurations must opt in explicitly; an unassessed run cannot make a
+    # novelty-admitted planning claim.
     enabled: bool = False
+    # Compatibility-only recall ranking controls. They never produce the v2 scientific verdict.
     direct_recap_threshold: float = Field(default=0.9, ge=0.0, le=1.0)
     close_prior_threshold: float = Field(default=0.7, ge=0.0, le=1.0)
     max_candidates: int = Field(default=5, ge=1)
+    # N-2 is an independent, bounded web-discovery lane.  Its nested default is disabled so
+    # existing v0.1 configurations load unchanged and construct no web provider.
+    web_grounding: NoveltyWebGroundingConfig = Field(default_factory=NoveltyWebGroundingConfig)
+
+    @model_validator(mode="after")
+    def require_novelty_admission_for_web_grounding(self) -> NoveltyConfig:
+        if self.web_grounding.enabled and not self.enabled:
+            raise ValueError("novelty web grounding requires novelty.enabled=true")
+        return self
 
 
 class RunConfig(BaseModel):
@@ -286,12 +462,31 @@ class MaieusisProjectConfig(BaseModel):
     novelty: NoveltyConfig = Field(default_factory=NoveltyConfig)
     run: RunConfig
 
+    @model_validator(mode="before")
+    @classmethod
+    def disable_demo_web_before_nested_validation(cls, value: object) -> object:
+        """Let demo mode coerce an otherwise incomplete default-off web block before it validates."""
+
+        if not isinstance(value, dict) or value.get("mode") != ProductMode.SUBSCRIPTION_ONLY_DEMO:
+            return value
+        copied = dict(value)
+        novelty_raw = copied.get("novelty")
+        novelty = dict(novelty_raw) if isinstance(novelty_raw, dict) else {}
+        web_raw = novelty.get("web_grounding")
+        web_grounding = dict(web_raw) if isinstance(web_raw, dict) else {}
+        novelty["enabled"] = False
+        web_grounding["enabled"] = False
+        novelty["web_grounding"] = web_grounding
+        copied["novelty"] = novelty
+        return copied
+
     @model_validator(mode="after")
     def apply_mode_and_reject_secrets(self) -> MaieusisProjectConfig:
-        # Demo disables literature egress. Novelty already defaults off; an explicit true must remain
-        # visible so preflight can reject the unsupported capability instead of silently coercing it.
+        # Demo disables all live literature/novelty egress and cannot earn novelty admission.
         if self.mode == ProductMode.SUBSCRIPTION_ONLY_DEMO:
             self.literature.enabled = False
+            self.novelty.enabled = False
+            self.novelty.web_grounding.enabled = False
         secret_hits = _scan_for_secrets(self.model_dump(mode="python"))
         if secret_hits:
             raise ValueError(

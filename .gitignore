@@ -1,6 +1,5 @@
 # Python and tool caches
 .venv/
-.uv-cache/
 __pycache__/
 *.py[cod]
 .pytest_cache/
@@ -18,62 +17,18 @@ build/
 !.env.example
 runtime.env
 *.local.yaml
-data_locations*.yaml
 *.pem
 *.key
 *.token
 *.credentials
 
-# Generated research artifacts and local model/data caches
+# Generated run output and local caches
 .maieusis-cache/
 runs/*
 !runs/.gitkeep
-reports/
-!docs/prototypes/
-!docs/prototypes/phase2/
-!docs/prototypes/phase2/reports/
-!docs/prototypes/phase2/reports/**
-artifacts/
 outputs/
 *.log
-*.parquet
-*.pqt
-*.npy
-*.npz
-*.h5
-*.hdf5
-*.nwb
-*.feather
-*.zarr/
 
-# Copyright-sensitive local reading corpus
-example_papers/
-corpus/papers/inbox/*
-!corpus/papers/inbox/.gitkeep
-corpus/parsed/*
-!corpus/parsed/.gitkeep
-corpus/cases/extracted/*
-!corpus/cases/extracted/.gitkeep
-corpus/indexes/*
-!corpus/indexes/.gitkeep
-corpus/**/*.pdf
-corpus/**/*.tei.xml
-corpus/**/*.jsonl
-
-# Withheld benchmark material
-qbench/hidden/
-qbench/prospective/
-
-# Release/package artifacts
-RELEASE_MANIFEST.json
-*.zip
-*.zip.sha256
-*.tar
-*.tar.gz
-*.whl
-
-# OS files
-.DS_Store
 
 # Maieusis user inputs and local run state (public-checkout safety layer)
 /maieusis.yaml
@@ -115,9 +70,7 @@ RELEASE_MANIFEST.json
 # These are reviewed, versioned release assets rather than local run output.  Keep the
 # exceptions after every broad data/artifact rule so an empty public repository can stage the
 # exact exported tree without `git add -f`.
-!/demos/ibl/artifacts/
-!/demos/ibl/artifacts/**
-!/demos/nlb/artifacts/
-!/demos/nlb/artifacts/**
+!/demos/*/artifacts/
+!/demos/*/artifacts/**
 !/docs/positioning/PRIMARY_SOURCE_LOG.csv
 !/docs/positioning/positioning_coordinates.csv

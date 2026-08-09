@@ -1,0 +1,163 @@
+schema_version: maieusis.public_demo.paper_sources/v1
+release: 0.1.1
+status: climate_twenty_source_demonstration_input
+raw_pdfs_included: false
+note: 'The 20 source inputs for the climate demonstration. Each DOI is an acquisition and metadata starting
+  point, not a promise that publisher full text is freely available; obtain lawful copies yourself. Unlike
+  the neuroscience cohort, no pdf_sha256 is published for these: every one of them was read through a
+  locally produced text derivative, so a checksum recorded here would not match the file a reader downloads
+  and would be a false verification aid. The screen below is the run''s own outcome, including two canonical
+  works lost to a parse failure rather than to any judgement about their science.'
+final_screen:
+  source_input_count: 20
+  accepted_paper_case_count: 13
+  excluded_count: 7
+  reviewed_formation_trace_count: 12
+  reviewed_pattern_count: 8
+  note: 'Three exclusions were parse failures: 09-lorenz-hartmann-2001, 12-charlton-polvani-2007, and
+    19-rousi-et-al-2022 could not be turned into the structured record the review stage requires. That
+    is a processing outcome and not an assessment of those papers.'
+papers:
+- filename: 01-wallace-gutzler-1981.pdf
+  title: Teleconnections in the Geopotential Height Field during the Northern Hemisphere Winter
+  authors: John M. Wallace; David S. Gutzler
+  year: 1981
+  doi: 10.1175/1520-0493(1981)109%3C0784:TITGHF%3E2.0.CO;2
+  acquisition_url: https://doi.org/10.1175/1520-0493(1981)109%3C0784:TITGHF%3E2.0.CO;2
+  venue: Monthly Weather Review
+- filename: 02-barnston-livezey-1987.pdf
+  title: Classification, Seasonality and Persistence of Low-Frequency Atmospheric Circulation Patterns
+  authors: Anthony G. Barnston; Robert E. Livezey
+  year: 1987
+  doi: 10.1175/1520-0493(1987)115%3C1083:CSAPOL%3E2.0.CO;2
+  acquisition_url: https://doi.org/10.1175/1520-0493(1987)115%3C1083:CSAPOL%3E2.0.CO;2
+  venue: Monthly Weather Review
+- filename: 03-blackmon-et-al-1977.pdf
+  title: An Observational Study of the Northern Hemisphere Wintertime Circulation
+  authors: Maurice L. Blackmon; John M. Wallace; Ngar-Cheung Lau; Steven L. Mullen
+  year: 1977
+  doi: 10.1175/1520-0469(1977)034%3C1040:AOSOTN%3E2.0.CO;2
+  acquisition_url: https://doi.org/10.1175/1520-0469(1977)034%3C1040:AOSOTN%3E2.0.CO;2
+  venue: Journal of the Atmospheric Sciences
+- filename: 04-lau-1988.pdf
+  title: Variability of the Observed Midlatitude Storm Tracks in Relation to Low-Frequency Changes in
+    the Circulation Pattern
+  authors: Ngar-Cheung Lau
+  year: 1988
+  doi: 10.1175/1520-0469(1988)045%3C2718:VOTOMS%3E2.0.CO;2
+  acquisition_url: https://doi.org/10.1175/1520-0469(1988)045%3C2718:VOTOMS%3E2.0.CO;2
+  venue: Journal of the Atmospheric Sciences
+- filename: 05-hoskins-hodges-2002.pdf
+  title: New Perspectives on the Northern Hemisphere Winter Storm Tracks
+  authors: Brian J. Hoskins; Kevin I. Hodges
+  year: 2002
+  doi: 10.1175/1520-0469(2002)059%3C1041:NPOTNH%3E2.0.CO;2
+  acquisition_url: https://doi.org/10.1175/1520-0469(2002)059%3C1041:NPOTNH%3E2.0.CO;2
+  venue: Journal of the Atmospheric Sciences
+- filename: 06-hurrell-1995.pdf
+  title: 'Decadal Trends in the North Atlantic Oscillation: Regional Temperatures and Precipitation'
+  authors: James W. Hurrell
+  year: 1995
+  doi: 10.1126/science.269.5224.676
+  acquisition_url: https://doi.org/10.1126/science.269.5224.676
+  venue: Science
+- filename: 07-thompson-wallace-2000-part-i.pdf
+  title: 'Annular Modes in the Extratropical Circulation. Part I: Month-to-Month Variability'
+  authors: David W. J. Thompson; John M. Wallace
+  year: 2000
+  doi: 10.1175/1520-0442(2000)013%3C1000:AMITEC%3E2.0.CO;2
+  acquisition_url: https://doi.org/10.1175/1520-0442(2000)013%3C1000:AMITEC%3E2.0.CO;2
+  venue: Journal of Climate
+- filename: 08-thompson-wallace-hegerl-2000-part-ii.pdf
+  title: 'Annular Modes in the Extratropical Circulation. Part II: Trends'
+  authors: David W. J. Thompson; John M. Wallace; Gabriele C. Hegerl
+  year: 2000
+  doi: 10.1175/1520-0442(2000)013%3C1018:AMITEC%3E2.0.CO;2
+  acquisition_url: https://doi.org/10.1175/1520-0442(2000)013%3C1018:AMITEC%3E2.0.CO;2
+  venue: Journal of Climate
+- filename: 09-lorenz-hartmann-2001.pdf
+  title: Eddy-Zonal Flow Feedback in the Southern Hemisphere
+  authors: David J. Lorenz; Dennis L. Hartmann
+  year: 2001
+  doi: 10.1175/1520-0469(2001)058%3C3312:EZFFIT%3E2.0.CO;2
+  acquisition_url: https://doi.org/10.1175/1520-0469(2001)058%3C3312:EZFFIT%3E2.0.CO;2
+  venue: Journal of the Atmospheric Sciences
+- filename: 10-holton-tan-1980.pdf
+  title: The Influence of the Equatorial Quasi-Biennial Oscillation on the Global Circulation at 50 mb
+  authors: James R. Holton; Hsiu-Chi Tan
+  year: 1980
+  doi: 10.1175/1520-0469(1980)037%3C2200:TIOTEQ%3E2.0.CO;2
+  acquisition_url: https://doi.org/10.1175/1520-0469(1980)037%3C2200:TIOTEQ%3E2.0.CO;2
+  venue: Journal of the Atmospheric Sciences
+- filename: 11-baldwin-dunkerton-2001.pdf
+  title: Stratospheric Harbingers of Anomalous Weather Regimes
+  authors: Mark P. Baldwin; Timothy J. Dunkerton
+  year: 2001
+  doi: 10.1126/science.1063315
+  acquisition_url: https://doi.org/10.1126/science.1063315
+  venue: Science
+- filename: 12-charlton-polvani-2007.pdf
+  title: 'A New Look at Stratospheric Sudden Warmings. Part I: Climatology and Modeling Benchmarks'
+  authors: Andrew J. Charlton; Lorenzo M. Polvani
+  year: 2007
+  doi: 10.1175/JCLI3996.1
+  acquisition_url: https://doi.org/10.1175/JCLI3996.1
+  venue: Journal of Climate
+- filename: 13-wernli-schwierz-2006.pdf
+  title: 'Surface Cyclones in the ERA-40 Dataset (1958-2001). Part I: Novel Identification Method and
+    Global Climatology'
+  authors: Heini Wernli; Cornelia Schwierz
+  year: 2006
+  doi: 10.1175/JAS3766.1
+  acquisition_url: https://doi.org/10.1175/JAS3766.1
+  venue: Journal of the Atmospheric Sciences
+- filename: 14-zhu-newell-1998.pdf
+  title: A Proposed Algorithm for Moisture Fluxes from Atmospheric Rivers
+  authors: Yong Zhu; Reginald E. Newell
+  year: 1998
+  doi: 10.1175/1520-0493(1998)126%3C0725:APAFMF%3E2.0.CO;2
+  acquisition_url: https://doi.org/10.1175/1520-0493(1998)126%3C0725:APAFMF%3E2.0.CO;2
+  venue: Monthly Weather Review
+- filename: 15-held-soden-2006.pdf
+  title: Robust Responses of the Hydrological Cycle to Global Warming
+  authors: Isaac M. Held; Brian J. Soden
+  year: 2006
+  doi: 10.1175/JCLI3990.1
+  acquisition_url: https://doi.org/10.1175/JCLI3990.1
+  venue: Journal of Climate
+- filename: 16-taszarek-et-al-2021.pdf
+  title: Global Climatology and Trends in Convective Environments from ERA5 and Rawinsonde Data
+  authors: Mateusz Taszarek; John T. Allen; Mattia Marchio; Harold E. Brooks
+  year: 2021
+  doi: 10.1038/s41612-021-00190-x
+  acquisition_url: https://doi.org/10.1038/s41612-021-00190-x
+  venue: npj Climate and Atmospheric Science
+- filename: 17-wills-et-al-2022-author-manuscript.pdf
+  title: Systematic Climate Model Biases in the Large-Scale Patterns of Recent Sea-Surface Temperature
+    and Sea-Level Pressure Change
+  authors: Robert C. J. Wills; Yue Dong; Cristian Proistosescu; Kyle C. Armour; David S. Battisti
+  year: 2022
+  doi: 10.1029/2022GL100011
+  acquisition_url: https://doi.org/10.1029/2022GL100011
+  venue: Geophysical Research Letters
+- filename: 18-thackeray-et-al-2022.pdf
+  title: Constraining the Increased Frequency of Global Precipitation Extremes under Warming
+  authors: Chad W. Thackeray; Alex Hall; Jesse Norris; Di Chen
+  year: 2022
+  doi: 10.1038/s41558-022-01329-1
+  acquisition_url: https://doi.org/10.1038/s41558-022-01329-1
+  venue: Nature Climate Change
+- filename: 19-rousi-et-al-2022.pdf
+  title: Accelerated Western European Heatwave Trends Linked to More-Persistent Double Jets over Eurasia
+  authors: Efi Rousi; Kai Kornhuber; Goratz Beobide-Arsuaga; Fei Luo; Dim Coumou
+  year: 2022
+  doi: 10.1038/s41467-022-31432-y
+  acquisition_url: https://doi.org/10.1038/s41467-022-31432-y
+  venue: Nature Communications
+- filename: 20-shaw-miyawaki-2024.pdf
+  title: Fast Upper-Level Jet Stream Winds Get Faster under Climate Change
+  authors: Tiffany A. Shaw; Osamu Miyawaki
+  year: 2024
+  doi: 10.1038/s41558-023-01884-1
+  acquisition_url: https://doi.org/10.1038/s41558-023-01884-1
+  venue: Nature Climate Change

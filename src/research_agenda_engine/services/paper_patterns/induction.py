@@ -21,6 +21,12 @@ from .formation_trace import FormationTraceRecord, require_usable_trace_records
 
 QUESTION_PATTERN_INDUCER_PROMPT_VERSION = "question_pattern_inducer/v3"
 
+# Machine-readable prefix for the max_patterns backstop, mirroring the existing
+# `pattern_dropped_abstraction_or_firewall` contract. The driver keys the run diagnostic off this
+# rather than off prose, because the per-pattern `review_guidance` filter selects warnings by
+# pattern_id and a truncation warning names no surviving pattern.
+PATTERN_TRUNCATED_AT_CAP_WARNING = "pattern_truncated_at_cap:"
+
 
 class NoInduciblePatterns(Exception):
     """Every induced pattern was dropped (abstraction/firewall). An HONEST zero-patterns signal —
@@ -69,6 +75,18 @@ def induce_question_patterns(
     source_trace_ids = [record.formation_trace.trace_id for record in records]
     patterns: list[QuestionPatternCard] = []
     warnings = list(batch.warnings)
+    if len(batch.patterns) > max_patterns:
+        # The cap is carried to the model as `max_patterns` in the payload and asked for in the
+        # prompt ("Produce up to `max_patterns` ..."), so this slice is only the backstop for a
+        # generator that overshot. It was the ONE drop in this loop that recorded nothing, while
+        # every sibling below appends a warning naming what it dropped and why. A backstop that
+        # cuts in model EMISSION order — which is not a ranking of scientific value — must at
+        # least say so, or a future corpus loses abstractions with no trace in the run.
+        warnings.append(
+            f"{PATTERN_TRUNCATED_AT_CAP_WARNING} induction returned {len(batch.patterns)} patterns "
+            f"against max_patterns={max_patterns}; kept the first {max_patterns} in model emission "
+            f"order and dropped {len(batch.patterns) - max_patterns} unreviewed"
+        )
     for pattern in batch.patterns[:max_patterns]:
         draft = QuestionPatternCard.model_validate(
             {

@@ -675,6 +675,13 @@ def _trace_from_model_output(
         for work in trace_context.selected_cited_works
     }
     selected_ids = set(trace_context.key_cited_work_ids)
+    # A context whose citation-importance selection chose nothing is THINNER, not invalid. Every
+    # literature requirement below is conditioned on this, mirroring the schema, which conditions
+    # the same requirements on `local_literature_context_id` being claimed. Without this the three
+    # sites below reduce a citation-free trace to zero literature evidence and then reject it FOR
+    # having none -- a bar the paper can never clear because the drafter was handed nothing to
+    # clear it with.
+    citation_free_context = not trace_context.local_literature_context_id.strip()
     # Deterministic reconciliation (Strategy-1): a cited-work id the model mis-transcribed is DROPPED
     # and flagged, never re-prompted. literature_evidence entries citing a non-selected work are
     # dropped; binding cited-work ids are filtered to the selected set below.
@@ -726,7 +733,7 @@ def _trace_from_model_output(
                 }
             )
         )
-    if not literature_evidence:
+    if not literature_evidence and not citation_free_context:
         raise TraceDraftInsufficientEvidence(
             "draft formation trace has no reconcilable literature_evidence"
         )
@@ -781,8 +788,10 @@ def _trace_from_model_output(
         # question roles need source spans. Do not invent a locator or reinterpret the role: drop the
         # unsupported binding, flag it, and let the existing no-evidence path degrade this paper if
         # no valid binding remains.
-        if binding.role in literature_binding_roles and not (
-            valid_cited_work_ids or valid_context_ids
+        if (
+            binding.role in literature_binding_roles
+            and not citation_free_context
+            and not (valid_cited_work_ids or valid_context_ids)
         ):
             auto_flags.append(
                 f"evidence_binding_{index}: dropped_literature_role_without_citation_evidence"
@@ -830,7 +839,7 @@ def _trace_from_model_output(
             "literature_evidence_without_binding_dropped: " + ", ".join(dropped_literature_ids)
         )
     literature_evidence = covered_literature_evidence
-    if not literature_evidence:
+    if not literature_evidence and not citation_free_context:
         raise TraceDraftInsufficientEvidence(
             "draft formation trace has no literature_evidence backed by an evidence_binding"
         )
@@ -874,9 +883,24 @@ def _draft_payload(
     allowed_contexts_by_work = {
         work.cited_work_id: work.evidence_context_ids for work in trace_context.selected_cited_works
     }
+    instruction = "Draft one public QuestionFormationTrace for expert review."
+    if not trace_context.local_literature_context_id.strip():
+        # This paper's citation-importance selection chose nothing, so `allowed_cited_work_ids` is
+        # empty. The prompt asks unconditionally for at least one literature-side binding, and
+        # without this note a compliant model faces an instruction it has no allowed locator for --
+        # it would either invent a cited-work id (rejected downstream) or omit the binding, and a
+        # trace with no literature-side binding cannot be promoted past DRAFT
+        # (question_pattern.py:181-184). Saying so in the PAYLOAD rather than the prompt keeps the
+        # prompt a stable contract: this is a fact about one paper, not a change of task.
+        instruction += (
+            " No selected cited works are available for this paper, so cite none: leave"
+            " literature_evidence empty and use no cited work or citation context IDs. Still"
+            " provide at least one literature-side evidence binding, backed by allowed PaperCase"
+            " source span IDs. Never invent an identifier to satisfy a field."
+        )
     return {
         "prompt_version": QUESTION_FORMATION_TRACE_DRAFTER_PROMPT_VERSION,
-        "instruction": "Draft one public QuestionFormationTrace for expert review.",
+        "instruction": instruction,
         "paper_case": paper_case.model_dump(
             mode="json",
             exclude={"formation_trace"},

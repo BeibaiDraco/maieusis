@@ -214,6 +214,12 @@ class CitationImportanceSelection(BaseModel):
     input_digest: str
     items: list[CitationImportanceSelectionItem] = Field(default_factory=list)
     failure_reason: str = ""
+    # CLIM-04 partition measurements (additive with defaults — every persisted v0.1 selection
+    # still loads): when the full packet exceeded the budget, the selection was produced by
+    # deterministic within-budget partitioning and these fields carry the honest measurements.
+    partition_count: int = Field(default=1, ge=1)
+    partition_measured_chars: int = Field(default=0, ge=0)
+    partition_budget_chars: int = Field(default=0, ge=0)
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     @field_validator("selection_id", "paper_case_id", "prompt_version", "input_digest")
@@ -377,7 +383,15 @@ def literature_context_digest(context: PaperLocalLiteratureContext) -> str:
         context.model_dump(
             mode="json",
             exclude={
-                "importance_selection": {"selection_policy"},
+                # CLIM-04 partition measurements are packaging PROVENANCE, not scientific content:
+                # excluding them keeps every pre-partition on-disk digest byte-identical while the
+                # fields still persist on new artifacts for reload.
+                "importance_selection": {
+                    "selection_policy",
+                    "partition_count",
+                    "partition_measured_chars",
+                    "partition_budget_chars",
+                },
                 "cited_works": {"__all__": {"abstract_license_class"}},
             },
         )

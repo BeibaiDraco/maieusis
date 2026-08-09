@@ -78,6 +78,12 @@ def _shortlisted_family(
         review=review,
         active_variant_ids=active_ids,
         source_batch_id=batch_id,
+        novelty_admission_id=outcome.novelty_admission_id,
+        novelty_assessment_ids={
+            item.variant_id: item.novelty_assessment_id
+            for item in active_vos
+            if item.novelty_assessment_id
+        },
     )
 
 
@@ -94,6 +100,7 @@ def build_shortlist_manifest(
     rejected: list[str] = []
     needs_revision: list[str] = []
     deferred: list[str] = []
+    run_incomplete: list[str] = []
     for outcome, reviewed_family in results:
         label = outcome.label
         if label == FamilyInclusionLabel.INCLUDED_BY_AUTOMATED_REVIEW:
@@ -106,9 +113,13 @@ def build_shortlist_manifest(
             rejected.append(outcome.question_family_id)
         elif label == FamilyInclusionLabel.DEFERRED_MATERIAL_REVISION:
             needs_revision.append(outcome.question_family_id)
+        elif label == FamilyInclusionLabel.RUN_INCOMPLETE:
+            # Its own bucket since 2026-07-31. It used to share `deferred`, and the axis map turned
+            # the shared bucket into DEFERRED_INSUFFICIENT_EVIDENCE — so an API failure reached the
+            # reader as "not enough usable evidence", the exact mislabelling that put 97% of
+            # non-scientific losses behind a scientific sentence.
+            run_incomplete.append(outcome.question_family_id)
         else:
-            # deferred_insufficient_evidence + run_incomplete → deferred bucket (the manifest has no
-            # run_incomplete bucket; the honest label survives in the persisted outcome records).
             deferred.append(outcome.question_family_id)
     return QuestionFamilyShortlistManifest(
         shortlist_id=f"automated-shortlist-{batch_id}",
@@ -119,6 +130,7 @@ def build_shortlist_manifest(
         rejected_family_ids=rejected,
         needs_revision_family_ids=needs_revision,
         deferred_family_ids=deferred,
+        run_incomplete_family_ids=run_incomplete,
         authority_ceiling=authority_ceiling,
         # Phase 6-P sends both authority modes through the same planner route. The authority
         # ceiling is carried separately and must never be inferred from route eligibility.

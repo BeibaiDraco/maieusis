@@ -28,7 +28,7 @@ from ...schemas.cited_literature import (
 from ...schemas.gate_outcome import GateOutcome
 from ...schemas.paper_case import PaperCase
 from .gate_kernel import run_structured_gate_review
-from .promotion import assert_promotion_binding
+from .promotion import assert_promoted_status_is_holdable, assert_promotion_binding
 from .reviewer_base import build_scientific_reviewer_provider_from_env
 
 CITATION_IMPORTANCE_REVIEWER_PROMPT_VERSION = "citation_importance_reviewer/v1"
@@ -140,6 +140,7 @@ def promote_literature_to_ai_reviewed(
     )
     promoted = literature.model_copy(deep=True)
     promoted.review_status = PaperLocalLiteratureReviewStatus.AI_REVIEWED
+    assert_promoted_status_is_holdable(promoted, expected_gate=CITATION_IMPORTANCE_GATE)
     promoted.warnings = [
         *literature.warnings,
         (

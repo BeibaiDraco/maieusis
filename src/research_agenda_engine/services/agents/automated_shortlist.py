@@ -25,6 +25,7 @@ from ...schemas.shortlist_outcome import (
     VariantShortlistOutcome,
 )
 from ...schemas.variant_novelty import VariantNoveltyResult
+from .promotion import assert_promoted_status_is_holdable
 from .shortlist_reviewer import review_shortlist_worthiness
 
 
@@ -113,9 +114,11 @@ def promote_family_to_ai_reviewed(
             f"cannot shortlist QuestionFamily: automated label is {outcome.label.value!r}, "
             "not included_by_automated_review — fail closed"
         )
-    return family.model_copy(
+    promoted = family.model_copy(
         update={"review_status": QuestionFamilyGenerationReviewStatus.AI_REVIEWED}
     )
+    assert_promoted_status_is_holdable(promoted, expected_gate="question_family_generation")
+    return promoted
 
 
 def run_automated_family_shortlist(

@@ -35,18 +35,37 @@ from contextlib import contextmanager, suppress
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal, NoReturn, TypeVar
 
+import yaml
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
-from yaml import YAMLError
+from yaml import YAMLError, safe_dump
 
-from ...io import dump_data, load_model
-from ...provenance import sha256_file, stable_hash
+from ...io import dump_data, load_data, load_model
+from ...provenance import semantic_hash, sha256_bytes, sha256_file, stable_hash
+from ...providers.models.base import VENDOR_DEFAULT
+from ...providers.models.policy import model_versions_accept
+from ...schemas.external_evidence import (
+    ExternalEvidenceAttemptStatus,
+    ExternalEvidenceBatchReceipt,
+    LegacyExternalEvidenceDegradationReceipt,
+    RetrievalOperation,
+)
 from ...schemas.front_half_authority import FrontHalfAuthorityCeiling
 from ...schemas.gate_outcome import PromotionReceipt
 from ...schemas.inferred_research_scope import ResolvedResearchScope
 from ...schemas.maieusis_project_config import MaieusisProjectConfig
 from ...schemas.multi_family_dossier import FamilyDossierStatus
+from ...schemas.novelty_admission import (
+    NoveltyEvidencePack,
+    NoveltyPriorEvidenceOrigin,
+    NoveltyWebLeadResolution,
+    NoveltyWebLeadResolutionReservation,
+    NoveltyWebLeadResolutionStatus,
+    NoveltyWebSearchReceipt,
+    NoveltyWebSearchReservation,
+    VariantNoveltyAssessment,
+)
 from ...schemas.question_family import QuestionFamilyBatch, QuestionFamilyShortlistManifest
 from ...schemas.question_pattern import QuestionFormationTrace, QuestionPatternCard
 from ...schemas.question_scientist_context_v2 import QuestionScientistContextPayloadV2
@@ -62,13 +81,40 @@ from ...schemas.resume import (
     StageResumeDecisionKind,
     StageRunReason,
 )
-from ...schemas.run_outcome import DossierAxis, FamilyRunOutcome
+from ...schemas.run_outcome import DossierAxis, FamilyRunOutcome, RunTerminal
 from ...schemas.stage_d import StageDCandidateDisposition, StageDOutcomeRecord
 from ...schemas.stage_receipt import FailureClass, StageReceipt, StageStatus
 from ..agents.citation_importance_reviewer import CITATION_IMPORTANCE_REVIEWER_PROMPT_VERSION
+from ..agents.dataset_narrative_reviewer import (
+    DATASET_NARRATIVE_FIDELITY_REVIEWER_PROMPT_VERSION,
+)
 from ..agents.formation_trace_reviewer import FORMATION_TRACE_REVIEWER_PROMPT_VERSION
+from ..agents.novelty_admission import (
+    NOVELTY_REVIEWER_PROMPT_VERSION,
+    NOVELTY_REVISION_PROMPT_VERSION,
+    NOVELTY_WEB_SCOUT_PROMPT_VERSION,
+)
 from ..agents.paper_case_reviewer import PAPER_CASE_FIDELITY_REVIEWER_PROMPT_VERSION
 from ..agents.pattern_reviewer import QUESTION_PATTERN_REVIEWER_PROMPT_VERSION
+from ..agents.topic_evidence_reviewer import TOPIC_EVIDENCE_REVIEWER_PROMPT_VERSION
+from ..context.dataset_narrative import DATASET_NARRATIVE_EXTRACTOR_PROMPT_VERSION
+from ..context.topic_evidence import (
+    TOPIC_EVIDENCE_BRIEF_SYNTHESIZER_PROMPT_VERSION,
+    TOPIC_FIELD_STATE_SYNTHESIZER_PROMPT_VERSION,
+    R5TopicEvidenceSourceTable,
+    R5TopicSourceRecordEvidence,
+    TopicSourceAbstractStatus,
+    TopicSourceSnippetKind,
+    assess_fulltext_rights_degradation,
+    fulltext_rights_are_verified,
+)
+from ..context.topic_evidence_revision import (
+    TOPIC_EVIDENCE_BRIEF_REVISER_PROMPT_VERSION,
+    TopicEvidenceRevisionHistory,
+)
+from ..context.topic_evidence_terminal_inquiry import (
+    TOPIC_EVIDENCE_TERMINAL_INQUIRY_PROMPT_VERSION,
+)
 from ..paper_ingest.extraction import SOURCE_SPAN_PROMPT_VERSION
 from ..paper_ingest.paperbank_gate import AcceptedPaperCase, PaperBankGateResult, PaperCaseDraft
 from ..paper_patterns.citation_importance import (
@@ -80,11 +126,21 @@ from ..paper_patterns.pattern_revision import (
     PatternRevisionHistory,
 )
 from ..paper_patterns.trace_drafting import QUESTION_FORMATION_TRACE_DRAFTER_PROMPT_VERSION
-from .run_layout import RunPaths, assign_family_slugs, family_slug, read_stage_receipt
+from .run_layout import (
+    RunPaths,
+    assign_family_slugs,
+    family_slug,
+    read_stage_receipt,
+    write_run_terminal_summary,
+    write_stage_receipt,
+)
 
 if TYPE_CHECKING:
     from ...schemas.topic_literature import TopicSourceTable
-    from ..context.topic_evidence import R5TopicEvidenceSourceTable
+    from ..context.question_scientist_export import RightsSafeTopicSourceProjection
+
+
+_N2Model = TypeVar("_N2Model", bound=BaseModel)
 
 
 # --- stage names + the explicit coarse DAG -------------
@@ -97,10 +153,13 @@ STAGE_BACK_HALF = "back_half"
 
 # Receipt config slices must change when a stage's deterministic semantics change, even if operator
 # config and model routing do not. Otherwise an honest SCIENTIFIC_TERMINAL from old code is reusable
-# forever and a launch-blocker fix cannot take effect on resume. Bump this explicit revision for every
-# paper-half semantic change that can alter stage products or terminal disposition.
-PAPER_HALF_IMPLEMENTATION_VERSION = "paper_half/v6"
-STAGE_C_IMPLEMENTATION_VERSION = "stage_c/v1"
+# forever and a launch-blocker fix cannot take effect on resume. Bump the respective explicit
+# revision for every paper- or dataset-half semantic change that can alter products or disposition.
+PAPER_HALF_IMPLEMENTATION_VERSION = "paper_half/v7-terminal-cause"
+DATASET_HALF_IMPLEMENTATION_VERSION = "dataset_half/v6-terminal-cause-inquiry"
+STAGE_C_IMPLEMENTATION_VERSION = "stage_c/v2-rights-safe-projection"
+STAGE_D_IMPLEMENTATION_VERSION = "stage_d/v2-n2-web-grounding"
+FRONT_LAYOUT_IMPLEMENTATION_VERSION = "front_layout/v2-novelty-admission-projection"
 BACK_HALF_IMPLEMENTATION_VERSION = "back_half/v2"
 
 STAGE_ORDER: tuple[str, ...] = (
@@ -134,6 +193,18 @@ STAGE_CLEAN_AREAS: dict[str, tuple[str, ...]] = {
         "artifacts/patterns",
         "paperbank",
         "corpus/patterns",
+        # Current-attempt gate diagnostics are projections of this stage. Leaving a failed attempt
+        # here caused a healthy resume to re-index the stale failure into its final README.
+        "diagnostics/paper_case_fidelity",
+        "diagnostics/paper_case_fidelity_accepted",
+        "diagnostics/citation_importance",
+        "diagnostics/citation_importance_accepted",
+        "diagnostics/formation_trace_draft",
+        "diagnostics/formation_trace",
+        "diagnostics/formation_trace_accepted",
+        "diagnostics/question_pattern_induction",
+        "diagnostics/question_pattern",
+        "diagnostics/question_pattern_accepted",
         # The pattern-bank manifest sits at the corpus root (NOT under patterns/); a re-run that ends
         # all-unusable would otherwise leave a PREVIOUS run's manifest for stage C to read.
         "corpus/question_pattern_manifest.yaml",
@@ -143,9 +214,15 @@ STAGE_CLEAN_AREAS: dict[str, tuple[str, ...]] = {
         "corpus/context/dataset_narratives",
         "corpus/context/topic_evidence",
         "stage_outputs/dataset-half.yaml",
+        "stage_outputs/dataset-half-terminal.yaml",
         "receipts/fulltext-enrichment.yaml",
+        "receipts/external-evidence",
     ),
-    STAGE_C: ("corpus/research_intent.yaml", "corpus/context/question_scientist"),
+    STAGE_C: (
+        "corpus/research_intent.yaml",
+        "corpus/context/question_scientist",
+        "stage_outputs/stage-c-terminal.yaml",
+    ),
     STAGE_D: ("corpus/question_families", "stage_outputs/stage-d.yaml"),
     # These are indexed stable projections. Their writers use adjacent replacement + os.replace, so
     # a failed rerender must leave the last valid current bytes visible.
@@ -195,6 +272,78 @@ class ScientificResumePreflightRequired(RuntimeError):
     """The locked re-plan found scientific work; CLI must preflight before retrying."""
 
 
+_TOPIC_SOURCE_TABLE_RELATIVE_PATH = (
+    "corpus/context/topic_evidence/sources/research_intent.topic_source_table.yaml"
+)
+_EXTERNAL_EVIDENCE_BATCH_RELATIVE_PATH = "receipts/external-evidence/fulltext-enrichment-batch.yaml"
+_TOPIC_RIGHTS_DEGRADATION_RELATIVE_PATH = "receipts/external-evidence/topic-rights-degradation.yaml"
+_LEGACY_RIGHTS_SIDECAR_DIGEST_PREFIX = "legacy_rights_sidecar_sha256:"
+_EXTERNAL_EVIDENCE_TRANSPORT_STATUSES = frozenset(
+    {
+        ExternalEvidenceAttemptStatus.SUCCEEDED,
+        ExternalEvidenceAttemptStatus.HTTP_ERROR,
+        ExternalEvidenceAttemptStatus.STATUS_REJECTED,
+        ExternalEvidenceAttemptStatus.FINAL_URL_REJECTED,
+        ExternalEvidenceAttemptStatus.MEDIA_TYPE_REJECTED,
+        ExternalEvidenceAttemptStatus.BODY_REJECTED,
+        ExternalEvidenceAttemptStatus.FETCH_ERROR,
+    }
+)
+
+
+class _LegacyV01TopicSourceRecord(BaseModel):
+    """Exact pre-rights record surface retained by the climate validation run.
+
+    This is intentionally not a permissive alias for the current record model. It names every
+    field present on the retained artifact and forbids every later field, including the current
+    rights, fallback, and provenance fields. It is consumed only by the bounded resume migration;
+    normal ``R5TopicSourceRecordEvidence`` construction remains fail-closed.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    source_record_id: str
+    lane_ids: list[str]
+    query_ids: list[str]
+    title: str
+    year: int | None
+    doi: str
+    pmid: str
+    openalex_id: str
+    semantic_scholar_id: str
+    url: str
+    abstract_or_snippet: str
+    abstract_status: Literal["available", "metadata_only"]
+    snippet_kind: Literal["abstract", "fulltext_excerpt", "title_only"]
+    ranking_features: dict[str, float]
+    dedupe_key: str
+    source_quality_flags: list[str]
+
+
+class _LegacyV01TopicEvidenceSourceTable(BaseModel):
+    """Exact table envelope paired with :class:`_LegacyV01TopicSourceRecord`."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    table_id: str
+    query_plan_id: str
+    protocol_version: Literal["r5_topic_evidence_lanes/v1"]
+    records: list[_LegacyV01TopicSourceRecord]
+    lane_coverage: dict[str, int]
+    source_quality_flags: list[str]
+
+
+@dataclass(frozen=True)
+class _TopicSourceRightsMigrationView:
+    """Rights partitions plus a safe in-memory projection over immutable source bytes."""
+
+    safe_source_table: R5TopicEvidenceSourceTable
+    degraded_source_record_ids: tuple[str, ...]
+    abstract_fallback_source_record_ids: tuple[str, ...]
+    metadata_only_source_record_ids: tuple[str, ...]
+    legacy_v0_1_shape: bool = False
+
+
 # --- typed per-stage output summaries (rehydrated by the resume/layout/back-half paths) ------------
 class PaperHalfStageOutput(BaseModel):
     """Everything the layout + back half need from the paper half, persisted at stage end."""
@@ -219,10 +368,15 @@ class DatasetHalfStageOutput(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     receipts: list[PromotionReceipt] = Field(default_factory=list)
+    topic_revision_history: TopicEvidenceRevisionHistory | None = None
     lane_coverage: dict[str, int] = Field(default_factory=dict)
     source_count: int = 0
     scope: ResolvedResearchScope
     fulltext_counts: dict[str, int] = Field(default_factory=dict)
+    external_evidence_batch_receipt_path: str = ""
+    external_evidence_batch_receipt_digest: str = ""
+    rights_degradation_receipt_path: str = ""
+    rights_degradation_receipt_digest: str = ""
     authority_ceiling: FrontHalfAuthorityCeiling = FrontHalfAuthorityCeiling.VERIFIED
     source_activity_path: str = ""
 
@@ -241,9 +395,21 @@ def compute_paper_half_input_digests(
     inbox = Path(config.paperbank.inbox_dir)
     if not inbox.is_dir():
         return {}
-    return {
+    digests = {
         f"pdf:{pdf.name}": sha256_file(pdf) for pdf in sorted(inbox.glob("*.pdf")) if pdf.is_file()
     }
+    # Source-preparation sidecars (derivative receipts, article spans) are inputs too: a changed
+    # sidecar must invalidate reuse exactly like changed PDF bytes. Absent sidecars leave every
+    # pre-existing digest map byte-identical.
+    for pattern in ("*.derivative.yaml", "*.article_span.yaml"):
+        digests.update(
+            {
+                f"sidecar:{sidecar.name}": sha256_file(sidecar)
+                for sidecar in sorted(inbox.glob(pattern))
+                if sidecar.is_file()
+            }
+        )
+    return digests
 
 
 def compute_dataset_half_input_digests(config: MaieusisProjectConfig) -> dict[str, str]:
@@ -263,13 +429,17 @@ def compute_dataset_half_input_digests(config: MaieusisProjectConfig) -> dict[st
 def upstream_output_digest(paths: RunPaths, upstream_stage: str) -> str:
     """The single 'upstream:<stage>' input value: a hash over the upstream receipt's output digests.
 
-    Byte-identical upstream re-runs therefore still allow downstream REUSE (maximally honest AND
-    cache-friendly). Missing upstream receipt → "missing" (never equal to a recorded hash).
+    CLIM-10: hashes the TIMESTAMP-FREE semantic output digests, so a scientifically identical
+    upstream re-run (differing only by provenance timestamps embedded in its artifacts) yields the
+    same value and downstream REUSES — the honest, cache-friendly behavior the docstring always
+    promised. Pre-CLIM-10 receipts have no semantic digests and fall back to the raw byte digests
+    (unchanged behavior). Missing upstream receipt → "missing" (never equal to a recorded hash).
     """
     receipt = read_stage_receipt(paths, upstream_stage)
     if receipt is None:
         return "missing"
-    return stable_hash(dict(sorted(receipt.output_digests.items())))
+    reuse_digests = receipt.semantic_output_digests or receipt.output_digests
+    return stable_hash(dict(sorted(reuse_digests.items())))
 
 
 def upstream_input_digests(paths: RunPaths, stage: str) -> dict[str, str]:
@@ -305,10 +475,14 @@ def stage_model_versions(config: MaieusisProjectConfig, stage: str) -> dict[str,
             "reviewer": _effective(config, models.reviewer),
         }
     if stage == STAGE_D:
-        return {
+        versions = {
             "questioner": _effective(config, models.questioner),
             "reviewer": _effective(config, models.reviewer),
+            "novelty_reviewer": _effective(config, models.novelty_reviewer or models.reviewer),
         }
+        if config.novelty.web_grounding.enabled and not config.is_demo:
+            versions["novelty_web_scout"] = _effective(config, config.novelty.web_grounding.scout)
+        return versions
     if stage == STAGE_BACK_HALF:
         versions = {
             "owner": _effective(config, models.owner),
@@ -322,7 +496,11 @@ def stage_model_versions(config: MaieusisProjectConfig, stage: str) -> dict[str,
     return {}
 
 
-def stage_prompt_versions(stage: str) -> dict[str, str]:
+def stage_prompt_versions(
+    stage: str,
+    *,
+    config: MaieusisProjectConfig | None = None,
+) -> dict[str, str]:
     """Active prompt families whose bytes semantically own one coarse stage.
 
     The paper half is the only cross-run importable stage. Keeping every generator and independent
@@ -341,7 +519,82 @@ def stage_prompt_versions(stage: str) -> dict[str, str]:
             "formation_trace_review": FORMATION_TRACE_REVIEWER_PROMPT_VERSION,
             "question_pattern_review": QUESTION_PATTERN_REVIEWER_PROMPT_VERSION,
         }
+    if stage == STAGE_DATASET_HALF:
+        return {
+            "dataset_narrative_extraction": DATASET_NARRATIVE_EXTRACTOR_PROMPT_VERSION,
+            "dataset_narrative_review": DATASET_NARRATIVE_FIDELITY_REVIEWER_PROMPT_VERSION,
+            "topic_field_state_synthesis": TOPIC_FIELD_STATE_SYNTHESIZER_PROMPT_VERSION,
+            "topic_evidence_synthesis": TOPIC_EVIDENCE_BRIEF_SYNTHESIZER_PROMPT_VERSION,
+            "topic_evidence_revision": TOPIC_EVIDENCE_BRIEF_REVISER_PROMPT_VERSION,
+            "topic_evidence_terminal_inquiry": TOPIC_EVIDENCE_TERMINAL_INQUIRY_PROMPT_VERSION,
+            "topic_evidence_review": TOPIC_EVIDENCE_REVIEWER_PROMPT_VERSION,
+        }
+    if stage == STAGE_D:
+        versions = {
+            "novelty_review": NOVELTY_REVIEWER_PROMPT_VERSION,
+            "novelty_revision": NOVELTY_REVISION_PROMPT_VERSION,
+        }
+        if config is not None and config.novelty.web_grounding.enabled and not config.is_demo:
+            versions["novelty_web_scout"] = NOVELTY_WEB_SCOUT_PROMPT_VERSION
+        return versions
     return {}
+
+
+def _dataset_half_config_slice(
+    config: MaieusisProjectConfig,
+    *,
+    include_rights_implementation_version: bool,
+) -> dict[str, object]:
+    """Return the exact dataset-half config slice for current or frozen-v0.1 semantics.
+
+    Public v0.1 receipts predate an explicit dataset-half implementation revision.  The
+    compatibility migrator must recognize that exact historical hash without treating an
+    arbitrary config mismatch as eligible for a no-call migration.
+    """
+
+    payload: dict[str, object] = {
+        "mode": config.mode.value,
+        "dataset_id": config.dataset.seed.dataset_id,
+        "link": config.dataset.seed.link,
+        "docs": [str(path) for path in config.dataset.seed.docs],
+        "literature": config.literature.model_dump(mode="json"),
+        "research_intent": config.research_intent.model_dump(mode="json"),
+    }
+    if include_rights_implementation_version:
+        payload = {
+            "implementation_version": DATASET_HALF_IMPLEMENTATION_VERSION,
+            "max_revise_rounds": config.run.max_revise_rounds,
+            **payload,
+        }
+    payload["allow_pro_model"] = config.models.allow_pro_model
+    return payload
+
+
+def legacy_dataset_half_config_version(config: MaieusisProjectConfig) -> str:
+    """Frozen v0.1 dataset-half config hash (before the rights implementation version existed)."""
+
+    return stable_hash(
+        _dataset_half_config_slice(config, include_rights_implementation_version=False)
+    )
+
+
+def _drop_vendor_default_reasoning(dumped: object) -> None:
+    """Strip reasoning depth from a dumped ProviderModel when it is the vendor default.
+
+    A run configured at the vendor default sends exactly what runs sent before this field existed,
+    so its scientific configuration is unchanged and its receipt must stay reusable. Leaving the
+    keys in moved the ``paper_half`` and ``stage_d`` digests on EVERY pre-existing run: a resume
+    re-paid the whole pipeline from 25-PDF extraction onward, and the cross-run PaperBank import --
+    which uses this same predicate as a HARD gate -- failed at preflight.
+
+    A depth that was actually CHOSEN is scientific configuration and stays in the digest, so setting
+    one still invalidates reuse. That is correct: it changes what the models do.
+    """
+    if not isinstance(dumped, dict):
+        return
+    for key in ("thinking", "effort"):
+        if dumped.get(key) == VENDOR_DEFAULT:
+            dumped.pop(key, None)
 
 
 def stage_config_version(
@@ -369,6 +622,7 @@ def stage_config_version(
         paperbank.pop("inbox_dir", None)
         paperbank.pop("import_from_run", None)
         paperbank.pop("max_workers", None)  # parallelism is neutral
+        _drop_vendor_default_reasoning(paperbank.get("extraction", {}))
         slices = {
             "implementation_version": PAPER_HALF_IMPLEMENTATION_VERSION,
             "mode": mode,
@@ -376,14 +630,11 @@ def stage_config_version(
             "max_revise_rounds": config.run.max_revise_rounds,
         }
     elif stage == STAGE_DATASET_HALF:
-        slices = {
-            "mode": mode,
-            "dataset_id": config.dataset.seed.dataset_id,
-            "link": config.dataset.seed.link,
-            "docs": [str(path) for path in config.dataset.seed.docs],
-            "literature": config.literature.model_dump(mode="json"),
-            "research_intent": config.research_intent.model_dump(mode="json"),
-        }
+        # This helper already includes the shared allow_pro_model field so it can also reproduce
+        # the exact frozen v0.1 slice for the bounded rights-only compatibility migration.
+        return stable_hash(
+            _dataset_half_config_slice(config, include_rights_implementation_version=True)
+        )
     elif stage == STAGE_C:
         slices = {
             "implementation_version": STAGE_C_IMPLEMENTATION_VERSION,
@@ -391,15 +642,22 @@ def stage_config_version(
             "dataset_id": config.dataset.seed.dataset_id,
         }
     elif stage == STAGE_D:
+        novelty = config.novelty.model_dump(mode="json")
+        _drop_vendor_default_reasoning((novelty.get("web_grounding") or {}).get("scout", {}))
         slices = {
+            "implementation_version": STAGE_D_IMPLEMENTATION_VERSION,
             "mode": mode,
-            "novelty": config.novelty.model_dump(mode="json"),
+            "novelty": novelty,
             "family_count": family_count,
             "variants_per_family": variants_per_family,
         }
     elif stage == STAGE_FRONT_LAYOUT:
-        # Everything resolved_inputs.md renders (mode/dataset/providers) — a pure-render slice.
+        # Everything the human views render (mode/dataset/providers) — a pure-render slice. The
+        # renderer itself is an input too: without the implementation version here, a corrected
+        # projection could never reach a resumed run, and the only alternative would be deleting a
+        # receipt by hand (never permitted). Bump it whenever a human-view projection changes.
         slices = {
+            "implementation_version": FRONT_LAYOUT_IMPLEMENTATION_VERSION,
             "mode": mode,
             "dataset_id": config.dataset.seed.dataset_id,
             "link_set": bool(config.dataset.seed.link),
@@ -437,6 +695,33 @@ def relative_output_digests(run_root: Path, paths: Sequence[Path]) -> dict[str, 
     return dict(sorted(digests.items()))
 
 
+def _semantic_file_digest(file: Path) -> str:
+    """Timestamp-free semantic digest of one output artifact (CLIM-10).
+
+    Loadable YAML/JSON artifacts are hashed with provenance-timestamp keys stripped so a re-run
+    that changed only timestamps compares equal; anything that will not parse as a mapping/list
+    (opaque bytes, markdown) falls back to its byte digest — conservative: it gates as before.
+    """
+    try:
+        loaded = load_data(file)
+    except (OSError, ValueError, yaml.YAMLError):
+        # Unreadable or non-YAML/JSON output → byte digest (conservative: gates as before).
+        return sha256_file(file)
+    if not isinstance(loaded, (dict, list)):
+        return sha256_file(file)
+    return semantic_hash(loaded)
+
+
+def relative_semantic_output_digests(run_root: Path, paths: Sequence[Path]) -> dict[str, str]:
+    """Per-output timestamp-free semantic digests, keyed like ``relative_output_digests``."""
+    digests: dict[str, str] = {}
+    for path in paths:
+        for file in sorted(path.rglob("*") if path.is_dir() else [path]):
+            if file.is_file():
+                digests[file.relative_to(run_root).as_posix()] = _semantic_file_digest(file)
+    return dict(sorted(digests.items()))
+
+
 def _verify_output_digests(
     run_root: Path, recorded: dict[str, str], *, owner_label: str
 ) -> list[str]:
@@ -458,6 +743,798 @@ def _verify_output_digests(
             )
         verified.append(rel)
     return verified
+
+
+def _topic_source_table_path(paths: RunPaths) -> Path:
+    return paths.root / _TOPIC_SOURCE_TABLE_RELATIVE_PATH
+
+
+def _topic_rights_degradation_path(paths: RunPaths) -> Path:
+    return paths.root / _TOPIC_RIGHTS_DEGRADATION_RELATIVE_PATH
+
+
+_LEGACY_V01_REPAIR_FLAG = "public_fulltext_excerpt_repair:v2_export_gate"
+_LEGACY_V01_REPAIR_FEATURE = "public_fulltext_excerpt_repair"
+_LEGACY_V01_LOOKUP_REPAIR_FLAG = "public_lookup_repair_from_secondary_pointer"
+_LEGACY_V01_LOOKUP_REPAIR_FEATURE = "public_lookup_repair"
+_LEGACY_V01_BASE_RANKING_FEATURES = frozenset(
+    {"relevance_score", "metadata_quality_score", "cited_by_count", "lane_count"}
+)
+
+
+def _current_topic_rights_migration_view(
+    source_table: R5TopicEvidenceSourceTable,
+) -> _TopicSourceRightsMigrationView:
+    assessment = assess_fulltext_rights_degradation(source_table)
+    return _TopicSourceRightsMigrationView(
+        safe_source_table=source_table,
+        degraded_source_record_ids=tuple(assessment.degraded_source_record_ids),
+        abstract_fallback_source_record_ids=tuple(assessment.abstract_fallback_source_record_ids),
+        metadata_only_source_record_ids=tuple(assessment.metadata_only_source_record_ids),
+    )
+
+
+def _legacy_v01_topic_rights_migration_view(
+    payload: object,
+) -> _TopicSourceRightsMigrationView:
+    """Validate one exact historical shape and derive a non-persisted safe projection.
+
+    The retained climate-run table predates ``fulltext_provenance``. Its five repaired excerpt
+    rows can be recognized by a pair of exact v0.1 repair markers, but those markers never prove
+    access rights. Their fetched passage is therefore removed in the safe projection. Independently
+    retained abstract rows remain available; no text is guessed to be an abstract fallback for a
+    repaired excerpt row.
+    """
+
+    legacy = _LegacyV01TopicEvidenceSourceTable.model_validate(payload)
+    if not legacy.table_id.startswith(
+        "r5-topic-source-table-"
+    ) or not legacy.query_plan_id.startswith("r5-topic-evidence-plan-"):
+        raise ValueError("legacy v0.1 topic table identifiers do not match the frozen shape")
+    record_ids = [record.source_record_id for record in legacy.records]
+    if not record_ids or len(record_ids) != len(set(record_ids)):
+        raise ValueError("legacy v0.1 topic table requires unique records")
+    computed_lane_coverage: dict[str, int] = {}
+    safe_records: list[R5TopicSourceRecordEvidence] = []
+    degraded_ids: list[str] = []
+    for record in legacy.records:
+        if (
+            not record.source_record_id.startswith("topic-source-record-")
+            or not record.lane_ids
+            or not record.query_ids
+            or not all(query_id.startswith("r5-topic-") for query_id in record.query_ids)
+            or not record.title.strip()
+            or not record.url.strip()
+            or not record.dedupe_key.strip()
+        ):
+            raise ValueError("legacy v0.1 topic record identity does not match the frozen shape")
+        for lane_id in record.lane_ids:
+            computed_lane_coverage[lane_id] = computed_lane_coverage.get(lane_id, 0) + 1
+        feature_keys = frozenset(record.ranking_features)
+        allowed_features = _LEGACY_V01_BASE_RANKING_FEATURES | {
+            _LEGACY_V01_REPAIR_FEATURE,
+            _LEGACY_V01_LOOKUP_REPAIR_FEATURE,
+        }
+        if not _LEGACY_V01_BASE_RANKING_FEATURES.issubset(
+            feature_keys
+        ) or not feature_keys.issubset(allowed_features):
+            raise ValueError("legacy v0.1 ranking features do not match the frozen shape")
+        is_repaired_fulltext = record.snippet_kind == "fulltext_excerpt"
+        is_lookup_repaired_abstract = (
+            _LEGACY_V01_LOOKUP_REPAIR_FEATURE in feature_keys
+            or _LEGACY_V01_LOOKUP_REPAIR_FLAG in record.source_quality_flags
+        )
+        if is_repaired_fulltext:
+            if (
+                record.abstract_status != "available"
+                or feature_keys != _LEGACY_V01_BASE_RANKING_FEATURES | {_LEGACY_V01_REPAIR_FEATURE}
+                or record.ranking_features[_LEGACY_V01_REPAIR_FEATURE] != 1.0
+                or record.source_quality_flags != [_LEGACY_V01_REPAIR_FLAG]
+            ):
+                raise ValueError(
+                    "legacy no-provenance fulltext lacks the exact frozen repair markers"
+                )
+        elif is_lookup_repaired_abstract:
+            if (
+                record.snippet_kind != "abstract"
+                or record.abstract_status != "available"
+                or feature_keys
+                != _LEGACY_V01_BASE_RANKING_FEATURES | {_LEGACY_V01_LOOKUP_REPAIR_FEATURE}
+                or record.ranking_features.get(_LEGACY_V01_LOOKUP_REPAIR_FEATURE) != 1.0
+                or record.source_quality_flags != [_LEGACY_V01_LOOKUP_REPAIR_FLAG]
+            ):
+                raise ValueError("legacy public-lookup repair does not match the frozen shape")
+        elif (
+            _LEGACY_V01_REPAIR_FEATURE in feature_keys
+            or _LEGACY_V01_REPAIR_FLAG in record.source_quality_flags
+        ):
+            raise ValueError("legacy repair markers are valid only on a fulltext excerpt")
+        elif feature_keys != _LEGACY_V01_BASE_RANKING_FEATURES:
+            raise ValueError("legacy ranking features contain an unpaired repair marker")
+        elif record.snippet_kind == "abstract" and record.abstract_status != "available":
+            raise ValueError("legacy abstract rows must have available status")
+        elif record.snippet_kind == "title_only" and record.abstract_status != "metadata_only":
+            raise ValueError("legacy title-only rows must have metadata-only status")
+
+        safe_payload = record.model_dump(mode="python")
+        if is_repaired_fulltext:
+            degraded_ids.append(record.source_record_id)
+            safe_payload.update(
+                {
+                    "abstract_or_snippet": "",
+                    "abstract_status": TopicSourceAbstractStatus.METADATA_ONLY,
+                    "snippet_kind": TopicSourceSnippetKind.METADATA,
+                    "source_quality_flags": [
+                        *record.source_quality_flags,
+                        "fulltext_rights_unverified",
+                        "legacy_fulltext_removed_from_safe_projection",
+                    ],
+                }
+            )
+        safe_records.append(R5TopicSourceRecordEvidence.model_validate(safe_payload))
+    if not degraded_ids:
+        raise ValueError("legacy v0.1 compatibility requires a repaired no-provenance excerpt")
+    if computed_lane_coverage != legacy.lane_coverage:
+        raise ValueError("legacy v0.1 lane coverage does not match its records")
+    return _TopicSourceRightsMigrationView(
+        safe_source_table=R5TopicEvidenceSourceTable(
+            table_id=legacy.table_id,
+            query_plan_id=legacy.query_plan_id,
+            protocol_version=legacy.protocol_version,
+            records=safe_records,
+            lane_coverage=dict(legacy.lane_coverage),
+            source_quality_flags=[
+                *legacy.source_quality_flags,
+                "legacy_v0_1_rights_safe_projection",
+            ],
+        ),
+        degraded_source_record_ids=tuple(sorted(degraded_ids)),
+        abstract_fallback_source_record_ids=(),
+        metadata_only_source_record_ids=tuple(sorted(degraded_ids)),
+        legacy_v0_1_shape=True,
+    )
+
+
+def _build_topic_rights_degradation_receipt(
+    paths: RunPaths,
+    source_table: _TopicSourceRightsMigrationView,
+    *,
+    created_at: datetime | None = None,
+) -> LegacyExternalEvidenceDegradationReceipt | None:
+    """Build the canonical sidecar over immutable source-table bytes, without writing either."""
+
+    if not source_table.degraded_source_record_ids:
+        return None
+    source_path = _confined_external_evidence_path(
+        paths,
+        _TOPIC_SOURCE_TABLE_RELATIVE_PATH,
+        owner_label="topic source table for rights degradation",
+    )
+    source_digest = sha256_file(source_path)
+    identity = {
+        "source_path": _TOPIC_SOURCE_TABLE_RELATIVE_PATH,
+        "source_digest": source_digest,
+        "affected_source_ids": source_table.degraded_source_record_ids,
+    }
+    values: dict[str, object] = {
+        "receipt_id": f"legacy-external-evidence-{stable_hash(identity)[:16]}",
+        "original_artifact_path": _TOPIC_SOURCE_TABLE_RELATIVE_PATH,
+        "original_artifact_digest": source_digest,
+        "affected_source_ids": source_table.degraded_source_record_ids,
+        "abstract_fallback_source_ids": source_table.abstract_fallback_source_record_ids,
+        "metadata_only_source_ids": source_table.metadata_only_source_record_ids,
+    }
+    if created_at is not None:
+        values["created_at"] = created_at
+    return LegacyExternalEvidenceDegradationReceipt.model_validate(values)
+
+
+def _load_topic_source_table_for_rights_migration(
+    paths: RunPaths,
+) -> _TopicSourceRightsMigrationView:
+    try:
+        source_path = _confined_external_evidence_path(
+            paths,
+            _TOPIC_SOURCE_TABLE_RELATIVE_PATH,
+            owner_label="topic source table for rights migration",
+        )
+        payload = load_data(source_path)
+        try:
+            current = R5TopicEvidenceSourceTable.model_validate(payload)
+        except ValidationError:
+            return _legacy_v01_topic_rights_migration_view(payload)
+        return _current_topic_rights_migration_view(current)
+    except (OSError, ValueError, ValidationError, YAMLError) as exc:
+        raise RunArtifactCorruptionError(
+            f"corruption in run {paths.root.name!r}: legacy topic source table is missing, "
+            "aliased, or invalid; refusing rights migration/reuse"
+        ) from exc
+
+
+def _legacy_rights_sidecar_markers(dataset_receipt: StageReceipt | None) -> list[str]:
+    return [
+        line.removeprefix(_LEGACY_RIGHTS_SIDECAR_DIGEST_PREFIX).strip()
+        for line in (dataset_receipt.detail.splitlines() if dataset_receipt else [])
+        if line.startswith(_LEGACY_RIGHTS_SIDECAR_DIGEST_PREFIX)
+    ]
+
+
+def _confined_external_evidence_path(
+    paths: RunPaths,
+    relative_path: str,
+    *,
+    owner_label: str,
+) -> Path:
+    """Resolve one persisted pointer without accepting absolute, parent, or symlink aliases."""
+
+    candidate = Path(relative_path)
+    if candidate.is_absolute() or not candidate.parts or ".." in candidate.parts:
+        raise RunArtifactCorruptionError(
+            f"corruption in run {paths.root.name!r}: {owner_label} violates run-root confinement"
+        )
+    try:
+        root = paths.root.resolve(strict=True)
+        pointed = paths.root / candidate
+        resolved = pointed.resolve(strict=True)
+    except OSError as exc:
+        raise RunArtifactCorruptionError(
+            f"corruption in run {paths.root.name!r}: {owner_label} is missing or violates "
+            "run-root confinement"
+        ) from exc
+    expected = root.joinpath(*candidate.parts)
+    if (
+        resolved != expected
+        or not resolved.is_relative_to(root)
+        or not resolved.is_file()
+        or pointed.is_symlink()
+    ):
+        raise RunArtifactCorruptionError(
+            f"corruption in run {paths.root.name!r}: {owner_label} violates run-root confinement "
+            "(external or symlink alias)"
+        )
+    return resolved
+
+
+def _confined_external_evidence_write_path(
+    paths: RunPaths,
+    relative_path: str,
+    *,
+    owner_label: str,
+) -> Path:
+    """Prepare one run-local write target without following symlinked ancestors.
+
+    The destination may not exist yet, so the read-side helper cannot be reused directly.
+    Every existing ancestor is checked before the next directory is created; the final
+    destination must either be absent or be the exact regular file inside the resolved run root.
+    """
+
+    candidate = Path(relative_path)
+    if candidate.is_absolute() or not candidate.parts or ".." in candidate.parts:
+        raise RunArtifactCorruptionError(
+            f"corruption in run {paths.root.name!r}: {owner_label} violates run-root confinement"
+        )
+    try:
+        root = paths.root.resolve(strict=True)
+        current = paths.root
+        for part in candidate.parts[:-1]:
+            current = current / part
+            if current.is_symlink():
+                raise ValueError("symlinked ancestor")
+            if current.exists():
+                if not current.is_dir():
+                    raise ValueError("non-directory ancestor")
+            else:
+                current.mkdir()
+            expected_current = root.joinpath(*current.relative_to(paths.root).parts)
+            if current.resolve(strict=True) != expected_current:
+                raise ValueError("aliased ancestor")
+        destination = paths.root / candidate
+        expected_destination = root.joinpath(*candidate.parts)
+        if destination.is_symlink():
+            raise ValueError("symlinked destination")
+        if destination.exists():
+            if (
+                destination.resolve(strict=True) != expected_destination
+                or not destination.is_file()
+            ):
+                raise ValueError("aliased or non-file destination")
+        elif destination.parent.resolve(strict=True) != expected_destination.parent:
+            raise ValueError("aliased destination parent")
+    except (OSError, ValueError) as exc:
+        raise RunArtifactCorruptionError(
+            f"corruption in run {paths.root.name!r}: {owner_label} violates run-root confinement "
+            "(external or symlink alias)"
+        ) from exc
+    return destination
+
+
+def _reconstructed_external_evidence_input_digest(
+    source_table: R5TopicEvidenceSourceTable,
+    batch: ExternalEvidenceBatchReceipt,
+) -> str:
+    """Recreate the pre-enrichment table that the fresh batch receipt signed.
+
+    A successful enrichment replaces the displayed abstract/provider snippet with the bounded
+    excerpt and retains the former text in explicit fallback fields.  Reversing only those
+    successful, attempt-bound changes lets resume compare the batch's input digest with the real
+    persisted output without discarding lawful lower-authority text.
+    """
+
+    attempts = {attempt.source_record_id: attempt for attempt in batch.attempts}
+    reconstructed: list[dict[str, object]] = []
+    for record in source_table.records:
+        attempt = attempts.get(record.source_record_id)
+        if attempt is None or attempt.status != ExternalEvidenceAttemptStatus.SUCCEEDED:
+            reconstructed.append(record.model_dump(mode="json"))
+            continue
+        provenance = record.fulltext_provenance
+        if (
+            provenance is None
+            or provenance.retrieval_attempt != attempt
+            or not fulltext_rights_are_verified(record)
+            or not record.fulltext_fallback_abstract_or_snippet.strip()
+            or record.fulltext_fallback_snippet_kind is None
+        ):
+            raise RunArtifactCorruptionError(
+                "external-evidence success is not exactly bound to the persisted source/fulltext "
+                f"provenance for {record.source_record_id!r}"
+            )
+        reconstructed.append(
+            record.model_copy(
+                update={
+                    "abstract_or_snippet": record.fulltext_fallback_abstract_or_snippet,
+                    "snippet_kind": record.fulltext_fallback_snippet_kind,
+                    "fulltext_fallback_abstract_or_snippet": "",
+                    "fulltext_fallback_snippet_kind": None,
+                    "fulltext_provenance": None,
+                }
+            ).model_dump(mode="json")
+        )
+    return stable_hash(reconstructed)
+
+
+def validate_external_evidence_batch_binding(
+    paths: RunPaths,
+    *,
+    dataset_output: DatasetHalfStageOutput,
+    dataset_receipt: StageReceipt,
+) -> list[str]:
+    """Verify a fresh dataset-half batch against its table and both receipt layers.
+
+    Migrated v0.1 outputs are the sole no-batch compatibility shape: they retain their historical
+    DatasetHalfStageOutput bytes and carry one exact rights-degradation marker instead.  Every fresh
+    Card-1 output must provide the canonical pointer/digest pair and a typed receipt whose complete
+    target accounting closes against the persisted topic table.
+    """
+
+    pointer = dataset_output.external_evidence_batch_receipt_path
+    pointer_digest = dataset_output.external_evidence_batch_receipt_digest
+    markers = _legacy_rights_sidecar_markers(dataset_receipt)
+    if bool(pointer) != bool(pointer_digest):
+        raise RunArtifactCorruptionError(
+            f"corruption in run {paths.root.name!r}: incomplete dataset-half external-evidence "
+            "batch pointer/digest pair"
+        )
+    if not pointer:
+        if len(markers) == 1 and markers[0]:
+            return []
+        raise RunArtifactCorruptionError(
+            f"corruption in run {paths.root.name!r}: current dataset-half output lacks its "
+            "external-evidence batch receipt"
+        )
+    if markers:
+        raise RunArtifactCorruptionError(
+            f"corruption in run {paths.root.name!r}: fresh external-evidence batch conflicts "
+            "with a legacy rights-migration marker"
+        )
+    if pointer != _EXTERNAL_EVIDENCE_BATCH_RELATIVE_PATH:
+        raise RunArtifactCorruptionError(
+            f"corruption in run {paths.root.name!r}: dataset-half external-evidence batch pointer "
+            "is not the canonical run-local path"
+        )
+    batch_path = _confined_external_evidence_path(
+        paths,
+        pointer,
+        owner_label="dataset-half external-evidence batch receipt",
+    )
+    try:
+        batch = load_model(batch_path, ExternalEvidenceBatchReceipt)
+    except (OSError, ValueError, ValidationError, YAMLError) as exc:
+        raise RunArtifactCorruptionError(
+            f"corruption in run {paths.root.name!r}: dataset-half external-evidence batch is "
+            "not a valid typed receipt"
+        ) from exc
+    raw_digest = sha256_file(batch_path)
+    canonical_digest = sha256_bytes(
+        safe_dump(
+            batch.model_dump(mode="json", exclude_none=True),
+            sort_keys=False,
+            allow_unicode=True,
+        ).encode("utf-8")
+    )
+    if pointer_digest != raw_digest or raw_digest != canonical_digest:
+        raise RunArtifactCorruptionError(
+            f"corruption in run {paths.root.name!r}: dataset-half external-evidence batch digest "
+            "does not match its canonical typed bytes"
+        )
+    if (
+        dataset_receipt.output_paths.count(pointer) != 1
+        or dataset_receipt.output_digests.get(pointer) != pointer_digest
+    ):
+        raise RunArtifactCorruptionError(
+            f"corruption in run {paths.root.name!r}: outer dataset-half StageReceipt does not "
+            "bind the exact external-evidence batch"
+        )
+    if batch.operation != RetrievalOperation.TOPIC_FULLTEXT_EXCERPT:
+        raise RunArtifactCorruptionError(
+            f"corruption in run {paths.root.name!r}: dataset-half batch records the wrong "
+            "retrieval operation"
+        )
+    expected_receipt_id = (
+        "external-evidence-batch-"
+        + stable_hash(
+            {
+                "attempts": batch.attempts_digest,
+                "input": batch.input_table_digest,
+                "targets": sorted(batch.declared_target_ids),
+            }
+        )[:16]
+    )
+    if batch.receipt_id != expected_receipt_id:
+        raise RunArtifactCorruptionError(
+            f"corruption in run {paths.root.name!r}: external-evidence batch receipt identity "
+            "does not match its bound contents"
+        )
+
+    source_table = _load_topic_source_table_for_rights_migration(paths).safe_source_table
+    source_ids = [record.source_record_id for record in source_table.records]
+    if len(source_ids) != len(set(source_ids)):
+        raise RunArtifactCorruptionError(
+            f"corruption in run {paths.root.name!r}: persisted topic source table contains "
+            "duplicate source_record_id values"
+        )
+    record_by_id = {record.source_record_id: record for record in source_table.records}
+    batch_attempt_ids = {attempt.attempt_id for attempt in batch.attempts}
+    for attempt in batch.attempts:
+        record = record_by_id.get(attempt.source_record_id)
+        if record is None:
+            if attempt.status != ExternalEvidenceAttemptStatus.TARGET_NOT_FOUND:
+                raise RunArtifactCorruptionError(
+                    f"corruption in run {paths.root.name!r}: external-evidence target "
+                    f"{attempt.source_record_id!r} is absent without TARGET_NOT_FOUND accounting"
+                )
+            continue
+        if attempt.status == ExternalEvidenceAttemptStatus.TARGET_NOT_FOUND:
+            raise RunArtifactCorruptionError(
+                f"corruption in run {paths.root.name!r}: external-evidence target "
+                f"{attempt.source_record_id!r} is present but recorded TARGET_NOT_FOUND"
+            )
+        if attempt.status == ExternalEvidenceAttemptStatus.SUCCEEDED:
+            provenance = record.fulltext_provenance
+            if (
+                provenance is None
+                or provenance.retrieval_attempt != attempt
+                or not fulltext_rights_are_verified(record)
+            ):
+                raise RunArtifactCorruptionError(
+                    f"corruption in run {paths.root.name!r}: successful external-evidence "
+                    f"attempt for {attempt.source_record_id!r} does not match fulltext provenance"
+                )
+        elif attempt.status == ExternalEvidenceAttemptStatus.SKIPPED_ALREADY_FULLTEXT and (
+            record.fulltext_provenance is None
+        ):
+            raise RunArtifactCorruptionError(
+                f"corruption in run {paths.root.name!r}: SKIPPED_ALREADY_FULLTEXT target "
+                f"{attempt.source_record_id!r} has no persisted fulltext provenance"
+            )
+    for record in source_table.records:
+        provenance = record.fulltext_provenance
+        if (
+            provenance is not None
+            and provenance.retrieval_attempt is not None
+            and provenance.retrieval_attempt.attempt_id in batch_attempt_ids
+        ):
+            matching = next(
+                attempt
+                for attempt in batch.attempts
+                if attempt.attempt_id == provenance.retrieval_attempt.attempt_id
+            )
+            if matching.status != ExternalEvidenceAttemptStatus.SUCCEEDED or matching != (
+                provenance.retrieval_attempt
+            ):
+                raise RunArtifactCorruptionError(
+                    f"corruption in run {paths.root.name!r}: persisted fulltext provenance for "
+                    f"{record.source_record_id!r} conflicts with its batch attempt"
+                )
+    reconstructed_input_digest = _reconstructed_external_evidence_input_digest(source_table, batch)
+    if reconstructed_input_digest != batch.input_table_digest:
+        raise RunArtifactCorruptionError(
+            f"corruption in run {paths.root.name!r}: external-evidence batch input digest does "
+            "not reconcile with the persisted topic source table"
+        )
+
+    external_stage_receipt = read_stage_receipt(paths, "fulltext_enrichment")
+    if (
+        external_stage_receipt is None
+        or external_stage_receipt.status != StageStatus.COMPLETE
+        or external_stage_receipt.output_paths != [pointer]
+        or external_stage_receipt.output_digests != {pointer: pointer_digest}
+    ):
+        raise RunArtifactCorruptionError(
+            f"corruption in run {paths.root.name!r}: fulltext-enrichment StageReceipt does not "
+            "bind the exact external-evidence batch"
+        )
+    expected_external_call_ids = sorted(
+        attempt.attempt_id
+        for attempt in batch.attempts
+        if attempt.status in _EXTERNAL_EVIDENCE_TRANSPORT_STATUSES
+    )
+    if (
+        len(external_stage_receipt.external_call_ids)
+        != len(set(external_stage_receipt.external_call_ids))
+        or sorted(external_stage_receipt.external_call_ids) != expected_external_call_ids
+    ):
+        raise RunArtifactCorruptionError(
+            f"corruption in run {paths.root.name!r}: fulltext-enrichment external_call_ids do "
+            "not match attempts that reached transport"
+        )
+    return [pointer]
+
+
+def validate_topic_rights_degradation_binding(
+    paths: RunPaths,
+    *,
+    dataset_output: DatasetHalfStageOutput | None = None,
+    dataset_receipt: StageReceipt | None = None,
+) -> list[str]:
+    """Consume and verify the canonical rights sidecar at the dataset-half reuse boundary.
+
+    A sidecar is mandatory exactly when the immutable table contains v0.1-style unverified
+    full-text records.  Its raw-file SHA, affected IDs, and abstract-vs-metadata partitions are
+    recomputed from the real table.  Missing, mutated, orphaned, or source-substituted sidecars are
+    corruption, never a reason to silently restore the old full-text authority or rerun providers.
+    """
+
+    source_table = _load_topic_source_table_for_rights_migration(paths)
+    expected_without_time = _build_topic_rights_degradation_receipt(paths, source_table)
+    sidecar_path = _topic_rights_degradation_path(paths)
+    if expected_without_time is None:
+        if sidecar_path.exists() or sidecar_path.is_symlink():
+            raise RunArtifactCorruptionError(
+                f"corruption in run {paths.root.name!r}: an orphaned topic rights-degradation "
+                "sidecar exists for a source table with no degraded records"
+            )
+        if dataset_output is not None and (
+            dataset_output.rights_degradation_receipt_path
+            or dataset_output.rights_degradation_receipt_digest
+        ):
+            raise RunArtifactCorruptionError(
+                f"corruption in run {paths.root.name!r}: dataset-half points to a rights "
+                "degradation sidecar that is not warranted by its source table"
+            )
+        if dataset_receipt is not None and any(
+            line.startswith(_LEGACY_RIGHTS_SIDECAR_DIGEST_PREFIX)
+            for line in dataset_receipt.detail.splitlines()
+        ):
+            raise RunArtifactCorruptionError(
+                f"corruption in run {paths.root.name!r}: dataset receipt claims a legacy rights "
+                "sidecar for a source table with no degraded records"
+            )
+        return []
+
+    try:
+        sidecar_path = _confined_external_evidence_path(
+            paths,
+            _TOPIC_RIGHTS_DEGRADATION_RELATIVE_PATH,
+            owner_label="topic rights-degradation sidecar",
+        )
+        persisted = load_model(sidecar_path, LegacyExternalEvidenceDegradationReceipt)
+    except (OSError, ValueError, ValidationError, YAMLError) as exc:
+        raise RunArtifactCorruptionError(
+            f"corruption in run {paths.root.name!r}: required topic rights-degradation sidecar "
+            "is missing, aliased, or invalid; refusing reuse"
+        ) from exc
+    expected = _build_topic_rights_degradation_receipt(
+        paths,
+        source_table,
+        created_at=persisted.created_at,
+    )
+    if expected is None or persisted != expected:
+        raise RunArtifactCorruptionError(
+            f"corruption in run {paths.root.name!r}: topic rights-degradation sidecar does not "
+            "match the immutable source bytes and recomputed authority partitions"
+        )
+    sidecar_digest = sha256_file(sidecar_path)
+    canonical_bytes = safe_dump(
+        persisted.model_dump(mode="json", exclude_none=True),
+        sort_keys=False,
+        allow_unicode=True,
+    ).encode("utf-8")
+    if sidecar_digest != sha256_bytes(canonical_bytes):
+        raise RunArtifactCorruptionError(
+            f"corruption in run {paths.root.name!r}: topic rights-degradation sidecar bytes "
+            "were changed or produced by an unknown serializer"
+        )
+    if dataset_output is not None:
+        pointer = dataset_output.rights_degradation_receipt_path
+        pointer_digest = dataset_output.rights_degradation_receipt_digest
+        if bool(pointer) != bool(pointer_digest):
+            raise RunArtifactCorruptionError(
+                f"corruption in run {paths.root.name!r}: incomplete dataset-half rights sidecar "
+                "pointer/digest pair"
+            )
+        # Fresh Card-1 runs bind the sidecar in DatasetHalfStageOutput.  A migrated v0.1 output is
+        # intentionally byte-preserved and therefore has neither field; the recomputed canonical
+        # binding above is its compatibility authority record.
+        if pointer and (
+            pointer != _TOPIC_RIGHTS_DEGRADATION_RELATIVE_PATH or pointer_digest != sidecar_digest
+        ):
+            raise RunArtifactCorruptionError(
+                f"corruption in run {paths.root.name!r}: dataset-half rights sidecar pointer or "
+                "digest does not match the canonical degradation receipt"
+            )
+        if not pointer:
+            markers = [
+                line.removeprefix(_LEGACY_RIGHTS_SIDECAR_DIGEST_PREFIX).strip()
+                for line in (dataset_receipt.detail.splitlines() if dataset_receipt else [])
+                if line.startswith(_LEGACY_RIGHTS_SIDECAR_DIGEST_PREFIX)
+            ]
+            if markers != [sidecar_digest]:
+                raise RunArtifactCorruptionError(
+                    f"corruption in run {paths.root.name!r}: byte-preserved legacy dataset-half "
+                    "output lacks the exact typed sidecar digest binding"
+                )
+    return [_TOPIC_RIGHTS_DEGRADATION_RELATIVE_PATH]
+
+
+def _validated_legacy_stage_c_source_projection(
+    paths: RunPaths,
+    *,
+    dataset_output: DatasetHalfStageOutput,
+    dataset_receipt: StageReceipt,
+) -> RightsSafeTopicSourceProjection | None:
+    """Return the legacy Stage-C projection only after validating both receipt layers.
+
+    Current-schema tables continue through Stage C's ordinary strict loader.  The exceptional
+    projection exists solely for an exact no-provenance v0.1 table whose immutable bytes, degraded
+    source partition, sidecar, and migrated dataset receipt all reconcile.
+    """
+
+    verified_paths = validate_topic_rights_degradation_binding(
+        paths,
+        dataset_output=dataset_output,
+        dataset_receipt=dataset_receipt,
+    )
+    view = _load_topic_source_table_for_rights_migration(paths)
+    if not view.legacy_v0_1_shape:
+        return None
+    if verified_paths != [_TOPIC_RIGHTS_DEGRADATION_RELATIVE_PATH]:
+        raise RunArtifactCorruptionError(
+            f"corruption in run {paths.root.name!r}: legacy Stage-C projection lacks its "
+            "validated rights-degradation sidecar"
+        )
+    from ..context.question_scientist_export import RightsSafeTopicSourceProjection
+
+    return RightsSafeTopicSourceProjection(
+        source_table=view.safe_source_table,
+        original_semantic_digest=stable_hash(load_data(_topic_source_table_path(paths))),
+        excluded_source_record_ids=view.degraded_source_record_ids,
+    )
+
+
+def persist_topic_rights_degradation_receipt(paths: RunPaths) -> Path | None:
+    """Persist or validate the canonical non-mutating topic-rights sidecar."""
+
+    source_path = _confined_external_evidence_path(
+        paths,
+        _TOPIC_SOURCE_TABLE_RELATIVE_PATH,
+        owner_label="topic source table for rights migration",
+    )
+    original_bytes = source_path.read_bytes()
+    source_table = _load_topic_source_table_for_rights_migration(paths)
+    receipt = _build_topic_rights_degradation_receipt(paths, source_table)
+    if receipt is None:
+        return None
+    sidecar_path = _confined_external_evidence_write_path(
+        paths,
+        _TOPIC_RIGHTS_DEGRADATION_RELATIVE_PATH,
+        owner_label="topic rights-degradation sidecar write",
+    )
+    if sidecar_path.exists():
+        validate_topic_rights_degradation_binding(paths)
+    else:
+        dump_data(receipt, sidecar_path)
+        validate_topic_rights_degradation_binding(paths)
+    if source_path.read_bytes() != original_bytes:
+        raise RunArtifactCorruptionError(
+            f"corruption in run {paths.root.name!r}: persisting the rights sidecar changed "
+            "immutable source-table bytes"
+        )
+    return sidecar_path
+
+
+def migrate_legacy_dataset_half_rights(
+    config: MaieusisProjectConfig,
+    paths: RunPaths,
+) -> Path | None:
+    """Perform the one bounded, provider-free v0.1 rights migration under the run lock.
+
+    Eligibility is deliberately exact: frozen legacy config hash, current real inputs, matching
+    model/prompt identity, intact recorded outputs, and at least one known-unverified FULLTEXT record.
+    Only the typed sidecar and dataset receipt's semantic config marker are written.  Source tables,
+    Stage-C/D products, family artifacts, and all scientific bytes remain unchanged.
+    """
+
+    receipt = read_stage_receipt(paths, STAGE_DATASET_HALF)
+    if receipt is None or receipt.status not in _REUSABLE_STATUSES:
+        return None
+    if receipt.config_version != legacy_dataset_half_config_version(config):
+        return None
+    if not model_versions_accept(
+        receipt.model_versions, stage_model_versions(config, STAGE_DATASET_HALF)
+    ) or receipt.prompt_versions != stage_prompt_versions(STAGE_DATASET_HALF):
+        return None
+    current_inputs = compute_current_input_digests(config, paths, STAGE_DATASET_HALF)
+    if receipt.input_digests != current_inputs:
+        return None
+    _verify_output_digests(
+        paths.root,
+        receipt.output_digests,
+        owner_label="legacy dataset-half rights migration",
+    )
+    dataset_output = load_model(paths.stage_output(STAGE_DATASET_HALF), DatasetHalfStageOutput)
+    if (
+        dataset_output.rights_degradation_receipt_path
+        or dataset_output.rights_degradation_receipt_digest
+    ):
+        # A supposedly frozen v0.1 output cannot already contain Card-1-only pointer fields.
+        raise RunArtifactCorruptionError(
+            f"corruption in run {paths.root.name!r}: legacy dataset-half output contains a "
+            "partial or anachronistic rights sidecar pointer"
+        )
+    source_table = _load_topic_source_table_for_rights_migration(paths)
+    if _build_topic_rights_degradation_receipt(paths, source_table) is None:
+        # The rights semantic revision may still require a normal dataset-half rerun; the special
+        # no-call path exists only for the known-wrong authority shape it can safely lower.
+        return None
+    sidecar_path = persist_topic_rights_degradation_receipt(paths)
+    if sidecar_path is None:
+        raise RunArtifactCorruptionError(
+            f"corruption in run {paths.root.name!r}: eligible rights migration did not persist "
+            "its required sidecar"
+        )
+    sidecar_digest = sha256_file(sidecar_path)
+    detail_lines = receipt.detail.splitlines()
+    old_markers = [
+        line for line in detail_lines if line.startswith(_LEGACY_RIGHTS_SIDECAR_DIGEST_PREFIX)
+    ]
+    if old_markers:
+        raise RunArtifactCorruptionError(
+            f"corruption in run {paths.root.name!r}: frozen legacy dataset receipt already "
+            "contains an unexpected rights-sidecar digest marker"
+        )
+    migrated_detail = "\n".join(
+        [
+            *detail_lines,
+            f"{_LEGACY_RIGHTS_SIDECAR_DIGEST_PREFIX}{sidecar_digest}",
+        ]
+    ).strip()
+    migrated_output_digests = {
+        **receipt.output_digests,
+        _TOPIC_RIGHTS_DEGRADATION_RELATIVE_PATH: sidecar_digest,
+    }
+    write_stage_receipt(
+        paths,
+        receipt.model_copy(
+            update={
+                "config_version": stage_config_version(config, STAGE_DATASET_HALF),
+                "detail": migrated_detail,
+                "output_paths": sorted(migrated_output_digests),
+                "output_digests": dict(sorted(migrated_output_digests.items())),
+            }
+        ),
+    )
+    return sidecar_path
 
 
 def _verify_stage_d_outcome_binding(paths: RunPaths) -> list[str]:
@@ -523,6 +1600,304 @@ def _verify_stage_d_outcome_binding(paths: RunPaths) -> list[str]:
     return verified
 
 
+_NOVELTY_WEB_JOURNAL_RELATIVE_ROOT = Path("receipts") / "novelty-web"
+
+
+def _verify_stage_d_novelty_web_bindings(paths: RunPaths) -> list[str]:
+    """Verify N-2's retained journal without constructing a provider or re-searching.
+
+    Stage D deliberately retains this small receipt tree across ordinary corpus cleanup.  Reuse is
+    safe only when every persisted web reference binds its family/variant/question and every
+    resolved canonical record exactly matches its one bounded Crossref reconciliation snapshot.
+    This verifier is read-only: a missing, swapped, malformed, or symlinked artifact is corruption,
+    never permission to make another web request.
+    """
+
+    reservations = _load_novelty_web_models(paths, "reservations", NoveltyWebSearchReservation)
+    completed = _load_novelty_web_models(paths, "completed", NoveltyWebSearchReceipt)
+    resolution_reservations = _load_novelty_web_models(
+        paths, "resolution-reservations", NoveltyWebLeadResolutionReservation
+    )
+    resolutions = _load_novelty_web_models(paths, "resolutions", NoveltyWebLeadResolution)
+
+    reservations_by_id = {item.reservation_id: item for _path, item in reservations}
+    receipts_by_id = {item.receipt_id: item for _path, item in completed}
+    resolution_reservations_by_id = {
+        item.reservation_id: item for _path, item in resolution_reservations
+    }
+    resolution_reservations_by_resolution_id = {
+        item.resolution_id: item for _path, item in resolution_reservations
+    }
+    resolutions_by_id = {item.resolution_id: item for _path, item in resolutions}
+    if len(reservations_by_id) != len(reservations):
+        _n2_corruption(paths, "duplicate novelty-web reservation identities")
+    if len(receipts_by_id) != len(completed):
+        _n2_corruption(paths, "duplicate novelty-web completed receipt identities")
+    if len(resolution_reservations_by_id) != len(resolution_reservations):
+        _n2_corruption(paths, "duplicate novelty-web reconciliation reservation identities")
+    if len(resolution_reservations_by_resolution_id) != len(resolution_reservations):
+        _n2_corruption(paths, "multiple reconciliation reservations target one web lead")
+    if len(resolutions_by_id) != len(resolutions):
+        _n2_corruption(paths, "duplicate novelty-web resolution identities")
+
+    for completed_path, receipt in completed:
+        if completed_path.stem != receipt.reservation_id:
+            _n2_corruption(
+                paths, "novelty-web completed receipt filename does not bind reservation"
+            )
+        reservation = reservations_by_id.get(receipt.reservation_id)
+        if reservation is None:
+            _n2_corruption(paths, "novelty-web completed receipt has no pre-call reservation")
+        _verify_novelty_web_receipt_reservation_pair(paths, receipt, reservation)
+
+    for reservation_path, reservation_entry in resolution_reservations:
+        if reservation_path.stem != reservation_entry.reservation_id:
+            _n2_corruption(
+                paths,
+                "novelty-web reconciliation reservation filename does not bind its identity",
+            )
+        bound_receipt = receipts_by_id.get(reservation_entry.receipt_id)
+        if bound_receipt is None:
+            _n2_corruption(
+                paths,
+                "novelty-web reconciliation reservation has no completed search receipt",
+            )
+        if reservation_entry.lead_id not in {lead.lead_id for lead in bound_receipt.leads}:
+            _n2_corruption(
+                paths,
+                "novelty-web reconciliation reservation references a lead outside its receipt",
+            )
+
+    for resolution_path, resolution in resolutions:
+        if resolution_path.stem != resolution.resolution_id:
+            _n2_corruption(paths, "novelty-web resolution filename does not bind its identity")
+        bound_receipt = receipts_by_id.get(resolution.receipt_id)
+        if bound_receipt is None:
+            _n2_corruption(paths, "novelty-web resolution has no completed search receipt")
+        if resolution.lead_id not in {lead.lead_id for lead in bound_receipt.leads}:
+            _n2_corruption(paths, "novelty-web resolution references a lead outside its receipt")
+        reconciliation_reservation = resolution_reservations_by_resolution_id.get(
+            resolution.resolution_id
+        )
+        if reconciliation_reservation is None:
+            _n2_corruption(
+                paths, "novelty-web resolution has no pre-call reconciliation reservation"
+            )
+        if (
+            reconciliation_reservation.receipt_id != resolution.receipt_id
+            or reconciliation_reservation.lead_id != resolution.lead_id
+        ):
+            _n2_corruption(
+                paths, "novelty-web resolution does not bind its reconciliation reservation"
+            )
+        if resolution.status != NoveltyWebLeadResolutionStatus.UNAVAILABLE and (
+            reconciliation_reservation.method != resolution.method
+            or reconciliation_reservation.deterministic_provider_id
+            != resolution.deterministic_provider_id
+            or reconciliation_reservation.deterministic_query_digest
+            != resolution.deterministic_query_digest
+        ):
+            _n2_corruption(
+                paths,
+                "novelty-web resolution route does not match its pre-call reconciliation reservation",
+            )
+
+    evidence_packs = _load_stage_d_novelty_models(paths, "evidence", NoveltyEvidencePack)
+    evidence_by_id = {item.evidence_pack_id: item for _path, item in evidence_packs}
+    if len(evidence_by_id) != len(evidence_packs):
+        _n2_corruption(paths, "duplicate Stage-D novelty evidence-pack identities")
+    for _path, evidence in evidence_packs:
+        _verify_novelty_web_evidence_pack(
+            paths,
+            evidence,
+            receipts_by_id=receipts_by_id,
+            resolutions_by_id=resolutions_by_id,
+        )
+
+    assessments = _load_stage_d_novelty_models(paths, "assessments", VariantNoveltyAssessment)
+    for _path, assessment in assessments:
+        bound_evidence = evidence_by_id.get(assessment.evidence_pack_id)
+        if bound_evidence is None:
+            _n2_corruption(paths, "novelty assessment refers to a missing evidence pack")
+        if set(assessment.web_receipt_ids) != set(bound_evidence.web_receipt_ids) or set(
+            assessment.web_resolution_ids
+        ) != set(bound_evidence.web_resolution_ids):
+            _n2_corruption(
+                paths,
+                "novelty assessment web receipt/resolution links do not match its evidence pack",
+            )
+
+    return sorted(
+        [
+            path.relative_to(paths.root).as_posix()
+            for path, _item in [
+                *reservations,
+                *completed,
+                *resolution_reservations,
+                *resolutions,
+            ]
+        ]
+    )
+
+
+def _load_novelty_web_models(
+    paths: RunPaths,
+    subdirectory: str,
+    model_type: type[_N2Model],
+) -> list[tuple[Path, _N2Model]]:
+    """Load every controlled N-2 journal YAML only from a confined regular-file directory."""
+
+    directory = _novelty_web_confined_directory(paths, subdirectory)
+    if directory is None:
+        return []
+    loaded: list[tuple[Path, _N2Model]] = []
+    for candidate in sorted(directory.iterdir()):
+        if candidate.suffix != ".yaml" or candidate.is_symlink() or not candidate.is_file():
+            _n2_corruption(paths, "novelty-web journal contains a non-regular YAML artifact")
+        try:
+            resolved = candidate.resolve(strict=True)
+            if not resolved.is_relative_to(directory):
+                _n2_corruption(paths, "novelty-web journal artifact escapes its directory")
+            model = load_model(candidate, model_type)
+        except (OSError, ValueError, ValidationError, YAMLError) as exc:
+            raise RunArtifactCorruptionError(
+                f"corruption in run {paths.root.name!r}: novelty-web {subdirectory} artifact "
+                "is not a valid typed receipt"
+            ) from exc
+        loaded.append((candidate, model))
+    return loaded
+
+
+def _load_stage_d_novelty_models(
+    paths: RunPaths,
+    leaf_directory: str,
+    model_type: type[_N2Model],
+) -> list[tuple[Path, _N2Model]]:
+    """Read normal Stage-D novelty outputs while refusing symlink traversal outside the run."""
+
+    root = paths.corpus / "question_families" / "novelty"
+    if not root.exists():
+        return []
+    if root.is_symlink() or not root.is_dir():
+        _n2_corruption(paths, "Stage-D novelty output root is not a real directory")
+    run_root = paths.root.resolve(strict=True)
+    loaded: list[tuple[Path, _N2Model]] = []
+    for candidate in sorted(root.rglob(f"{leaf_directory}/*.yaml")):
+        if candidate.is_symlink() or not candidate.is_file():
+            _n2_corruption(paths, "Stage-D novelty output contains a non-regular artifact")
+        try:
+            resolved = candidate.resolve(strict=True)
+            if not resolved.is_relative_to(run_root):
+                _n2_corruption(paths, "Stage-D novelty artifact escapes the run root")
+            model = load_model(candidate, model_type)
+        except (OSError, ValueError, ValidationError, YAMLError) as exc:
+            raise RunArtifactCorruptionError(
+                f"corruption in run {paths.root.name!r}: Stage-D novelty {leaf_directory} "
+                "artifact is not a valid typed model"
+            ) from exc
+        loaded.append((candidate, model))
+    return loaded
+
+
+def _novelty_web_confined_directory(paths: RunPaths, subdirectory: str) -> Path | None:
+    if Path(subdirectory).name != subdirectory:
+        _n2_corruption(paths, "invalid novelty-web journal directory identifier")
+    directory = paths.root / _NOVELTY_WEB_JOURNAL_RELATIVE_ROOT / subdirectory
+    if not directory.exists():
+        return None
+    if directory.is_symlink() or not directory.is_dir():
+        _n2_corruption(paths, "novelty-web journal directory is not a real directory")
+    try:
+        run_root = paths.root.resolve(strict=True)
+        resolved = directory.resolve(strict=True)
+    except OSError as exc:
+        raise RunArtifactCorruptionError(
+            f"corruption in run {paths.root.name!r}: novelty-web journal directory cannot be read"
+        ) from exc
+    if not resolved.is_relative_to(run_root):
+        _n2_corruption(paths, "novelty-web journal directory escapes the run root")
+    return resolved
+
+
+def _verify_novelty_web_receipt_reservation_pair(
+    paths: RunPaths,
+    receipt: NoveltyWebSearchReceipt,
+    reservation: NoveltyWebSearchReservation,
+) -> None:
+    fields = (
+        "run_id",
+        "question_family_id",
+        "variant_id",
+        "question_seed_id",
+        "question_digest",
+        "candidate_input_digest",
+        "request_digest",
+        "config_digest",
+        "prompt_version",
+        "prompt_digest",
+        "provider_id",
+        "model_id",
+        "rate_card",
+        "tool_rate_micro_usd",
+        "reserved_web_tool_uses",
+    )
+    if any(getattr(receipt, field) != getattr(reservation, field) for field in fields):
+        _n2_corruption(paths, "novelty-web receipt does not match its immutable reservation")
+    if receipt.requested_at != reservation.reserved_at:
+        _n2_corruption(paths, "novelty-web receipt request time does not match its reservation")
+
+
+def _verify_novelty_web_evidence_pack(
+    paths: RunPaths,
+    evidence: NoveltyEvidencePack,
+    *,
+    receipts_by_id: dict[str, NoveltyWebSearchReceipt],
+    resolutions_by_id: dict[str, NoveltyWebLeadResolution],
+) -> None:
+    for receipt_id in evidence.web_receipt_ids:
+        receipt = receipts_by_id.get(receipt_id)
+        if receipt is None:
+            _n2_corruption(paths, "novelty evidence pack refers to a missing web receipt")
+        if (
+            receipt.question_family_id != evidence.question_family_id
+            or receipt.variant_id != evidence.variant_id
+            or receipt.question_seed_id != evidence.question_seed_id
+            or receipt.question_digest != evidence.question_digest
+        ):
+            _n2_corruption(
+                paths, "novelty web receipt is swapped across family, variant, or question"
+            )
+    for resolution_id in evidence.web_resolution_ids:
+        resolution = resolutions_by_id.get(resolution_id)
+        if resolution is None:
+            _n2_corruption(paths, "novelty evidence pack refers to a missing web resolution")
+        if resolution.receipt_id not in evidence.web_receipt_ids:
+            _n2_corruption(
+                paths, "novelty web resolution is not bound to the evidence-pack receipt"
+            )
+    for prior in evidence.priors:
+        if prior.evidence_origin != NoveltyPriorEvidenceOrigin.WEB_LEAD_RESOLVED:
+            continue
+        if (
+            prior.web_receipt_id not in evidence.web_receipt_ids
+            or prior.web_resolution_id not in evidence.web_resolution_ids
+        ):
+            _n2_corruption(paths, "web-resolved prior has no evidence-pack receipt chain")
+        resolution = resolutions_by_id.get(prior.web_resolution_id)
+        if (
+            resolution is None
+            or resolution.canonical_prior is None
+            or resolution.canonical_prior.model_dump(mode="json") != prior.model_dump(mode="json")
+        ):
+            _n2_corruption(
+                paths, "web-resolved prior does not match its immutable resolution snapshot"
+            )
+
+
+def _n2_corruption(paths: RunPaths, detail: str) -> NoReturn:
+    raise RunArtifactCorruptionError(f"corruption in run {paths.root.name!r}: {detail}")
+
+
 # --- run lock --------------------------------------------------------------------------------
 def _pid_alive(pid: int) -> bool:
     try:
@@ -585,6 +1960,7 @@ def family_slug_map(manifest: QuestionFamilyShortlistManifest) -> dict[str, str]
         | set(manifest.rejected_family_ids)
         | set(manifest.needs_revision_family_ids)
         | set(manifest.deferred_family_ids)
+        | set(manifest.run_incomplete_family_ids)
     )
     return assign_family_slugs(all_ids)
 
@@ -599,7 +1975,7 @@ def discover_family_completions(
     a matching digest (mismatch/missing artifact behind a record → corruption, fail closed).
     A missing record or a non-terminal status → RUN (clean + recreate).
     """
-    shortlist_digest = stable_hash(manifest)
+    shortlist_digest = semantic_hash(manifest)
     slugs = family_slug_map(manifest)
     completed: list[FamilyCompletionRecord] = []
     decisions: list[FamilyResumeDecision] = []
@@ -684,7 +2060,7 @@ def inspect_persisted_family_processing(
     consistent with the discovery predicate without relabeling warnings as accepted plans.
     """
 
-    shortlist_digest = stable_hash(manifest)
+    shortlist_digest = semantic_hash(manifest)
     slugs = family_slug_map(manifest)
     outcomes: list[FamilyRunOutcome] = []
     infrastructure_incomplete = False
@@ -733,16 +2109,41 @@ class ResumePlan:
 
     @property
     def rerun_stage_count(self) -> int:
-        return len(self.stage_decisions) - self.reused_stage_count
+        return sum(
+            1 for d in self.stage_decisions.values() if d.decision == StageResumeDecisionKind.RUN
+        )
+
+    @property
+    def terminal_not_applicable_count(self) -> int:
+        return sum(
+            1
+            for d in self.stage_decisions.values()
+            if d.decision == StageResumeDecisionKind.TERMINAL_NOT_APPLICABLE
+        )
+
+    @property
+    def reused_scientific_terminal_stage(self) -> str | None:
+        return next(
+            (
+                stage
+                for stage in STAGE_ORDER
+                if self.stage_decisions[stage].decision == StageResumeDecisionKind.REUSE
+                and self.stage_decisions[stage].receipt_status
+                == StageStatus.SCIENTIFIC_TERMINAL.value
+            ),
+            None,
+        )
 
     @property
     def all_stages_reused(self) -> bool:
+        """No stage will execute; terminal-barrier stages may be explicitly not applicable."""
         return self.rerun_stage_count == 0
 
     @property
     def presentation_only(self) -> bool:
         return (
             self.all_stages_reused
+            and self.reused_scientific_terminal_stage is None
             and self.presentation_decision.decision == PresentationResumeDecisionKind.RENDER
         )
 
@@ -770,6 +2171,21 @@ def _run_decision(
         changed_input_keys=list(changed_keys),
         recorded_input_digests=dict(receipt.input_digests) if receipt else {},
         current_input_digests=dict(current_inputs or {}),
+    )
+
+
+def _terminal_not_applicable_decision(
+    stage: str,
+    *,
+    receipt: StageReceipt | None,
+    terminal_upstreams: Sequence[str],
+) -> StageResumeDecision:
+    return StageResumeDecision(
+        stage_name=stage,
+        decision=StageResumeDecisionKind.TERMINAL_NOT_APPLICABLE,
+        reason=StageRunReason.UPSTREAM_SCIENTIFIC_TERMINAL,
+        receipt_status=receipt.status.value if receipt else "missing",
+        changed_input_keys=list(terminal_upstreams),
     )
 
 
@@ -827,6 +2243,22 @@ def plan_resume(
     decisions: dict[str, StageResumeDecision] = {}
     for stage in STAGE_ORDER:
         receipt = read_stage_receipt(paths, stage)
+        terminal_upstreams = [
+            upstream
+            for upstream in STAGE_UPSTREAM[stage]
+            if decisions[upstream].decision == StageResumeDecisionKind.TERMINAL_NOT_APPLICABLE
+            or (
+                decisions[upstream].decision == StageResumeDecisionKind.REUSE
+                and decisions[upstream].receipt_status == StageStatus.SCIENTIFIC_TERMINAL.value
+            )
+        ]
+        if terminal_upstreams:
+            decisions[stage] = _terminal_not_applicable_decision(
+                stage,
+                receipt=receipt,
+                terminal_upstreams=terminal_upstreams,
+            )
+            continue
         ran_upstreams = [
             up
             for up in STAGE_UPSTREAM[stage]
@@ -849,10 +2281,10 @@ def plan_resume(
             config, stage, family_count=family_count, variants_per_family=variants_per_family
         )
         expected_models = stage_model_versions(config, stage)
-        expected_prompts = stage_prompt_versions(stage)
+        expected_prompts = stage_prompt_versions(stage, config=config)
         if (
             receipt.config_version != expected_config
-            or receipt.model_versions != expected_models
+            or not model_versions_accept(receipt.model_versions, expected_models)
             or receipt.prompt_versions != expected_prompts
         ):
             decisions[stage] = _run_decision(
@@ -884,8 +2316,29 @@ def plan_resume(
         verified = _verify_output_digests(
             paths.root, receipt.output_digests, owner_label=f"stage {stage!r}"
         )
+        if stage == STAGE_DATASET_HALF and receipt.status == StageStatus.COMPLETE:
+            dataset_output = load_model(
+                paths.stage_output(STAGE_DATASET_HALF), DatasetHalfStageOutput
+            )
+            for relative_path in validate_external_evidence_batch_binding(
+                paths,
+                dataset_output=dataset_output,
+                dataset_receipt=receipt,
+            ):
+                if relative_path not in verified:
+                    verified.append(relative_path)
+            for relative_path in validate_topic_rights_degradation_binding(
+                paths,
+                dataset_output=dataset_output,
+                dataset_receipt=receipt,
+            ):
+                if relative_path not in verified:
+                    verified.append(relative_path)
         if stage == STAGE_D:
             for relative_path in _verify_stage_d_outcome_binding(paths):
+                if relative_path not in verified:
+                    verified.append(relative_path)
+            for relative_path in _verify_stage_d_novelty_web_bindings(paths):
                 if relative_path not in verified:
                     verified.append(relative_path)
         decisions[stage] = StageResumeDecision(
@@ -1049,6 +2502,11 @@ def _clear_manifest_stage_receipt(
             if not is_removed(diagnostic.internal_path)
         ]
     if stage == STAGE_PAPER_HALF:
+        manifest.diagnostics = [
+            diagnostic
+            for diagnostic in manifest.diagnostics
+            if diagnostic.code not in {"paper_half_terminal", "no_reviewed_question_patterns"}
+        ]
         for paper in manifest.papers:
             paper.disposition = PaperDispositionKind.PENDING
             paper.reason = ""
@@ -1108,10 +2566,16 @@ def persist_resume_receipt(paths: RunPaths, plan: ResumePlan, config_digest: str
 
 
 def resume_note_for(plan: ResumePlan) -> str:
-    return (
+    note = (
         f"This run was resumed: {plan.reused_stage_count} stage(s) reused, "
         f"{plan.rerun_stage_count} stage(s) re-run."
     )
+    if plan.terminal_not_applicable_count:
+        note += (
+            f" {plan.terminal_not_applicable_count} downstream stage(s) were not applicable "
+            "after a reused scientific terminal."
+        )
+    return note
 
 
 # --- the resume driver ---------------------------------------------------------------------------------
@@ -1134,9 +2598,14 @@ def _execute_resume_initialized(
     retrieval) happens ONLY when the owning stage actually re-runs.
     """
     from ...providers.models.base import ModelConfigurationError, StructuredModelProviderError
-    from ...providers.scientific_agents import ScientificAgentInfrastructureError
+    from ...providers.scientific_agents import (
+        ScientificAgentInfrastructureError,
+        ScientificAgentSessionError,
+    )
     from ..agents.question_scientist_family import NoValidFamilies, StageDPromptBudgetError
     from .end_to_end import (
+        DatasetContextTerminalError,
+        QuestionScientistContextReadinessError,
         StageExecutor,
         _dataset_context_run_terminal,
         _planning_ineligible_run_terminal,
@@ -1151,7 +2620,7 @@ def _execute_resume_initialized(
         exec_stage_dataset_half,
         exec_stage_paper_half,
         ingest_paper_drafts,
-        maybe_write_paper_half_terminal_summary,
+        maybe_terminalize_stage_receipt,
         preserve_branch_products_before_cleanup,
     )
     from .paperbank_import import import_paperbank_from_run
@@ -1178,6 +2647,11 @@ def _execute_resume_initialized(
         )
     paths = RunPaths(root=run_root)
     with acquire_run_lock(run_root, command="maieusis resume"):
+        # Card-1 compatibility: an exact v0.1 false-OA dataset half can be made safe without
+        # deleting its source table or constructing any provider.  The bounded migration writes
+        # only a typed authority-degradation sidecar and advances the dataset receipt's semantic
+        # marker; plan_resume then consumes and verifies that sidecar like every current receipt.
+        migrate_legacy_dataset_half_rights(config, paths)
         plan = plan_resume(
             config,
             paths,
@@ -1225,6 +2699,29 @@ def _execute_resume_initialized(
                 ),
             )
 
+        reused_terminal_stage = plan.reused_scientific_terminal_stage
+        if reused_terminal_stage is not None:
+            terminal_receipt = read_stage_receipt(paths, reused_terminal_stage)
+            if (
+                terminal_receipt is None
+                or terminal_receipt.status != StageStatus.SCIENTIFIC_TERMINAL
+                or terminal_receipt.failure_class != FailureClass.SCIENTIFIC
+            ):
+                raise RunArtifactCorruptionError(
+                    "resume plan named a scientific terminal without its bound scientific receipt"
+                )
+            write_run_terminal_summary(
+                paths,
+                RunTerminal(
+                    failed_stage=reused_terminal_stage,
+                    failed_stage_receipt_id=reused_terminal_stage,
+                    failure_class=FailureClass.SCIENTIFIC,
+                    reason=terminal_receipt.detail,
+                ),
+                resume_note=note,
+            )
+            return ResumeExecutionResult(summary=paths.summary, plan=plan)
+
         if plan.presentation_only:
             from ..presentation.materialize import try_materialize_detailed_presentation
             from .run_envelope import RunContext
@@ -1250,6 +2747,23 @@ def _execute_resume_initialized(
 
         def must_run(stage: str) -> bool:
             return decisions[stage].decision == StageResumeDecisionKind.RUN
+
+        stage_c_source_projection: RightsSafeTopicSourceProjection | None = None
+        if must_run(STAGE_C) and not must_run(STAGE_DATASET_HALF):
+            dataset_receipt = read_stage_receipt(paths, STAGE_DATASET_HALF)
+            if dataset_receipt is None or dataset_receipt.status != StageStatus.COMPLETE:
+                raise RunArtifactCorruptionError(
+                    f"corruption in run {paths.root.name!r}: Stage C cannot reuse a missing or "
+                    "non-complete dataset-half receipt"
+                )
+            dataset_output = load_model(
+                paths.stage_output(STAGE_DATASET_HALF), DatasetHalfStageOutput
+            )
+            stage_c_source_projection = _validated_legacy_stage_c_source_projection(
+                paths,
+                dataset_output=dataset_output,
+                dataset_receipt=dataset_receipt,
+            )
 
         # DP-6: clean every RUN stage BEFORE executing anything (re-run-safe on dirty dirs).
         for stage in STAGE_ORDER[:-1]:
@@ -1316,6 +2830,7 @@ def _execute_resume_initialized(
                         config,
                         resolved_executor,  # type: ignore[arg-type]
                         run_context=run_context,
+                        resume=True,
                     )
                 )
                 exec_stage_paper_half(
@@ -1328,11 +2843,16 @@ def _execute_resume_initialized(
         # Honest run terminal: a zero-accepted paper half (freshly re-run OR a reused
         # SCIENTIFIC_TERMINAL receipt) stops the resume here with the run-terminal summary — never a
         # stage-C crash on the missing pattern manifest.
-        terminal_summary = maybe_write_paper_half_terminal_summary(paths, resume_note=note)
-        if terminal_summary is not None:
-            return ResumeExecutionResult(summary=terminal_summary, plan=plan)
-        # Q2: mirror the fresh-run honest terminal on resume — a dataset-half / stage-C fail-closed
-        # verdict writes a SCIENTIFIC_TERMINAL receipt + summary.md and stops, never a bare traceback.
+        terminal_result = maybe_terminalize_stage_receipt(
+            paths,
+            run_id=run_id,
+            stage=STAGE_PAPER_HALF,
+            resume_note=note,
+        )
+        if terminal_result is not None:
+            return ResumeExecutionResult(summary=paths.summary, plan=plan)
+        # Mirror the fresh-run typed terminal on resume: scientific non-accept stays scientific;
+        # provider/schema/config failures stay infrastructure. Both stop before downstream stages.
         if must_run(STAGE_DATASET_HALF):
             try:
                 exec_stage_dataset_half(
@@ -1342,15 +2862,27 @@ def _execute_resume_initialized(
                     topic_source_table=topic_source_table,
                     topic_r5_source_table=topic_r5_source_table,
                 )
-            except (ValueError, ValidationError) as exc:
+            except (
+                DatasetContextTerminalError,
+                ModelConfigurationError,
+                ScientificAgentInfrastructureError,
+                ScientificAgentSessionError,
+                StructuredModelProviderError,
+                ValueError,
+                ValidationError,
+            ) as exc:
                 _dataset_context_run_terminal(
                     config, paths, run_id, exc, stage=STAGE_DATASET_HALF, resume_note=note
                 )
                 return ResumeExecutionResult(summary=paths.summary, plan=plan)
         if must_run(STAGE_C):
             try:
-                exec_stage_c(config, paths)
-            except (ValueError, ValidationError) as exc:
+                exec_stage_c(
+                    config,
+                    paths,
+                    rights_safe_topic_source_projection=stage_c_source_projection,
+                )
+            except QuestionScientistContextReadinessError as exc:
                 _dataset_context_run_terminal(
                     config, paths, run_id, exc, stage=STAGE_C, resume_note=note
                 )
@@ -1370,6 +2902,7 @@ def _execute_resume_initialized(
                 StructuredModelProviderError,
                 ModelConfigurationError,
                 ScientificAgentInfrastructureError,
+                ScientificAgentSessionError,
             ) as exc:
                 _stage_d_run_terminal(config, paths, run_id, exc, resume_note=note)
                 return ResumeExecutionResult(summary=paths.summary, plan=plan)
@@ -1407,6 +2940,11 @@ def execute_resume_from_config(
     scientific_preflight_complete: bool = True,
 ) -> Path:
     """Resume one existing envelope and preserve its last valid projections on failure."""
+    from ...providers.models.base import StructuredModelProviderError
+    from ...providers.scientific_agents import (
+        ScientificAgentInfrastructureError,
+        ScientificAgentSessionError,
+    )
     from ...schemas.run_manifest import (
         ArtifactAuthority,
         ArtifactKind,
@@ -1419,6 +2957,7 @@ def execute_resume_from_config(
         index_existing_artifact,
         load_run_manifest,
         record_run_failure,
+        retire_current_run_diagnostics,
         set_run_state,
     )
 
@@ -1427,7 +2966,23 @@ def execute_resume_from_config(
         raise ValueError(
             f"run {run_id!r} not found at {paths.root} — nothing to resume (start with 'maieusis run')"
         )
-    manifest = load_run_manifest(paths, allow_missing_receipts=True)
+    try:
+        manifest = load_run_manifest(paths, allow_missing_receipts=True)
+    except ValueError as exc:
+        # CLIM-13: a post-promotion artifact mutation must be REJECTED honestly — persist the
+        # INTEGRITY terminal (FAILED state + sanitized diagnostics) instead of dying with a bare
+        # traceback that only a manual off-product reindex could clear. Mutated bytes never
+        # regain authority; resume refuses to proceed.
+        from .run_envelope import record_detected_integrity_failure
+
+        mismatched = record_detected_integrity_failure(paths)
+        if not mismatched:
+            raise
+        raise ValueError(
+            "resume refused: indexed artifacts were mutated after promotion "
+            f"({', '.join(mismatched)}); the run is recorded as an honest INTEGRITY failure and "
+            "the mutated bytes hold no authority"
+        ) from exc
     if manifest.run_id != run_id:
         raise ValueError("run manifest identity does not match the requested run")
     context = RunContext(run_id=run_id, paths=paths)
@@ -1445,13 +3000,32 @@ def execute_resume_from_config(
         )
     except ScientificResumePreflightRequired:
         raise
-    except Exception:
+    except Exception as exc:
+        provider_failure = isinstance(
+            exc,
+            (
+                ScientificAgentInfrastructureError,
+                ScientificAgentSessionError,
+                StructuredModelProviderError,
+            ),
+        )
+        kind = getattr(getattr(exc, "kind", None), "value", "")
         record_run_failure(
             context,
-            code="resume_exception",
-            diagnostic_class=DiagnosticClass.PROGRAMMER_FAULT,
+            code=(
+                f"provider_{kind}"
+                if provider_failure and kind
+                else ("provider_infrastructure_failure" if provider_failure else "resume_exception")
+            ),
+            diagnostic_class=(
+                DiagnosticClass.INFRASTRUCTURE
+                if provider_failure
+                else DiagnosticClass.PROGRAMMER_FAULT
+            ),
             public_message=(
-                "Resume stopped before replacement completed; previous validated products remain current."
+                "A required provider could not complete resume; previous validated products remain current."
+                if provider_failure
+                else "Resume stopped before replacement completed; previous validated products remain current."
             ),
             failed=False,
         )
@@ -1467,6 +3041,23 @@ def execute_resume_from_config(
             processing_state=ProductProcessingState.PRODUCED,
             authority=ArtifactAuthority.PROVISIONAL,
         )
+    # The resumed summary may replace an indexed presentation artifact. Refresh that index before
+    # loading the manifest to retire stale run-level failures, otherwise integrity validation sees
+    # the intentionally replaced summary bytes as corruption.
+    retire_current_run_diagnostics(
+        context,
+        codes=(
+            "run_exception",
+            "resume_exception",
+            "provider_infrastructure_failure",
+            "provider_account_exhausted",
+            "provider_authentication",
+            "provider_rate_limit",
+            "provider_timeout",
+            "provider_connection",
+            "provider_server_error",
+        ),
+    )
     post_run = load_run_manifest(paths)
     family_outcomes: list[FamilyRunOutcome] = []
     family_processing_incomplete = False
@@ -1476,10 +3067,19 @@ def execute_resume_from_config(
         family_outcomes, family_processing_incomplete = inspect_persisted_family_processing(
             paths, shortlist
         )
-    shared_incomplete = any(
-        stage.processing_state in {ProductProcessingState.DEGRADED, ProductProcessingState.FAILED}
-        for stage in post_run.stages
-    )
+    shared_scientific_terminal = False
+    shared_incomplete = False
+    shared_projection_degraded = False
+    for stage in post_run.stages:
+        if stage.processing_state == ProductProcessingState.DEGRADED:
+            shared_projection_degraded = True
+            receipt = read_stage_receipt(paths, stage.stage.value)
+            if receipt is not None and receipt.status == StageStatus.SCIENTIFIC_TERMINAL:
+                shared_scientific_terminal = True
+            else:
+                shared_incomplete = True
+        elif stage.processing_state == ProductProcessingState.FAILED:
+            shared_incomplete = True
     family_projection_degraded = any(
         family.closure_state in {ProductProcessingState.DEGRADED, ProductProcessingState.FAILED}
         for family in post_run.families
@@ -1495,7 +3095,7 @@ def execute_resume_from_config(
     accepted_count = sum(
         outcome.dossier_axis == DossierAxis.RENDERED for outcome in family_outcomes
     )
-    if summary.is_file() and (shared_incomplete or family_projection_degraded):
+    if summary.is_file() and (shared_projection_degraded or family_projection_degraded):
         index_existing_artifact(
             context,
             summary,
@@ -1507,14 +3107,15 @@ def execute_resume_from_config(
         context,
         RunProcessingState.INCOMPLETE if infrastructure_incomplete else RunProcessingState.COMPLETE,
         next_action=(
-            (
+            "Read the shared scientific-terminal summary and its linked diagnostics; no "
+            "downstream dossier stage was applicable."
+            if shared_scientific_terminal and not infrastructure_incomplete
+            else (
                 "Read the available family dossiers and terminal summary; inspect any degraded "
                 "family separately."
                 if family_projection_degraded
-                else (
-                    "Read the family dossiers and terminal summary; downstream authorization "
-                    "remains separate."
-                )
+                else "Read the family dossiers and terminal summary; downstream authorization "
+                "remains separate."
             )
             if not infrastructure_incomplete and accepted_count
             else (
@@ -1547,15 +3148,25 @@ def regenerate_summary_from_disk(
         evidence_basis_by_family,
         is_development_surrogate,
         non_included_family_outcome,
+        shortlist_reason_by_family,
     )
     from .run_layout import write_run_summary
 
     manifest = load_model(find_shortlist_path(paths), QuestionFamilyShortlistManifest)
     completed, _ = discover_family_completions(paths, manifest)
     outcomes = [record.family_run_outcome for record in completed]
+    # A resumed run must render the same reason a fresh run does, or `resume` would silently strip
+    # it back out of summary.md — the third call site, and the one easiest to miss.
+    non_included_reasons = shortlist_reason_by_family(paths)
     for bucket, axis in _SHORTLIST_BUCKET_AXIS.items():
         for family_id in getattr(manifest, f"{bucket}_family_ids"):
-            outcomes.append(non_included_family_outcome(family_id, shortlist_axis=axis))
+            outcomes.append(
+                non_included_family_outcome(
+                    family_id,
+                    shortlist_axis=axis,
+                    reason=non_included_reasons.get(family_id, ""),
+                )
+            )
 
     paper_out = load_model(paths.stage_output(STAGE_PAPER_HALF), PaperHalfStageOutput)
     dataset_out = load_model(paths.stage_output(STAGE_DATASET_HALF), DatasetHalfStageOutput)
@@ -1566,10 +3177,10 @@ def regenerate_summary_from_disk(
     )
     payload = load_model(find_payload_path(paths), QuestionScientistContextPayloadV2)
     basis_by_family = evidence_basis_by_family(payload, [sf.family for sf in manifest.shortlisted])
-    included_ids = {record.question_family_id for record in completed}
+    planning_family_ids = {record.question_family_id for record in completed}
     abstract_only = sum(
         1
-        for family_id in included_ids
+        for family_id in planning_family_ids
         if basis_by_family.get(family_id) == EvidenceBasis.ABSTRACT_ONLY
     )
     return write_run_summary(
@@ -1577,6 +3188,6 @@ def regenerate_summary_from_disk(
         outcomes,
         development_surrogate=development_surrogate,
         authority_ceiling=manifest.authority_ceiling,
-        evidence_basis_line=summary_evidence_basis_line(abstract_only, len(included_ids)),
+        evidence_basis_line=summary_evidence_basis_line(abstract_only, len(planning_family_ids)),
         resume_note=resume_note,
     )

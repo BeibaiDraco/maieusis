@@ -17,6 +17,9 @@ from ...providers.models.base import (
     StructuredModelProvider,
     StructuredModelProviderError,
 )
+from ...schemas._r5_firewall import (
+    FIREWALL_REJECTION_MARKER as _FIREWALL_REJECTION_MARKER,
+)
 from ...schemas._r5_firewall import assert_proposal_safe_payload
 from ...schemas.front_half_authority import FrontHalfAuthorityCeiling
 from ...schemas.question_family import (
@@ -66,6 +69,38 @@ class NoValidFamilies(Exception):
 
 class StageDPromptBudgetError(RuntimeError):
     """The code-owned family prompt exceeded its configured hard resource bound."""
+
+
+def _rejected_fields(exc: BaseException) -> str:
+    """Name WHICH fields rejected the reply, using our own schema's identifiers only.
+
+    The corpus's single whole-run kill recorded nothing but "structured_output_invalid" and was
+    recovered only by an operator resume ten minutes later. Field location plus pydantic error type
+    are our own identifiers; the exception's rendered message can echo the offending input value and
+    is deliberately not included.
+    """
+
+    errors = getattr(exc, "errors", None)
+    if not callable(errors):
+        return type(exc).__name__
+    try:
+        raised = list(errors())
+        fields = sorted(
+            {f"{'.'.join(str(part) for part in item['loc'])}:{item['type']}" for item in raised}
+        )
+    except (TypeError, KeyError, AttributeError):
+        # A diagnostic must never mask the failure it is describing.
+        return type(exc).__name__
+    located = "; ".join(fields[:8]) or type(exc).__name__
+    # Name the CAUSE when the proposal firewall is what rejected the reply. Without this a vetoed
+    # word is reported as `variants.0.seed:value_error` and rendered publicly as "the model's reply
+    # did not match the required structure" -- indistinguishable from malformed JSON. A shepherd then
+    # burns its bounded per-site repair budget against an invisible cause, which is exactly the
+    # visibility failure that makes a break unrecoverable. The offending VALUE is still never echoed:
+    # this adds a fixed sentence, never any part of the matched text.
+    if any(_FIREWALL_REJECTION_MARKER in str(item.get("msg", "")) for item in raised):
+        return f"{located} (a proposal-firewall rule rejected generated prose)"
+    return located
 
 
 class _QuestionScientistSemanticOutputError(ValueError):
@@ -153,6 +188,7 @@ def generate_question_family_batch(
             raise StructuredModelProviderError(
                 StructuredModelFailureKind.STRUCTURED_OUTPUT_INVALID,
                 provider_id=provider.provider_id,
+                detail=_rejected_fields(exc),
             ) from exc
         try:
             return _force_question_family_batch(
@@ -167,6 +203,7 @@ def generate_question_family_batch(
             raise StructuredModelProviderError(
                 StructuredModelFailureKind.STRUCTURED_OUTPUT_INVALID,
                 provider_id=provider.provider_id,
+                detail=_rejected_fields(exc),
             ) from exc
 
     def _quality_filter(

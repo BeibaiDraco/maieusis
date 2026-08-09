@@ -9,9 +9,11 @@ from pydantic import BaseModel, ValidationError
 from ..capture import (
     capture_enabled,
     capture_paid_leaf,
+    capture_paid_leaf_failure,
     capture_parse_failure,
     raw_response_body,
 )
+from ..models.base import DEFAULT_EFFORT, DEFAULT_THINKING
 from ..models.policy import ModelPolicyDecision, ensure_model_allowed
 from .base import (
     ScientificAgentFailureKind,
@@ -21,6 +23,7 @@ from .base import (
     ScientificAgentSessionError,
     ScientificAgentSessionSnapshot,
     ScientificAgentTranscriptRecord,
+    is_account_exhaustion_error,
     retry_on_transient,
     scientific_agent_payload_digest,
 )
@@ -58,7 +61,14 @@ class OpenAIScientificAgentProvider(ScientificAgentProvider):
         allow_pro_model: bool = False,
         system_prompt: str = "",
         client: Any | None = None,
+        thinking: str = DEFAULT_THINKING,
+        effort: str = DEFAULT_EFFORT,
     ) -> None:
+        # Carried and recorded so a role's reasoning depth is one value across both hosts. The
+        # Responses API expresses it differently and gates it by model, so this adapter states the
+        # value rather than guessing a wire mapping it cannot verify here.
+        self._thinking = thinking
+        self._effort = effort
         resolved_model = model or os.getenv("OPENAI_MODEL")
         if not resolved_model:
             raise ValueError("Set OPENAI_MODEL or pass model=...")
@@ -104,6 +114,8 @@ class OpenAIScientificAgentProvider(ScientificAgentProvider):
             model_id=self.model_id,
             prompt_version=prompt_version,
             system_prompt=self._system_prompt,
+            thinking=self._thinking,
+            effort=self._effort,
         )
 
     def resume_session(
@@ -129,6 +141,10 @@ class OpenAIScientificAgentProvider(ScientificAgentProvider):
             transcript=snapshot.transcript,
             provider_session_id=snapshot.provider_session_id,
             provider_metadata=snapshot.provider_metadata,
+            # Same reason as the Anthropic lane: a resumed session keeps the provider's configured
+            # depth rather than silently reverting to the module default.
+            thinking=self._thinking,
+            effort=self._effort,
         )
 
 
@@ -146,7 +162,11 @@ class OpenAIScientificAgentSession(ScientificAgentSession):
         transcript: list[ScientificAgentTranscriptRecord] | None = None,
         provider_session_id: str = "",
         provider_metadata: dict[str, str] | None = None,
+        thinking: str = DEFAULT_THINKING,
+        effort: str = DEFAULT_EFFORT,
     ) -> None:
+        self._thinking = thinking
+        self._effort = effort
         self._client = client
         self._branch_id = branch_id
         self._session_id = session_id
@@ -198,15 +218,17 @@ class OpenAIScientificAgentSession(ScientificAgentSession):
         # exhaustion this raises ScientificAgentInfrastructureError, which the orchestrator maps
         # to an infrastructure_incomplete terminal (never a scientific failed_validation).
         capturing = capture_enabled()
+        capture_request: dict[str, Any] | None = None
         try:
             if capturing:
+                capture_request = self._capture_request(payload, output_schema, request_kwargs)
                 raw_response = retry_on_transient(
                     lambda: self._client.responses.with_raw_response.parse(**request_kwargs),
                     transient=_transient_openai_error_types(),
                 )
                 receipt = capture_paid_leaf(
                     "scientific_agents.openai.session_send",
-                    request=self._capture_request(payload, output_schema, request_kwargs),
+                    request=capture_request,
                     response=raw_response_body(raw_response),
                     model=self.model_id,
                 )
@@ -219,6 +241,12 @@ class OpenAIScientificAgentSession(ScientificAgentSession):
                 receipt = None
         except ScientificAgentInfrastructureError as exc:
             kind = _openai_session_failure_kind(exc.last_error)
+            self._capture_failed_send(
+                capture_request,
+                exc.last_error,
+                kind=kind,
+                attempts=exc.attempts,
+            )
             if kind is None:
                 raise
             raise ScientificAgentSessionError(
@@ -228,15 +256,22 @@ class OpenAIScientificAgentSession(ScientificAgentSession):
                 last_error=exc.last_error,
             ) from exc
         except ValidationError as exc:
+            self._capture_failed_send(
+                capture_request,
+                exc,
+                kind=ScientificAgentFailureKind.STRUCTURED_OUTPUT_INVALID,
+            )
             raise ScientificAgentSessionError(
                 ScientificAgentFailureKind.STRUCTURED_OUTPUT_INVALID,
                 provider_id=self.provider_id,
                 last_error=exc,
             ) from exc
-        except (TypeError, AssertionError):
+        except (TypeError, AssertionError) as exc:
+            self._capture_failed_send(capture_request, exc, kind=None)
             raise
         except Exception as exc:
             kind = _openai_session_failure_kind(exc)
+            self._capture_failed_send(capture_request, exc, kind=kind)
             if kind is None:
                 raise
             raise ScientificAgentSessionError(
@@ -311,7 +346,37 @@ class OpenAIScientificAgentSession(ScientificAgentSession):
             "input_schema": payload.__class__.__name__,
             "output_schema": output_schema.__name__,
             "wire": request_kwargs,
+            # Recorded beside the wire rather than inside it: this adapter carries the configured
+            # reasoning depth but does not send it, because the Responses API expresses the same
+            # idea as a differently-shaped, model-gated field. Keeping it in the capture is what
+            # makes "carried and recorded" true -- without this the value was dead state and the
+            # claim was false.
+            "configured_reasoning_depth": {
+                "thinking": self._thinking,
+                "effort": self._effort,
+                "sent_on_wire": False,
+            },
         }
+
+    def _capture_failed_send(
+        self,
+        request: dict[str, Any] | None,
+        error: BaseException,
+        *,
+        kind: ScientificAgentFailureKind | None,
+        attempts: int = 1,
+    ) -> None:
+        if request is None:
+            return
+        capture_paid_leaf_failure(
+            "scientific_agents.openai.session_send",
+            request=request,
+            error=error,
+            provider=self.provider_id,
+            model=self.model_id,
+            failure_kind=kind.value if kind is not None else "unclassified",
+            attempts=attempts,
+        )
 
     def snapshot(self) -> ScientificAgentSessionSnapshot:
         return ScientificAgentSessionSnapshot(
@@ -327,6 +392,8 @@ class OpenAIScientificAgentSession(ScientificAgentSession):
 
 
 def _openai_session_failure_kind(exc: BaseException) -> ScientificAgentFailureKind | None:
+    if is_account_exhaustion_error(exc):
+        return ScientificAgentFailureKind.ACCOUNT_EXHAUSTED
     name = type(exc).__name__
     if name in {"AuthenticationError", "PermissionDeniedError"}:
         return ScientificAgentFailureKind.AUTHENTICATION

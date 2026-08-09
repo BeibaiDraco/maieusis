@@ -14,6 +14,12 @@ from dataclasses import dataclass
 from pathlib import PurePosixPath
 from urllib.parse import urlsplit
 
+from ...schemas.novelty_admission import (
+    FamilyNoveltyAdmission,
+    NoveltyVariantDisposition,
+    VariantNoveltyAssessment,
+)
+from ...schemas.presentation import PresentationWarningCode
 from ...schemas.question_family import (
     QuestionFamily,
     QuestionFamilyBatch,
@@ -27,10 +33,13 @@ from ...schemas.question_scientist_context_v2 import (
     ProposerSourceEvidenceCard,
     TopicLiteratureContextPack,
 )
+from .privacy import extract_public_dois, remove_allowed_public_dois
 
 _OMITTED = "Information omitted because it is not safe for a public presentation page."
 _MISSING_SOURCE = "A reviewed source could not be resolved for public presentation."
 _NOT_RECORDED = "None recorded."
+_PATTERN_REFERENCE_LABEL = "a reviewed question pattern from this run's PatternBank"
+_PAPER_CASE_REFERENCE_LABEL = "a reviewed source paper from this run's PaperBank"
 
 _ABSOLUTE_PATH = re.compile(
     r"(?:^|[\s(\[])"
@@ -84,7 +93,7 @@ class RenderedPresentationPage:
     """One candidate page plus identifier-free warning codes."""
 
     markdown: str
-    warnings: tuple[str, ...] = ()
+    warnings: tuple[PresentationWarningCode, ...] = ()
 
     @property
     def presentation_ready(self) -> bool:
@@ -116,13 +125,13 @@ class _LiteratureItem:
 
 class _Warnings:
     def __init__(self) -> None:
-        self._codes: list[str] = []
+        self._codes: list[PresentationWarningCode] = []
 
-    def add(self, code: str) -> None:
+    def add(self, code: PresentationWarningCode) -> None:
         if code not in self._codes:
             self._codes.append(code)
 
-    def freeze(self) -> tuple[str, ...]:
+    def freeze(self) -> tuple[PresentationWarningCode, ...]:
         return tuple(self._codes)
 
 
@@ -132,7 +141,7 @@ class _LiteratureResolver:
         self._sources: dict[str, ProposerSourceEvidenceCard] = {}
         self._items: dict[str, _LiteratureItem] = {}
         if pack is None:
-            warnings.add("literature_context_unavailable")
+            warnings.add(PresentationWarningCode.LITERATURE_CONTEXT_UNAVAILABLE)
             return
 
         self._sources = {card.source_record_id: card for card in pack.source_cards}
@@ -177,7 +186,7 @@ class _LiteratureResolver:
     def exact(self, reference: str) -> _LiteratureItem | None:
         item = self._items.get(reference.strip())
         if item is None:
-            self._warnings.add("unresolved_literature_reference")
+            self._warnings.add(PresentationWarningCode.UNRESOLVED_LITERATURE_REFERENCE)
         return item
 
     def from_text(self, value: str) -> tuple[_LiteratureItem, ...]:
@@ -198,7 +207,7 @@ class _LiteratureResolver:
             # page renders the reviewed typed card instead of echoing that mixed string.
             return _deduplicate_literature(item for _, item in mentioned)
         if _looks_like_internal_reference(stripped):
-            self._warnings.add("unresolved_literature_reference")
+            self._warnings.add(PresentationWarningCode.UNRESOLVED_LITERATURE_REFERENCE)
             return ()
         return (_LiteratureItem(statement=stripped),)
 
@@ -215,7 +224,7 @@ class _LiteratureResolver:
         for source_index, source_id in enumerate(item.source_record_ids, start=1):
             source = self._sources.get(source_id)
             if source is None:
-                self._warnings.add("unresolved_literature_source")
+                self._warnings.add(PresentationWarningCode.UNRESOLVED_LITERATURE_SOURCE)
                 continue
             citation_text = _without_exact_typed_url(source.citation, source.url)
             if not citation_text:
@@ -236,14 +245,14 @@ class _LiteratureResolver:
                 if _is_safe_public_url(source.url):
                     citation = f"[{citation}]({source.url})"
                 else:
-                    self._warnings.add("unsafe_typed_source_url_omitted")
+                    self._warnings.add(PresentationWarningCode.UNSAFE_TYPED_SOURCE_URL_OMITTED)
             if citation not in citations:
                 citations.append(citation)
         if citations:
             lines.append(f"  - Sources: {'; '.join(citations)}")
         elif item.source_record_ids:
             lines.append(f"  - Sources: {_MISSING_SOURCE}")
-            self._warnings.add("unresolved_literature_source")
+            self._warnings.add(PresentationWarningCode.UNRESOLVED_LITERATURE_SOURCE)
         return lines
 
 
@@ -261,7 +270,7 @@ def render_question_patterns_detailed(
         if key in link_by_edge:
             existing = link_by_edge[key]
             if (existing.paper_href, existing.trace_href) != (link.paper_href, link.trace_href):
-                warnings.add("conflicting_pattern_source_link")
+                warnings.add(PresentationWarningCode.CONFLICTING_PATTERN_SOURCE_LINK)
             continue
         link_by_edge[key] = link
 
@@ -277,7 +286,7 @@ def render_question_patterns_detailed(
     ]
     if not patterns:
         lines.extend(["No reviewed question-formation patterns were available.", ""])
-        warnings.add("no_patterns_available")
+        warnings.add(PresentationWarningCode.NO_PATTERNS_AVAILABLE)
 
     for pattern_index, pattern in enumerate(patterns, start=1):
         forbidden = {
@@ -365,10 +374,10 @@ def render_question_patterns_detailed(
         )
         edges = list(zip(pattern.source_case_ids, pattern.source_trace_ids, strict=False))
         if len(pattern.source_case_ids) != len(pattern.source_trace_ids):
-            warnings.add("incomplete_pattern_source_lineage")
+            warnings.add(PresentationWarningCode.INCOMPLETE_PATTERN_SOURCE_LINEAGE)
         if not edges:
             lines.append(f"- {_MISSING_SOURCE}")
-            warnings.add("missing_pattern_source_link")
+            warnings.add(PresentationWarningCode.MISSING_PATTERN_SOURCE_LINK)
         for edge_index, edge in enumerate(edges, start=1):
             source_link = link_by_edge.get(edge)
             if (
@@ -377,12 +386,13 @@ def render_question_patterns_detailed(
                 or not _safe_relative_markdown_href(source_link.trace_href)
             ):
                 lines.append(f"- Source {edge_index}: {_MISSING_SOURCE}")
-                warnings.add("missing_pattern_source_link")
+                warnings.add(PresentationWarningCode.MISSING_PATTERN_SOURCE_LINK)
                 continue
             paper_label = _safe_text(
                 source_link.paper_label,
                 warnings=warnings,
                 forbidden_tokens=forbidden,
+                allowed_public_dois=extract_public_dois(source_link.paper_label),
             )
             trace_label = _safe_text(
                 source_link.trace_label,
@@ -401,15 +411,65 @@ def render_question_patterns_detailed(
     )
 
 
+def _novelty_evidence_by_variant(
+    assessments: Sequence[VariantNoveltyAssessment],
+) -> dict[str, str]:
+    """The reviewer's own sentence for a variant, plus the priors it actually compared against.
+
+    A scientific "no" must carry its evidence -- shape (2) of the shepherd contract. The reader was
+    told a question "duplicates prior work" and nothing more, while the rationale and the
+    DOI-identified comparisons sat unread in the assessment file. Only what the reviewer WROTE is
+    rendered; the host adds no interpretation of its own.
+    """
+    evidence: dict[str, str] = {}
+    for assessment in assessments:
+        parts: list[str] = []
+        rationale = (assessment.rationale or "").strip()
+        if rationale:
+            parts.append(rationale)
+        priors = [
+            comparison.source_record_id
+            for comparison in assessment.comparisons
+            if getattr(comparison, "source_record_id", "")
+        ]
+        if priors:
+            parts.append("Compared against: " + "; ".join(priors))
+        for requirement in assessment.distinction_requirements:
+            if requirement.strip():
+                parts.append(f"To distinguish it: {requirement.strip()}")
+        if parts:
+            evidence[assessment.variant_id] = " ".join(parts)
+    return evidence
+
+
+def _novelty_disposition_by_variant(
+    admissions: Sequence[FamilyNoveltyAdmission],
+) -> dict[str, NoveltyVariantDisposition]:
+    """Flatten the receipt-bound prior-art records into one variant → disposition lookup.
+
+    Variant ids are unique per run, so a flat map is safe and keeps the caller from having to know
+    which family owned which admission.
+    """
+    return {
+        item.variant_id: item.disposition
+        for admission in admissions
+        for item in admission.variant_admissions
+    }
+
+
 def render_question_families_detailed(
     batch: QuestionFamilyBatch,
     *,
     shortlist: QuestionFamilyShortlistManifest | None,
     topic_literature: TopicLiteratureContextPack | None,
+    novelty_admissions: Sequence[FamilyNoveltyAdmission] = (),
+    novelty_assessments: Sequence[VariantNoveltyAssessment] = (),
 ) -> RenderedPresentationPage:
     """Render every proposed family/variant, including families not shortlisted for planning."""
 
     warnings = _Warnings()
+    novelty_by_variant = _novelty_disposition_by_variant(novelty_admissions)
+    novelty_evidence = _novelty_evidence_by_variant(novelty_assessments)
     resolver = _LiteratureResolver(topic_literature, warnings)
     shortlist_by_family = (
         {item.family.question_family_id: item for item in shortlist.shortlisted}
@@ -419,8 +479,9 @@ def render_question_families_detailed(
     rejected = set(shortlist.rejected_family_ids) if shortlist is not None else set()
     needs_revision = set(shortlist.needs_revision_family_ids) if shortlist is not None else set()
     deferred = set(shortlist.deferred_family_ids) if shortlist is not None else set()
+    run_incomplete = set(shortlist.run_incomplete_family_ids) if shortlist is not None else set()
     if shortlist is None:
-        warnings.add("shortlist_unavailable")
+        warnings.add(PresentationWarningCode.SHORTLIST_UNAVAILABLE)
 
     lines = [
         "# Detailed Question Scientist families",
@@ -437,12 +498,14 @@ def render_question_families_detailed(
     ]
     for family_index, family in enumerate(batch.families, start=1):
         family_forbidden = _family_private_tokens(batch, family, resolver)
+        family_labels = _unrenderable_reference_labels(family)
         family_disposition = _family_disposition(
             family,
             shortlist_by_family=shortlist_by_family,
             rejected=rejected,
             needs_revision=needs_revision,
             deferred=deferred,
+            run_incomplete=run_incomplete,
             warnings=warnings,
         )
         lines.extend(
@@ -521,6 +584,8 @@ def render_question_families_detailed(
                 family_disposition=family_disposition,
                 variant=variant,
                 shortlisted_family=selected,
+                novelty_disposition=novelty_by_variant.get(variant.variant_id),
+                novelty_evidence=novelty_evidence.get(variant.variant_id, ""),
                 warnings=warnings,
             )
             seed = variant.seed
@@ -574,10 +639,10 @@ def render_question_families_detailed(
                     "",
                 ]
             )
-            relevant_items = _deduplicate_literature(
-                item
-                for value in seed.relevant_literature_claims
-                for item in resolver.from_text(value)
+            relevant_items = _resolved_literature(
+                seed.relevant_literature_claims,
+                resolver=resolver,
+                replacements=family_labels,
             )
             if relevant_items:
                 for item in relevant_items:
@@ -585,11 +650,13 @@ def render_question_families_detailed(
             else:
                 lines.append(f"- {_MISSING_SOURCE}")
                 if seed.relevant_literature_claims:
-                    warnings.add("unresolved_literature_reference")
+                    warnings.add(PresentationWarningCode.UNRESOLVED_LITERATURE_REFERENCE)
 
             lines.extend(["", "#### Closest known work", ""])
-            closest_items = _deduplicate_literature(
-                item for value in seed.closest_known_work for item in resolver.from_text(value)
+            closest_items = _resolved_literature(
+                seed.closest_known_work,
+                resolver=resolver,
+                replacements=family_labels,
             )
             if closest_items:
                 for item in closest_items:
@@ -680,6 +747,68 @@ def render_question_families_detailed(
     )
 
 
+def _unrenderable_reference_labels(family: QuestionFamily) -> dict[str, str]:
+    """Public stand-ins for the run-private ids a family may write inside scientific prose.
+
+    Pattern ids and paper-case ids are private to the run, so they belong in the forbidden set and
+    must never reach the page. They are also, measurably, written straight INTO the model's
+    sentences: across 17 live batches, 87 ``closest_known_work`` / ``relevant_literature_claims``
+    values carried a pattern id and 9 carried a paper-case id, most of them as the sentence's own
+    subject ("qpat-regional-anomaly-driver-states-007 provides a precedent for objective state
+    classification while preserving causal caveats.").
+
+    Forbidding without substituting destroyed the whole sentence: 13 of the 18 "Closest known work"
+    bullets on the only live run that ever built a PaperBank from scratch were the omission marker,
+    and a further 15 bullets across three other runs were the unresolved-source marker because the
+    model had written the bare id and nothing else.
+
+    This page never receives the PatternBank or the PaperBank, so the reference cannot be rendered
+    as a typed card. Naming its *kind* keeps the reviewer's sentence and its scientific meaning
+    while the id itself still never appears -- degrade before strict construction, AGENTS.md rule
+    11, and the same remedy as PR #109.
+    """
+    labels = {
+        pattern_id: _PATTERN_REFERENCE_LABEL
+        for pattern_id in family.source_pattern_ids
+        if pattern_id
+    }
+    for variant in family.variants:
+        for case_id in variant.seed.source_paper_case_ids:
+            if case_id:
+                labels[case_id] = _PAPER_CASE_REFERENCE_LABEL
+    return labels
+
+
+def _resolved_literature(
+    values: Iterable[str],
+    *,
+    resolver: _LiteratureResolver,
+    replacements: Mapping[str, str],
+) -> tuple[_LiteratureItem, ...]:
+    """Resolve model-written references, substituting the ids this page cannot render.
+
+    Substitution runs BEFORE resolution so a private id never reaches the point where it can
+    nullify the prose around it. Topic-literature ids are deliberately left intact: the resolver
+    still resolves them to their reviewed typed card, which renders better than any stand-in.
+    """
+    items: list[_LiteratureItem] = []
+    for value in values:
+        stripped = value.strip()
+        label = replacements.get(stripped)
+        if label is not None:
+            # The model wrote the bare id and nothing else; there is no sentence to preserve, so
+            # state the kind of reference rather than reporting a resolution failure.
+            items.append(_LiteratureItem(statement=f"{label[0].upper()}{label[1:]}."))
+            continue
+        substituted = _substitute_tokens(stripped, replacements)
+        # The id is usually the sentence's own subject, so the stand-in usually lands at position
+        # zero; the bullet is a standalone sentence and should read like one.
+        if any(substituted.startswith(label) for label in set(replacements.values())):
+            substituted = f"{substituted[0].upper()}{substituted[1:]}"
+        items.extend(resolver.from_text(substituted))
+    return _deduplicate_literature(items)
+
+
 def _family_private_tokens(
     batch: QuestionFamilyBatch,
     family: QuestionFamily,
@@ -720,6 +849,7 @@ def _family_disposition(
     rejected: set[str],
     needs_revision: set[str],
     deferred: set[str],
+    run_incomplete: set[str],
     warnings: _Warnings,
 ) -> str:
     family_id = family.question_family_id
@@ -731,8 +861,48 @@ def _family_disposition(
         return "Not shortlisted — revision requested"
     if family_id in deferred:
         return "Not shortlisted — deferred"
-    warnings.add("missing_shortlist_disposition")
+    if family_id in run_incomplete:
+        # The manifest has carried this bucket since #135 and nothing rendered it, so a family lost
+        # to a provider fault fell through to "Disposition unavailable" -- or, worse, was written
+        # into `deferred` upstream and read as a finding about the literature. The reader is told
+        # what actually happened.
+        return (
+            "Not shortlisted — this family was not reviewed: the run could not complete its "
+            "novelty review. This is an infrastructure limitation, not a scientific finding "
+            "about the literature"
+        )
+    warnings.add(PresentationWarningCode.MISSING_SHORTLIST_DISPOSITION)
     return "Disposition unavailable"
+
+
+_NOVELTY_FILTERED_DISPOSITIONS = {
+    NoveltyVariantDisposition.REJECTED_DIRECT_RECAP: (
+        "Not carried into planning — bounded prior-art review found a close prior that directly "
+        "recaps this variant"
+    ),
+    NoveltyVariantDisposition.DEFERRED_CLOSE_PRIOR: (
+        "Not carried into planning — deferred: a close prior sits near this variant and a "
+        "distinguishing revision is required first"
+    ),
+    NoveltyVariantDisposition.DEFERRED_INSUFFICIENT_EVIDENCE: (
+        "Not carried into planning — deferred: the bounded prior-art search did not return enough "
+        "evidence to judge this variant"
+    ),
+    # #145 routed provider faults into their own disposition and stopped there: this table had no
+    # entry, so such a variant fell past `filtered is None` to the missing-record branch and the
+    # reader was told the run "recorded no decision" -- which is the opposite of the truth, since
+    # #145's whole point is that the run DID record what happened. On the 2026-07-31 leg 2 of the
+    # 3 delivered families carry one such variant each, so that false sentence would have printed
+    # twice on the demo.
+    NoveltyVariantDisposition.NOT_ASSESSED_INFRASTRUCTURE: (
+        "Not carried into planning — this variant was never reviewed: the prior-art reviewer could "
+        "not be reached. This is an infrastructure limitation, not a finding about the literature"
+    ),
+}
+_NOVELTY_FILTERED_WITHOUT_RECORD = (
+    "Not carried into planning — filtered before family review; this run kept no record of which "
+    "prior-art finding decided it"
+)
 
 
 def _variant_disposition(
@@ -740,28 +910,68 @@ def _variant_disposition(
     family_disposition: str,
     variant: QuestionFamilyVariant,
     shortlisted_family: ShortlistedQuestionFamily | None,
+    novelty_disposition: NoveltyVariantDisposition | None,
     warnings: _Warnings,
+    novelty_evidence: str = "",
 ) -> str:
+    """One variant's honest disposition, including the ones family review never saw.
+
+    The `missing_variant_shortlist_disposition` case used to print "Not active; detailed disposition
+    unavailable" and raise a warning. Both were wrong, and measuring the corpus settled why: 27
+    variants across 14 of 16 live runs hit it, and in 27 of 27 the variant was absent from
+    ``shortlisted_family.family.variants`` as well -- because that field is the novelty-ADMITTED
+    family copy, so a variant filtered by bounded novelty admission was never carried into family
+    review at all. Nothing was lost: no shortlist review decision for it was ever produced, and the
+    shortlist reviewer has no per-variant slot in which to produce one.
+
+    So the old behaviour treated a normal, expected outcome as an anomaly, which is what made almost
+    every live run's presentation add-on read as degraded. Worse, the obvious "fix" -- minting a
+    review decision in persistence -- would stamp the novelty judge's finding with the shortlist
+    reviewer's identity, promoting unreviewed material past its authority (hard rule 12), and the
+    schema would accept the forged record.
+
+    The novelty judge DID decide, with provenance, and its record is receipt-bound in the same run.
+    That record is the honest source, so its disposition is named here. The warning now fires only
+    when something is genuinely unaccounted for: a variant family review should have decided on but
+    did not, or a filtered variant with no prior-art record to explain it.
+    """
     if shortlisted_family is None:
         return family_disposition
-    active_ids = set(shortlisted_family.active_variant_ids)
-    if variant.variant_id in active_ids:
+    if variant.variant_id in set(shortlisted_family.active_variant_ids):
         return "Active for planning"
     decisions = {
         decision.variant_id: decision.status
         for decision in shortlisted_family.review.variant_decisions
     }
     status = decisions.get(variant.variant_id)
-    if status is None:
-        warnings.add("missing_variant_shortlist_disposition")
-        return "Not active; detailed disposition unavailable"
-    labels = {
-        QuestionFamilyVariantReviewStatus.ACTIVE: "Active for planning",
-        QuestionFamilyVariantReviewStatus.NEEDS_REVISION: "Not active — revision requested",
-        QuestionFamilyVariantReviewStatus.REJECTED: "Not active — rejected by family review",
-        QuestionFamilyVariantReviewStatus.DEFERRED: "Not active — deferred",
-    }
-    return labels[status]
+    if status is not None:
+        labels = {
+            QuestionFamilyVariantReviewStatus.ACTIVE: "Active for planning",
+            QuestionFamilyVariantReviewStatus.NEEDS_REVISION: "Not active — revision requested",
+            QuestionFamilyVariantReviewStatus.REJECTED: "Not active — rejected by family review",
+            QuestionFamilyVariantReviewStatus.DEFERRED: "Not active — deferred",
+        }
+        return labels[status]
+    reviewed_variant_ids = {item.variant_id for item in shortlisted_family.family.variants}
+    if variant.variant_id in reviewed_variant_ids:
+        # Family review DID carry this variant and still recorded nothing for it. That is the only
+        # genuinely anomalous shape, and it is what the warning should mean.
+        warnings.add(PresentationWarningCode.MISSING_VARIANT_SHORTLIST_DISPOSITION)
+        return "Not active; family review recorded no decision for this variant"
+    filtered = _NOVELTY_FILTERED_DISPOSITIONS.get(novelty_disposition)  # type: ignore[arg-type]
+    if filtered is not None:
+        # The shepherd contract's shape (2) is "a scientific 'no' WITH its evidence". The label
+        # alone told the reader their question duplicates prior work and stopped there, while the
+        # reviewer's rationale and the DOI-identified priors it compared against sat unread in the
+        # assessment file, already paid for. Appended verbatim -- the host adds no reading of its
+        # own, and a variant whose assessment is missing keeps the bare label rather than a
+        # fabricated justification.
+        return f"{filtered}. {novelty_evidence}" if novelty_evidence else filtered
+    # Filtered before family review, but nothing on disk says why -- including the case where the
+    # prior-art record exists yet reports this variant as admitted, which would contradict its
+    # absence from the active set.
+    warnings.add(PresentationWarningCode.MISSING_VARIANT_SHORTLIST_DISPOSITION)
+    return _NOVELTY_FILTERED_WITHOUT_RECORD
 
 
 def _render_text_list(
@@ -797,20 +1007,14 @@ def _safe_text(
     *,
     warnings: _Warnings,
     forbidden_tokens: Iterable[str] = (),
+    allowed_public_dois: Iterable[str] = (),
     replacements: Mapping[str, str] | None = None,
 ) -> str:
-    normalized = " ".join(value.split())
+    normalized = _substitute_tokens(" ".join(value.split()), replacements)
     if not normalized:
         return _NOT_RECORDED
-    for token, replacement in sorted(
-        (replacements or {}).items(), key=lambda item: len(item[0]), reverse=True
-    ):
-        normalized = re.sub(
-            rf"(?<![A-Za-z0-9]){re.escape(token)}(?![A-Za-z0-9])",
-            replacement,
-            normalized,
-        )
     forbidden = [token.strip() for token in forbidden_tokens if token and token.strip()]
+    token_checked_text = remove_allowed_public_dois(normalized, allowed_public_dois)
     unsafe = (
         _ABSOLUTE_PATH.search(normalized)
         or _SHA256.search(normalized)
@@ -820,13 +1024,26 @@ def _safe_text(
         or _RAW_PAYLOAD.search(normalized)
         or _RAW_URL.search(normalized)
         or _PDF_REFERENCE.search(normalized)
-        or any(_contains_token(normalized, token) for token in forbidden)
+        or any(_contains_token(token_checked_text, token) for token in forbidden)
     )
     if unsafe:
-        warnings.add("unsafe_public_content_omitted")
+        warnings.add(PresentationWarningCode.UNSAFE_PUBLIC_CONTENT_OMITTED)
         return _OMITTED
     escaped = html.escape(normalized, quote=False)
     return escaped.replace("\\", "\\\\").replace("`", "\\`").replace("[", "\\[").replace("]", "\\]")
+
+
+def _substitute_tokens(value: str, replacements: Mapping[str, str] | None) -> str:
+    """Replace whole-token occurrences, longest key first so a prefix never eats a longer id."""
+    for token, replacement in sorted(
+        (replacements or {}).items(), key=lambda item: len(item[0]), reverse=True
+    ):
+        value = re.sub(
+            rf"(?<![A-Za-z0-9]){re.escape(token)}(?![A-Za-z0-9])",
+            replacement,
+            value,
+        )
+    return value
 
 
 def _contains_token(text: str, token: str) -> bool:

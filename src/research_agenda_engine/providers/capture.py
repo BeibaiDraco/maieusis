@@ -28,7 +28,9 @@ CAPTURE_ENV = "MAIEUSIS_CAPTURE_DIR"
 _MASK = "REDACTED"
 _SECRET_HEADER = re.compile(r"(?i)(authorization|api[_-]?key|x-api-key|token|secret|cookie)")
 _SECRET_QUERY_KEY = re.compile(r"(?i)(api_?key|key|token|secret|access_token|mailto)")
-_CAPTURE_FILENAME = re.compile(r"^(\d+)-(?:request|response|parse_failure)\.json$")
+_CAPTURE_FILENAME = re.compile(
+    r"^(\d+)-(?:request|response|parse_failure|transport_failure)\.json$"
+)
 _counter_lock = threading.Lock()
 
 
@@ -63,7 +65,17 @@ def _redact(value: Any) -> Any:
     if isinstance(value, dict):
         out: dict[str, Any] = {}
         for key, item in value.items():
-            if isinstance(key, str) and _SECRET_HEADER.search(key):
+            # A credential is always a STRING. `_SECRET_HEADER` matches any key containing "token",
+            # which is right for `auth_token` and wrong for `usage.output_tokens` -- and it masked
+            # the latter in all 123 session captures of the 2026-07-31 leg, leaving no way to tell
+            # how close a reply ran to its ceiling. That is the one number a truncation postmortem
+            # needs. Narrowing the pattern instead would be worse: `\btoken\b` stops matching
+            # `auth_token` too, because `_` is a word character.
+            if (
+                isinstance(key, str)
+                and _SECRET_HEADER.search(key)
+                and not isinstance(item, bool | int | float)
+            ):
                 out[key] = _MASK
             elif key == "url" and isinstance(item, str):
                 out[key] = _redact_url(item)
@@ -84,49 +96,105 @@ def capture_paid_leaf(
     root = capture_dir()
     if root is None:
         return None
-    seam_slug = re.sub(r"[^A-Za-z0-9._-]+", "_", seam)
     try:
-        dest = root / seam_slug
-        dest.mkdir(parents=True, exist_ok=True)
-        # The request file is the reservation record. Scan disk (not process memory) so a new
-        # ``resume`` process appends after existing captures, and use exclusive create so concurrent
-        # processes cannot claim the same occurrence. Slug-colliding seam names intentionally share
-        # one on-disk sequence because they share one destination directory.
-        with _counter_lock:
-            occurrence = _next_disk_occurrence(dest)
-            while True:
-                stamp = {
-                    "seam": seam,
-                    "model": model,
-                    "captured_at": datetime.now(UTC).isoformat(),
-                    "occurrence": occurrence,
-                }
-                try:
-                    with (dest / f"{occurrence:04d}-request.json").open(
-                        "x", encoding="utf-8"
-                    ) as handle:
-                        handle.write(
-                            json.dumps(
-                                {"provenance": stamp, "request": _redact(request)},
-                                indent=2,
-                                default=str,
-                            )
-                        )
-                    break
-                except FileExistsError:
-                    occurrence += 1
-        with (dest / f"{occurrence:04d}-response.json").open("x", encoding="utf-8") as handle:
+        receipt = _reserve_capture(root, seam=seam, request=request, model=model)
+        with (receipt.destination / f"{receipt.occurrence:04d}-response.json").open(
+            "x", encoding="utf-8"
+        ) as handle:
             handle.write(
                 json.dumps(
-                    {"provenance": stamp, "response": _redact(response)},
+                    {"provenance": receipt.provenance, "response": _redact(response)},
                     indent=2,
                     default=str,
                 )
             )
-        return CaptureReceipt(destination=dest, occurrence=occurrence, provenance=stamp)
+        return receipt
     except OSError:
         # Observability tee must never crash the run it is watching (bad MAIEUSIS_CAPTURE_DIR, full disk).
         return None
+
+
+def capture_paid_leaf_failure(
+    seam: str,
+    *,
+    request: dict[str, Any],
+    error: BaseException,
+    provider: str,
+    model: str = "",
+    failure_kind: str = "unclassified",
+    attempts: int = 1,
+) -> CaptureReceipt | None:
+    """Persist a failed paid call without persisting provider text or response bytes.
+
+    Successful capture has always reserved an occurrence only *after* the transport returned. A
+    transport exception therefore left no request identity at all. This sibling reserves the same
+    redacted request envelope and pairs it with a finite marker: enough to identify the failed leaf
+    and classify it, but never the exception message/body, request id, or partial model output.
+
+    One call should be made for the final exception of one logical ``send``. Provider adapters own
+    retry semantics and pass the final attempt count here.
+    """
+
+    root = capture_dir()
+    if root is None:
+        return None
+    try:
+        receipt = _reserve_capture(root, seam=seam, request=request, model=model)
+        status = int(getattr(error, "status_code", 0) or 0)
+        marker = {
+            "provenance": receipt.provenance,
+            "transport_failure": True,
+            "provider": provider,
+            "model": model,
+            "failure_kind": failure_kind,
+            "error_type": type(error).__name__,
+            "http_status": status or None,
+            "attempts": max(1, int(attempts)),
+        }
+        (receipt.destination / f"{receipt.occurrence:04d}-transport_failure.json").write_text(
+            json.dumps(marker, indent=2), encoding="utf-8"
+        )
+        return receipt
+    except OSError:
+        return None
+
+
+def _reserve_capture(
+    root: Path, *, seam: str, request: dict[str, Any], model: str
+) -> CaptureReceipt:
+    """Reserve one append-only occurrence by writing its redacted request first."""
+
+    seam_slug = re.sub(r"[^A-Za-z0-9._-]+", "_", seam)
+    dest = root / seam_slug
+    dest.mkdir(parents=True, exist_ok=True)
+    # The request file is the reservation record. Scan disk (not process memory) so a new
+    # ``resume`` process appends after existing captures, and use exclusive create so concurrent
+    # processes cannot claim the same occurrence. Slug-colliding seam names intentionally share
+    # one on-disk sequence because they share one destination directory.
+    with _counter_lock:
+        occurrence = _next_disk_occurrence(dest)
+        while True:
+            stamp = {
+                "seam": seam,
+                "model": model,
+                "captured_at": datetime.now(UTC).isoformat(),
+                "occurrence": occurrence,
+            }
+            try:
+                with (dest / f"{occurrence:04d}-request.json").open(
+                    "x", encoding="utf-8"
+                ) as handle:
+                    handle.write(
+                        json.dumps(
+                            {"provenance": stamp, "request": _redact(request)},
+                            indent=2,
+                            default=str,
+                        )
+                    )
+                break
+            except FileExistsError:
+                occurrence += 1
+    return CaptureReceipt(destination=dest, occurrence=occurrence, provenance=stamp)
 
 
 def _next_disk_occurrence(destination: Path) -> int:

@@ -1,0 +1,156 @@
+schema_version: maieusis.public_demo/v2
+demo_id: climate
+release: 0.1.1
+release_contract: release_validation_set/v2
+release_note: 'Release-byte identity -- wheel, sdist, tree, and seal digests -- lives in the published
+  release receipt, not here: the package is built from the tree that contains this file, so no file inside
+  it can carry the resulting hash.'
+release_ready: true
+release_readiness_scope: curated_demo_artifacts_only
+publication_gate: operator_approved
+release_blocker: null
+raw_pdfs_included: false
+bridge_status: closed
+paper_sources: ../climate/paper_sources.yaml
+paper_cohort_status: climate_twenty_source_demonstration_input
+dataset:
+  name: ERA5-derived 60N stratospheric dynamics
+  access_mode: collaborator_supplied_derived_product
+  upstream: ERA5 reanalysis, ECMWF / Copernicus Climate Change Service
+  upstream_url: https://www.ecmwf.int/en/forecasts/datasets
+  source_note: DATASET_NOTES.md
+  redistributed: false
+  derivation_published: false
+  note: The one-dimensional derived product is not redistributed and its derivation from ERA5 is not published
+    here.
+demo_provenance:
+  qualification_class: candidate_demonstration
+  note: These artifacts come from a demonstration run on the release-candidate source tree, not from the
+    byte-qualification run of the published package.
+  run_id: 20260806T144407Z-c6f4bf64
+  science_build_sha256: cb6744aec5a9e30d2190bf8920338e27b0a3e61e5e1953779e78182935caece8
+  science_build_version: 0.1.0
+  presentation_build_sha256: null
+  leg_receipt: withheld_private_operator_record
+  leg_receipt_note: The scientific leg receipt is an internal operator record and is not published. Its digest is kept so it can be verified if it is ever released.
+  leg_receipt_sha256: c042b68bbdaef07382bee98be06d4a7bb39e0a94e005678e3c5bc3c081b23726
+artifacts:
+  status: curated
+  root: artifacts
+  file_count: 50
+  inventory_sha256: 94e1376fba6a9683cb869b788064bff973138b14fd1eae996975eeec094bf8a0
+  showcase_family_ids:
+  - wave-forcing-and-state-dependence
+  showcase_selection_status: operator_selected
+  sanitization:
+  - remove_internal_citation_identifiers
+  - replace_redaction_residue_with_readable_prose
+  - remove_internal_evidence_request_labels
+  - remove_reviewer_note_lines
+  - summarize_excluded_candidate_diagnostic
+  - strip_internal_family_prefix_from_directory_names
+  sanitized_inventory:
+  - path: dataset/dataset_narrative.md
+    sha256: a349514a7f8f3d7dcc7693e665580a27afd054877dbfa74a21f0adf51f53ace3
+  - path: families/extreme-event-lifecycle-heterogeneity/dossier.md
+    sha256: 7bc925fbaea13209b9d7d9f24e403462c4d923c6ed6fea693a8527305920aaf3
+  - path: families/extreme-event-lifecycle-heterogeneity/dossier_detailed.md
+    sha256: 849e235c64f63d448ba8dc43c98a61ce921848613963398bcef0d84635f2cea4
+  - path: families/historical-change-in-dynamical-organization/dossier.md
+    sha256: 4fb99ffa0779ca8f04222cb381035eab0c92405b1f2e92354764a324b1ede947
+  - path: families/historical-change-in-dynamical-organization/dossier_detailed.md
+    sha256: ac1ec83316d9eff072f22bf4d68dc37d837531813ebd9ddca257c5b4e193d730
+  - path: families/persistence-memory-and-hysteresis/dossier.md
+    sha256: 3d63fa228a55055f897061af727454e805c710e915f0d23c91c752bf12a3a0a7
+  - path: families/persistence-memory-and-hysteresis/dossier_detailed.md
+    sha256: 4c1440f9b97f73bfbbb9bd8ed7df01f3fb420e7a696caeed5b04d1c469d2c939
+  - path: families/state-versus-transition-organization/dossier.md
+    sha256: 73ee5f41ed93018180b440357b1881d5e45053d49ad1be20940cbbe05b085932
+  - path: families/state-versus-transition-organization/dossier_detailed.md
+    sha256: ce5d0d81d3a29220424e80ba604f0b24616c8adc5126da8f1fb5480d6abc3a71
+  - path: families/vertical-coupling-representations/dossier.md
+    sha256: d1f97c245856f073cdbcce767b8a7441e5b2ef0d1048b70cf7d2283a7204aab8
+  - path: families/vertical-coupling-representations/dossier_detailed.md
+    sha256: 151a1b6edaefb0eb49dae549a3eb341fed8b71ef7c3504a3023940acc8d7661c
+  - path: families/wave-forcing-and-state-dependence/dossier.md
+    sha256: 4bb7b3f6431fa2b9112aa2803f38012c1575dd366b0fab22e0a7c8361540e7d3
+  - path: families/wave-forcing-and-state-dependence/dossier_detailed.md
+    sha256: 2b1567f582acfeb3277fb822923068f4b10f014a025a780ab10dcbce76de1e9c
+  - path: literature/research_scope.md
+    sha256: 8aedffb6a0e014c60b09c98aa12fe9d26ff26ef208e4f8ddfd0a9c3ae136a3c8
+  - path: literature/retrieval_summary.md
+    sha256: 5d695e0f96d8f1a776927132010f5dd633e0ffd937363375bce849aabe09050e
+  - path: literature/topic_evidence_summary.md
+    sha256: e010d28ea454f211604a7ac904c7792280795cfbc5e17f979c260d9488e897c6
+  - path: paperbank/formation_traces/01-wallace-gutzler-1981.md
+    sha256: b1bace91ca7cf9a9b5f194dde2bdf6aed4b3e1a4668ce89e8434f75e34717b6e
+  - path: paperbank/formation_traces/02-barnston-livezey-1987.md
+    sha256: f8084917512dfd728f1ec65f5bfac482a555b93c2d87159f85abb0c9859481c4
+  - path: paperbank/formation_traces/04-lau-1988.md
+    sha256: eb06eb7a2d096b0f79c32258e8be4a945e3398a7268a3f2daff53900d61d2d5f
+  - path: paperbank/formation_traces/05-hoskins-hodges-2002.md
+    sha256: 12110de65f62f749b9972249df1c36edfbaaffc90b7e23ee72d926364d29270a
+  - path: paperbank/formation_traces/07-thompson-wallace-2000-part-i.md
+    sha256: 989af8bb3330a04f5b1f0594fc2ae348d497c701a532fcf8cb12c5b8da044631
+  - path: paperbank/formation_traces/08-thompson-wallace-hegerl-2000-part-ii.md
+    sha256: 9b791ca70eea385bc22913d55503db5e4ee7c0bef0cde1235b993eb5bec0e3d7
+  - path: paperbank/formation_traces/10-holton-tan-1980.md
+    sha256: a3957ca6307b8c9161aad0caa4874545d85907082bddfcd47a67d251972bdf45
+  - path: paperbank/formation_traces/11-baldwin-dunkerton-2001.md
+    sha256: 5cbee11e52f4fd1400d485e13d762f485b4b29e7079a0139f6993124243c8ddd
+  - path: paperbank/formation_traces/13-wernli-schwierz-2006.md
+    sha256: b042d56af4a49b2b2ccdf14e4ca6bc3eb99d5d28fd1656007d05583dd091ea93
+  - path: paperbank/formation_traces/14-zhu-newell-1998.md
+    sha256: 48ddb4ba786dafb893afc032b83f3f91bc7f8f40e10a539d1955de35312a0d46
+  - path: paperbank/formation_traces/16-taszarek-et-al-2021.md
+    sha256: e05056b0712b5bd607832564fb861df713d1e84ac935a42ebfe425e6672dbab7
+  - path: paperbank/formation_traces/17-wills-et-al-2022-author-manuscript.md
+    sha256: c85263050d26a658303fd41ac77c5880527cbb5f524f4a29736b923464e0a122
+  - path: paperbank/paperbank_summary.md
+    sha256: 42b8c01b73df54218290fd12381d83505fce8f89e681b032d132a132f4a9046c
+  - path: paperbank/papers/01-wallace-gutzler-1981.md
+    sha256: 30b5244be42e5e3c6d15ba5b20d4b3dc11e3ea436e823bddb6491ff8431e8e90
+  - path: paperbank/papers/02-barnston-livezey-1987.md
+    sha256: 7e80737eefac72d7d94f60a829ba93e324d8d45fd60f1584668d43f44b4a34b9
+  - path: paperbank/papers/03-blackmon-et-al-1977.md
+    sha256: e595b69bfb055ad182f0076c246a7e91893c958e097c99db82ea870cced95e25
+  - path: paperbank/papers/04-lau-1988.md
+    sha256: 3062802aa952d0ce082dff025e2161dcfbb15d16a95433cd58a2db8b0364c440
+  - path: paperbank/papers/05-hoskins-hodges-2002.md
+    sha256: 8f1b031efe79e927be26cd3966e9f4f5a2bab785637a598b41557c3f4a42d1f7
+  - path: paperbank/papers/06-hurrell-1995.md
+    sha256: 45aa5ede472ee8a760c9622e1adc08b36ac75cbb96798f8feb3b928c875327c3
+  - path: paperbank/papers/07-thompson-wallace-2000-part-i.md
+    sha256: 91c55c97dfb8b1bc2151c4e4a49291c80fdf725e2506bf8127407335fed7a32f
+  - path: paperbank/papers/08-thompson-wallace-hegerl-2000-part-ii.md
+    sha256: 8cf40faef4b95cd6674dfcd1c0e25044360d73395e7c9f01481f16807fb6f96a
+  - path: paperbank/papers/10-holton-tan-1980.md
+    sha256: 4e35bc0f9c74766c0e797f6c89c22bf3e0111adf2cbd4b750c066115c14472d3
+  - path: paperbank/papers/11-baldwin-dunkerton-2001.md
+    sha256: 21ac129b99191aebf4b516a4bce86fbcb960c59b0225dee91aed35189286ee5e
+  - path: paperbank/papers/13-wernli-schwierz-2006.md
+    sha256: bbdf50d95b608cdfadf8e82ab10e4b5f9adac827a54375caad88cd6c10392012
+  - path: paperbank/papers/14-zhu-newell-1998.md
+    sha256: e8b075ced1d7bae63368bcd56369bd298e21d6490d5cecb35d94b903fb482332
+  - path: paperbank/papers/15-held-soden-2006.md
+    sha256: 39593a8ea0bae33fb081ea5cc2fd79c889e0ee1fc6e5fd07ed18b1eb1893b75c
+  - path: paperbank/papers/16-taszarek-et-al-2021.md
+    sha256: 29629733834709bac2f718b1d80413ede71289c2c8d514bc03db27b8fd04c356
+  - path: paperbank/papers/17-wills-et-al-2022-author-manuscript.md
+    sha256: d120078eed58278c9e575400535b59be7025e2e94884dddb06eb6cfba94e8cf9
+  - path: paperbank/papers/18-thackeray-et-al-2022.md
+    sha256: bc82a2a1f1ba1e8a6fb71e6a904f1b22aec02ffde346284ceaaf81bca90a0258
+  - path: paperbank/papers/20-shaw-miyawaki-2024.md
+    sha256: 00715d4b4aba481ea298e3e6415faaf2d7719ea562a1aa9f5accfa5bac6cdb7c
+  - path: paperbank/question_patterns.md
+    sha256: 0c4c55a82d777e51b57e8b8632fa76c4922c87c76cea05b41bfa66cfbe7b901b
+  - path: paperbank/question_patterns_detailed.md
+    sha256: 18c18dec2313ca2480268dff7db35de93537372d170dd5f306285e1aa88ab4d0
+  - path: questions/question_families.md
+    sha256: ef1bba2dee7f25f4205c782ff4fc32ab8ef0b051b2aa24a9cebc9b1946345ef5
+  - path: questions/question_families_detailed.md
+    sha256: ee24c439e3841fa9e08e44db02e162dbaf6efc62fe6f9cb736127b28c5c6fa28
+presentation:
+  status: produced_in_run
+  pattern_detailed_sha256: 18c18dec2313ca2480268dff7db35de93537372d170dd5f306285e1aa88ab4d0
+  question_families_detailed_sha256: ee24c439e3841fa9e08e44db02e162dbaf6efc62fe6f9cb736127b28c5c6fa28

@@ -15,20 +15,27 @@ from ...schemas.scientific_context import TopicEvidenceBrief, TopicEvidenceClaim
 def render_retrieval_summary(
     *, topic_terms: list[str], lane_coverage: dict[str, int], source_count: int
 ) -> str:
-    """Diagnostic summary of what literature retrieval found (lanes, source counts)."""
+    """Diagnostic summary of acquisition lineage and source counts."""
     lines = [
         "# Literature retrieval",
         "",
         f"- Query terms: {', '.join(topic_terms) or '(none)'}",
         f"- Sources retrieved: {source_count}",
         "",
-        "## Lane coverage",
+        "## Retrieval lineage",
         "",
         *(f"- {lane}: {count} source(s)" for lane, count in sorted(lane_coverage.items())),
     ]
-    thin = [lane for lane, count in lane_coverage.items() if count == 0]
-    if thin:
-        lines.extend(["", "## Thin lanes (no sources found)", "", *(f"- {lane}" for lane in thin)])
+    empty_lineage = [lane for lane, count in lane_coverage.items() if count == 0]
+    if empty_lineage:
+        lines.extend(
+            [
+                "",
+                "## Empty acquisition lineages (no sources found)",
+                "",
+                *(f"- {lane}" for lane in empty_lineage),
+            ]
+        )
     lines.extend(
         [
             "",

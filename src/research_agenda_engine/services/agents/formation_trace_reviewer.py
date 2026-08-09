@@ -25,7 +25,7 @@ from ...schemas.gate_outcome import GateOutcome
 from ...schemas.paper_case import PaperCase
 from ...schemas.question_pattern import QuestionFormationTrace, QuestionFormationTraceReviewStatus
 from .gate_kernel import run_structured_gate_review
-from .promotion import assert_promotion_binding
+from .promotion import assert_promoted_status_is_holdable, assert_promotion_binding
 from .reviewer_base import build_scientific_reviewer_provider_from_env
 
 FORMATION_TRACE_REVIEWER_PROMPT_VERSION = "formation_trace_reviewer/v1"
@@ -98,31 +98,97 @@ def _evidence_resolved(
     return True
 
 
+_SELECTION_SCOPE_NOTE = (
+    "`cited_works` lists only the works citation-importance selection made available to the"
+    " drafter, not the paper's full reference list."
+)
+_NO_SELECTION_NOTE = (
+    "Citation-importance selection chose no cited works for this paper, so the drafter was"
+    " instructed to cite none and `cited_works` is empty by construction. This is a property of"
+    " the pipeline's input, not a choice by the drafter. DO NOT return a `cited_roles_correct`"
+    " assessment at all: with no citation to check, there is nothing to be right or wrong about,"
+    " and the host has dropped it from the required set for this paper. Assess the remaining"
+    " criteria against the evidence the trace actually carries."
+)
+
+
+#: The required set for a paper with no citation to judge. `cited_roles_correct` reads "each cited
+#: work's role in the trace matches how the paper used it" -- over an empty set there is nothing to
+#: be right or wrong about, and letting it decide is a coin flip: measured, 10 outcomes failed it
+#: and 8 solely, while `06-hurrell` bound zero of 48 works and PASSED on the same evidence.
+_CRITERIA_WITHOUT_CITED_ROLES: tuple[str, ...] = tuple(
+    criterion for criterion in FORMATION_TRACE_CRITERIA if criterion != "cited_roles_correct"
+)
+
+
+def _selection_note(has_visible_works: bool) -> str:
+    return _SELECTION_SCOPE_NOTE if has_visible_works else _NO_SELECTION_NOTE
+
+
 def review_formation_trace(
     *,
     session: ScientificAgentSession,
     trace: QuestionFormationTrace,
     paper_case: PaperCase,
     literature: PaperLocalLiteratureContext,
+    allowed_cited_work_ids: Sequence[str],
     generator_provider_ids: Sequence[str],
     review_guidance: str = "",
 ) -> GateOutcome:
-    """Run the independent formation-trace gate; returns a structurally-earned GateOutcome."""
+    """Run the independent formation-trace gate; returns a structurally-earned GateOutcome.
+
+    The reviewer sees the works the DRAFTER was allowed to bind, not every resolved reference.
+    Sending the full list made the two agents judge different worlds: on the 2026-07-31 climate leg
+    seven papers were drafted under an explicit "cite none" instruction and then failed
+    ``cited_roles_correct`` for citing none, a criterion that ranges over the trace's own citations
+    and cannot be failed by an empty set. "This trace ignores available literature" is a true
+    observation about the SELECTOR; routed onto this criterion it killed the paper.
+    """
+    allowed = set(allowed_cited_work_ids)
+    visible_works = [work for work in literature.cited_works if work.cited_work_id in allowed]
+    note = _selection_note(bool(visible_works))
     turn_input = FormationTraceTurnInput(
         formation_trace=trace.model_dump(mode="json"),
         paper_case_question=paper_case.scientific_question.model_dump(mode="json"),
-        cited_works=[work.model_dump(mode="json") for work in literature.cited_works],
-        review_guidance=review_guidance,
+        cited_works=[work.model_dump(mode="json") for work in visible_works],
+        review_guidance=f"{review_guidance.strip()} {note}".strip(),
     )
-    return run_structured_gate_review(
+    # With no citation in front of it, `cited_roles_correct` has nothing to be right or wrong
+    # about, and letting it decide is a coin flip on a paper's life. Measured: 10 outcomes failed
+    # it, 8 of them SOLELY, and 4 of those had an empty allowed set -- while `06-hurrell` bound
+    # zero of 48 works and PASSED. Same evidence, opposite verdicts.
+    #
+    # Dropping it from the required set is NOT enough on its own, and the first draft of this
+    # change was worse than the defect it replaced. `gate_kernel` counts an assessment for a
+    # criterion outside the required set as `unknown`, and any unknown blocks accept -- so a
+    # reviewer that ignores the note and returns `cited_roles_correct` anyway would take the paper
+    # from a coin flip to certain death. Verified before landing: reduced set + a compliant reply
+    # accepts; reduced set + a five-criterion reply produced `unknown=['cited_roles_correct']`.
+    #
+    # So the host does both halves itself: it drops the criterion AND discards any assessment of it
+    # that comes back regardless. An honest not-applicable cannot depend on a model following an
+    # instruction.
+    if visible_works:
+        return run_structured_gate_review(
+            session=session,
+            turn_input=turn_input,
+            candidate=trace,
+            gate_name=FORMATION_TRACE_GATE,
+            required_criteria=FORMATION_TRACE_CRITERIA,
+            evidence_resolved=_evidence_resolved(trace, paper_case, literature),
+            generator_provider_ids=generator_provider_ids,
+        )
+    outcome = run_structured_gate_review(
         session=session,
         turn_input=turn_input,
         candidate=trace,
         gate_name=FORMATION_TRACE_GATE,
-        required_criteria=FORMATION_TRACE_CRITERIA,
+        required_criteria=_CRITERIA_WITHOUT_CITED_ROLES,
         evidence_resolved=_evidence_resolved(trace, paper_case, literature),
         generator_provider_ids=generator_provider_ids,
+        drop_unrequired_criteria=True,
     )
+    return outcome
 
 
 def promote_formation_trace_to_ai_reviewed(
@@ -135,4 +201,5 @@ def promote_formation_trace_to_ai_reviewed(
     assert_promotion_binding(candidate=trace, outcome=outcome, expected_gate=FORMATION_TRACE_GATE)
     promoted = trace.model_copy(deep=True)
     promoted.review_status = QuestionFormationTraceReviewStatus.AI_REVIEWED
+    assert_promoted_status_is_holdable(promoted, expected_gate=FORMATION_TRACE_GATE)
     return promoted

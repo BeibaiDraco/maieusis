@@ -23,6 +23,7 @@ from pathlib import Path
 from typing import Literal
 
 from ...config import load_runtime_env
+from ...providers.models.base import DEFAULT_EFFORT, DEFAULT_THINKING
 from ...providers.scientific_agents import (
     AnthropicScientificAgentProvider,
     OpenAIScientificAgentProvider,
@@ -40,6 +41,8 @@ def build_scientific_reviewer_provider_from_env(
     provider: Literal["openai", "anthropic"] | None = None,
     allow_pro_model: bool = False,
     project_root: str | Path | None = None,
+    thinking: str = DEFAULT_THINKING,
+    effort: str = DEFAULT_EFFORT,
 ) -> ScientificAgentProvider:
     """Resolve a live independent reviewer provider from runtime env files.
 
@@ -67,11 +70,17 @@ def build_scientific_reviewer_provider_from_env(
     system_prompt = system_prompt_loader()
     if provider_name == "openai":
         return OpenAIScientificAgentProvider(
-            allow_pro_model=allow_pro_model, system_prompt=system_prompt
+            allow_pro_model=allow_pro_model,
+            system_prompt=system_prompt,
+            thinking=thinking,
+            effort=effort,
         )
     if provider_name == "anthropic":
         return AnthropicScientificAgentProvider(
-            allow_pro_model=allow_pro_model, system_prompt=system_prompt
+            allow_pro_model=allow_pro_model,
+            system_prompt=system_prompt,
+            thinking=thinking,
+            effort=effort,
         )
     raise ValueError(f"Unsupported {unsupported_provider_label} provider: {provider_name}")
 

@@ -14,8 +14,12 @@ software, names, logos, or services. In particular:
 - source-paper PDFs are not distributed;
 - demo paper manifests provide bibliographic metadata and lawful acquisition
   links, not copies of the papers;
-- IBL, NLB, DANDI, Codex, Claude Code, OpenAI, Anthropic, Zenodo, PyPI, and
-  other referenced projects or services retain their own terms; and
+- IBL, NLB, DANDI, ECMWF, Copernicus Climate Change Service, Codex, Claude
+  Code, OpenAI, Anthropic, Zenodo, PyPI, and other referenced projects or
+  services retain their own terms;
+- ERA5 and products derived from it carry the Copernicus attribution and
+  disclaimer recorded in `THIRD_PARTY_NOTICES.md`; a derived product is not
+  redistributed unless its own provenance and licence are established; and
 - generated dossiers do not change the license or factual authority of their
   cited sources.
 

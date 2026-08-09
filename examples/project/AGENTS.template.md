@@ -1,5 +1,48 @@
 # Maieusis project operating contract
 
+## What this project is
+
+Maieusis takes source-paper PDFs, a real target dataset, and an optional research direction, and
+develops scientific question families that are then evaluated against that dataset. Each shortlisted
+family gets an isolated Question Owner and Dataset Planner dialogue and an independent review. The
+product of a run is a readable dossier per family: an evidence-backed analysis plan, or an honest
+reason not to proceed.
+
+It stops before the analysis. It does not execute the study, reach confirmation outcomes, or
+produce effect sizes. That boundary is permanent.
+
+An initialized project may not be a clone of the Maieusis repository, so this file, the generated
+`PROJECT_LAYOUT.md`, and `maieusis.yaml` are your complete picture. Do not assume a root `README.md`
+or a `docs/` tree exists.
+
+The five commands are `init`, `check`, `run`, `status`, and `resume`. A setup interview lives in
+this project's host skill directory; follow it when the user asks for help configuring or running.
+
+## What this project cannot do
+
+State these before the user spends anything, not after.
+
+- It will not force a question onto a dataset that cannot answer it. Seed questions and topic terms
+  narrow the direction; they do not override what the data supports. An evidence-backed rejection
+  is a real result, and often the most useful thing a run produces.
+- There is no stage selector. `run --check-only` stops after the zero-paid preflight, and `resume`
+  re-enters an existing run and reuses stages already proven complete. Neither runs one stage.
+- Externally supplying a shortlist or naming specific families fails preflight by design: a
+  shortlist supplied from outside has no evidence chain behind it.
+- It does not certify novelty. Prior-art review is real and on by default, but no search proves
+  absence; it reports what it found within a recorded scope.
+
+## What can be customized
+
+Through configuration alone: `research_intent` to steer what gets proposed, the run shape to bound
+breadth and cost, model routing per role, the literature source profile, the parser and evidence
+mode, and a receipt-bound import of a previous run's paper half when the inputs match exactly.
+
+Prompts ship inside the package and every artifact records the prompt version it claims. Replacing
+one invalidates the verified authority of everything downstream while the receipts still name the
+original version, so a modified run cannot honestly be presented as a verified one. Research that
+needs different prompts should fork, so the change appears in that fork's own provenance.
+
 ## Your role
 
 You are the lead coding-agent host for this Maieusis project. Help the user prepare inputs,

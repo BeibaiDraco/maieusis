@@ -96,6 +96,10 @@ DEFAULT_REVIEW_GUIDANCE = (
     "unresolvable by revision or rejection; it is a rare last resort, not a default."
 )
 
+# A malformed review REPLY gets this many extra attempts before the family closes. It re-asks
+# the reviewers only — never the planner — so it is bounded, cheap, and cannot alter the plan.
+_MAX_REVIEW_ARTIFACT_REATTEMPTS = 2
+
 # Development-mode authority provenance for the review decision (honest label; not human review).
 _DEVELOPMENT_REVIEW_PROVIDER_ID = "local:development-review-authority"
 _DEVELOPMENT_REVIEW_MODEL_ID = "development-review-authority"
@@ -313,6 +317,7 @@ def run_development_review_and_dossier(
     """
     if max_revise_rounds < 0:
         raise ValueError("max_revise_rounds must be >= 0")
+    review_artifact_reattempts = 0
     if review_authority != ReviewAuthority.AUTOMATED:
         raise ValueError("development review emits automated authority only")
     output_root = Path(output_root)
@@ -364,7 +369,9 @@ def run_development_review_and_dossier(
         # (1) Real owner plan review (owner model). Session id is owner-specific + round-scoped.
         owner_session = owner_provider.start_session(
             branch_id=branch.branch_id,
-            session_id=_review_session_id("owner", family.question_family_id, round_index),
+            session_id=_review_session_id(
+                "owner", family.question_family_id, round_index, review_artifact_reattempts
+            ),
             prompt_version=QUESTION_OWNER_PROMPT_VERSION,
         )
         owner_review = review_plan_draft(
@@ -380,7 +387,13 @@ def run_development_review_and_dossier(
 
         # Persist the paid owner verdict and reviewed plan before invoking the independent provider.
         # If that second provider is unavailable, the successful owner work must remain visible.
-        round_dir = work / f"round_{round_index}"
+        # Each re-ask writes its own directory: the discarded replies are the only evidence of
+        # what the reviewers actually returned, and overwriting them loses exactly that.
+        round_dir = work / (
+            f"round_{round_index}"
+            if not review_artifact_reattempts
+            else f"round_{round_index}_attempt_{review_artifact_reattempts}"
+        )
         round_dir.mkdir(parents=True, exist_ok=True)
         dump_data(current_plan.model_dump(mode="json"), round_dir / "plan_draft.yaml")
         dump_data(owner_review, owner_review_path)
@@ -396,7 +409,9 @@ def run_development_review_and_dossier(
         # (2) Real independent review (a distinct model; distinct session id => independence check).
         reviewer_session = reviewer_provider.start_session(
             branch_id=branch.branch_id,
-            session_id=_review_session_id("independent", family.question_family_id, round_index),
+            session_id=_review_session_id(
+                "independent", family.question_family_id, round_index, review_artifact_reattempts
+            ),
             prompt_version=PLAN_FIDELITY_REVIEWER_PROMPT_VERSION,
         )
         independent_review = review_plan_draft_independently(
@@ -458,6 +473,17 @@ def run_development_review_and_dossier(
                     ]
                 )
             )
+            # A malformed review artifact — an unrecognized criterion status, a revise with no
+            # required changes — is a reply-shape failure, not a judgement on the plan. Ending the
+            # family on the first one meant a single badly formed reply destroyed work that was
+            # already paid for and possibly sound: four of six families in one live leg
+            # (2026-07-25). Ask the reviewers again, at most `_MAX_REVIEW_ARTIFACT_REATTEMPTS`
+            # times, before treating it as terminal. This re-asks the REVIEWERS only — the planner
+            # is never re-spawned, so the plan under review is unchanged and no revise round is
+            # consumed.
+            if review_artifact_reattempts < _MAX_REVIEW_ARTIFACT_REATTEMPTS:
+                review_artifact_reattempts += 1
+                continue
             raise DevelopmentReviewIncomplete(
                 owner_decision=owner_decision,
                 independent_decision=independent_decision,
@@ -626,10 +652,18 @@ def _session_last_usage(session: ScientificAgentSession) -> tuple[int | None, fl
     return (last.total_tokens, last.cost_usd)
 
 
-def _review_session_id(role: str, family_id: str, round_index: int) -> str:
-    """Round-scoped review session id (round 0 keeps the historical, un-suffixed id)."""
+def _review_session_id(role: str, family_id: str, round_index: int, attempt: int = 0) -> str:
+    """Round- and attempt-scoped review session id.
+
+    Round 0 attempt 0 keeps the historical, un-suffixed id. The attempt suffix exists because a
+    malformed reply is re-asked within the same round: without it three separately paid messages
+    share one identity while carrying different output digests, which breaks the replayable
+    typed-message contract and destroys the very record of WHY the replies keep coming back
+    malformed.
+    """
     suffix = f"-r{round_index}" if round_index else ""
-    return f"development-{role}-review-{family_id}{suffix}"
+    attempt_suffix = f"-a{attempt}" if attempt else ""
+    return f"development-{role}-review-{family_id}{suffix}{attempt_suffix}"
 
 
 def _default_workspace(output_root: Path, run_id: str, branch_id: str) -> Path:

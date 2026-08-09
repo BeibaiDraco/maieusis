@@ -3,8 +3,8 @@
 WHY a gate did not accept, written next to the run so a non-accept leaves an honest, debuggable
 trace instead of a bare 'fail closed' message. This never changes a gate decision, a kernel, or a
 promotion — it reads the earned ``GateOutcome`` and records it. The topic-evidence gate has a richer
-subclass (readiness + lane coverage) in ``topic_evidence_reviewer``; every other front-half gate uses
-the base directly.
+subclass (readiness + retrieval lineage) in ``topic_evidence_reviewer``; every other front-half gate
+uses the base directly.
 
 This module carries no dataset-specific names; it is enforced by the dataset-agnostic guard.
 """
@@ -111,19 +111,31 @@ def _slug(value: str) -> str:
 
 
 def gate_diagnostic_path(
-    diagnostics_dir: Path, *, gate_name: str, artifact_label: str = ""
+    diagnostics_dir: Path,
+    *,
+    gate_name: str,
+    artifact_label: str = "",
+    directory_name: str = "",
 ) -> Path:
-    """``<diagnostics_dir>/<gate>/<artifact>.yaml`` for per-artifact gates, else ``<gate>.yaml``."""
+    """``<diagnostics_dir>/<gate>/<artifact>.yaml`` for per-artifact gates, else ``<gate>.yaml``.
+
+    ``directory_name`` renames only the DIRECTORY. A caller that needs two records for one gate to
+    live side by side changes where the file lands, never what the record says it is.
+    """
+    name = directory_name or gate_name
     if artifact_label:
-        return diagnostics_dir / gate_name / f"{_slug(artifact_label)}.yaml"
-    return diagnostics_dir / f"{gate_name}.yaml"
+        return diagnostics_dir / name / f"{_slug(artifact_label)}.yaml"
+    return diagnostics_dir / f"{name}.yaml"
 
 
-def write_gate_diagnostic(diagnostic: GateDiagnostic, diagnostics_dir: Path) -> Path:
+def write_gate_diagnostic(
+    diagnostic: GateDiagnostic, diagnostics_dir: Path, *, directory_name: str = ""
+) -> Path:
     """Persist ``diagnostic`` under the run's diagnostics dir; returns the written path."""
     path = gate_diagnostic_path(
         diagnostics_dir,
         gate_name=diagnostic.gate_name,
         artifact_label=diagnostic.artifact_label,
+        directory_name=directory_name,
     )
     return dump_data(diagnostic, path)

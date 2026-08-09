@@ -10,6 +10,7 @@ from pathlib import Path, PurePosixPath
 
 from ...io import dump_data, load_model
 from ...provenance import sha256_file, stable_hash
+from ...providers.models.policy import model_versions_accept
 from ...schemas.maieusis_project_config import MaieusisProjectConfig
 from ...schemas.paperbank_import import PaperBankImportReceipt
 from ...schemas.run_manifest import ProductProcessingState, RunStage
@@ -106,7 +107,7 @@ def validate_paperbank_import(config: MaieusisProjectConfig) -> VerifiedPaperBan
     if source_receipt.config_version != expected_config:
         raise PaperBankImportError("PaperBank source parser/config/implementation digest differs")
     expected_models = stage_model_versions(config, STAGE_PAPER_HALF)
-    if source_receipt.model_versions != expected_models:
+    if not model_versions_accept(source_receipt.model_versions, expected_models):
         raise PaperBankImportError("PaperBank source extraction/pattern/reviewer models differ")
     expected_prompts = stage_prompt_versions(STAGE_PAPER_HALF)
     if source_receipt.prompt_versions != expected_prompts:

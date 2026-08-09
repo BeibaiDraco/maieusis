@@ -6,19 +6,30 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
-from ...io import dump_data
-from ...provenance import stable_hash
-from ...providers.models.base import StructuredModelProvider
-from ...schemas.cited_literature import literature_context_digest
-from ...schemas.paper_case import PaperCaseReviewStatus
+from pydantic import ValidationError
+from yaml import YAMLError
+
+from ...io import dump_data, load_model
+from ...provenance import sha256_file, stable_hash
+from ...providers.models.base import (
+    StructuredModelFailureKind,
+    StructuredModelProvider,
+    StructuredModelProviderError,
+)
+from ...schemas.cited_literature import PaperLocalLiteratureContext, literature_context_digest
+from ...schemas.paper_case import PaperCase, PaperCaseReviewStatus
 from ...schemas.paper_ingest import (
     ExternalPaperRecord,
     PaperIdentityQuery,
     PaperIngestItem,
     PaperIngestRunManifest,
     PaperIngestStatus,
+    ParsedPaper,
+    TitleCandidateResult,
+    TitleConfidence,
     paper_id_from_filename,
 )
+from ...schemas.stage_receipt import FailureClass
 from ..paper_patterns.citation_importance import select_key_citations_product
 from .cited_abstracts import build_paper_local_literature_context
 from .external_lookup import (
@@ -35,10 +46,58 @@ from .extraction import (
     build_source_spans,
 )
 from .parsing import PdfParsingProvider, build_completeness_report, build_pdf_parser
+from .source_preparation import (
+    apply_source_preparation,
+    derived_companion_names,
+    resolve_source_preparation,
+)
+
+
+def _agent_citation_context_reader(*, workspace: Path, max_parallel: int):
+    """Adapt the batch agent extractor to the pipeline's one-paper-at-a-time shape.
+
+    The pipeline processes papers in a loop, so this hands the extractor a single-paper batch each
+    time. `max_parallel` still matters: a paper with many cited works is one session either way,
+    and the parameter keeps the batch API honest for a caller that does pass several.
+
+    The body file is written from the parsed blocks rather than re-read from the PDF, so the agent
+    sees exactly the text every downstream stage sees -- which after #155 is docling's prose rather
+    than poppler's column-interleaved fragments. That is the whole reason this is worth doing: on
+    the old text the agent returned fragments like "trate to successively lower altitudes".
+    """
+    from .citation_context_agent import (
+        _body_blocks,
+        claude_code_spawn,
+        extract_citation_contexts_with_agent,
+    )
+
+    spawn = claude_code_spawn()
+
+    def read(parsed, cited_works):
+        cell = Path(workspace) / parsed.paper_id
+        cell.mkdir(parents=True, exist_ok=True)
+        body = cell / f"{parsed.paper_id}.txt"
+        body.write_text("\n\n".join(block.text for block in _body_blocks(parsed)), encoding="utf-8")
+        contexts, _report = extract_citation_contexts_with_agent(
+            workspace=cell,
+            spawn=spawn,
+            parsed_by_paper={parsed.paper_id: parsed},
+            cited_works_by_paper={parsed.paper_id: list(cited_works)},
+            body_paths={parsed.paper_id: body},
+            max_parallel=max_parallel,
+        )
+        return contexts.get(parsed.paper_id, [])
+
+    return read
 
 
 @dataclass
 class PaperIngestPipelineConfig:
+    #: Read citing sentences with a coding agent rather than the regex extractor. The seam existed
+    #: from #156 and NOTHING constructed it, so a run still took the regex fallback -- the "#124
+    #: inert" shape, a change that is design-faithful and does nothing.
+    citation_contexts_by_agent: bool = False
+    citation_context_agent_parallel: int = 4
     inbox_dir: Path = Path("corpus/papers/inbox")
     output_root: Path = Path("corpus")
     parser_name: str = "auto"
@@ -92,6 +151,16 @@ class PaperIngestPipeline:
         # OCR/web lookup on implicitly.
         self.supplied_text_parser = supplied_text_parser
         self.model_provider = model_provider
+        # Built once, used per paper. `None` means the regex fallback, which the artifact records
+        # by name so a low context count is never mistaken for a finding about the paper.
+        self.citation_context_reader = (
+            _agent_citation_context_reader(
+                workspace=self.config.output_root / "citation_context_agent",
+                max_parallel=self.config.citation_context_agent_parallel,
+            )
+            if self.config.citation_contexts_by_agent
+            else None
+        )
         self.lookup_providers = lookup_providers or [NullProcessedPaperLookupProvider()]
         # P1: DOI-keyed whole-bibliography providers (Crossref/OpenAlex reference lists). When a paper
         # parses too few local references, these backfill the reference list so cited-work resolution
@@ -134,7 +203,12 @@ class PaperIngestPipeline:
         if pilot and all_papers:
             raise ValueError("Use either pilot or all_papers, not both")
         if all_papers:
-            pdfs = sorted(self.config.inbox_dir.glob("*.pdf"))
+            # Receipt-declared derived companions are text carriers for their originals, never
+            # standalone papers.
+            companions = derived_companion_names(self.config.inbox_dir)
+            pdfs = sorted(
+                path for path in self.config.inbox_dir.glob("*.pdf") if path.name not in companions
+            )
         else:
             selected = pilot or "paper_001_theory_reuse.pdf"
             pdfs = [self.config.inbox_dir / selected]
@@ -163,6 +237,81 @@ class PaperIngestPipeline:
                 "min_local_reference_count": self.config.min_local_reference_count,
             }
         )
+
+    def _resume_reuse_artifacts(
+        self,
+        *,
+        pdf_path: Path,
+        parsed_path: Path,
+        completeness_path: Path,
+        external_path: Path,
+        packet_path: Path,
+        case_path: Path,
+        local_literature_path: Path,
+        review_path: Path,
+    ) -> tuple[dict[str, str], str]:
+        """Return complete reusable artifact paths, or a categorical re-ingest warning.
+
+        The config signature alone cannot bind a case to the current paper bytes or preparation
+        sidecars. Verify both identities from persisted typed artifacts before skipping paid work.
+        """
+        required = {
+            "parsed_artifact": parsed_path,
+            "completeness_artifact": completeness_path,
+            "source_packet_artifact": packet_path,
+            "paper_case_artifact": case_path,
+            "review_artifact": review_path,
+        }
+        if self.config.external_lookup:
+            required["external_artifact"] = external_path
+        if any(not path.is_file() for path in required.values()):
+            return {}, "resume_reingest_artifact_missing"
+
+        try:
+            preparation = resolve_source_preparation(pdf_path)
+            paper_case = load_model(case_path, PaperCase)
+            parsed = load_model(parsed_path, ParsedPaper)
+            original_sha = sha256_file(pdf_path)
+        except (OSError, TypeError, ValueError, YAMLError):
+            return {}, "resume_reingest_artifact_invalid"
+
+        if paper_case.source_sha256 != original_sha or parsed.source_sha256 != original_sha:
+            return {}, "resume_reingest_source_changed"
+
+        metadata = parsed.metadata
+        if preparation.receipt is None:
+            if metadata.get("derivative_receipt_digest") or metadata.get("derived_sha256"):
+                return {}, "resume_reingest_preparation_changed"
+        elif (
+            metadata.get("derivative_receipt_digest") != preparation.receipt_digest
+            or metadata.get("derived_sha256") != preparation.receipt.derived_sha256
+        ):
+            return {}, "resume_reingest_preparation_changed"
+
+        if preparation.article_span is None:
+            if any(
+                metadata.get(field) is not None
+                for field in ("article_page_start", "article_page_end", "article_span_reason")
+            ):
+                return {}, "resume_reingest_preparation_changed"
+        elif (
+            metadata.get("article_page_start") != preparation.article_span.page_start
+            or metadata.get("article_page_end") != preparation.article_span.page_end
+            or metadata.get("article_span_reason") != preparation.article_span.reason
+        ):
+            return {}, "resume_reingest_preparation_changed"
+
+        if paper_case.local_literature_context_id:
+            if not local_literature_path.is_file():
+                return {}, "resume_reingest_artifact_missing"
+            try:
+                literature = load_model(local_literature_path, PaperLocalLiteratureContext)
+            except (OSError, TypeError, ValueError, YAMLError):
+                return {}, "resume_reingest_artifact_invalid"
+            if literature_context_digest(literature) != paper_case.local_literature_context_digest:
+                return {}, "resume_reingest_artifact_invalid"
+            required["local_literature_artifact"] = local_literature_path
+        return {field: path.as_posix() for field, path in required.items()}, ""
 
     def _process_pdf(self, pdf_path: Path) -> PaperIngestItem:
         # Y1(c): single finalization point — persist a per-paper diagnostic on every return path
@@ -227,19 +376,35 @@ class PaperIngestPipeline:
                 else ""
             )
             if stored_signature == self._config_signature():
-                item.status = PaperIngestStatus.SKIPPED
-                item.paper_case_artifact = case_path.as_posix()
-                item.review_artifact = review_path.as_posix()
-                item.warnings.append("resume_skip_existing_case")
-                return item
-            item.warnings.append("resume_reingest_config_changed")
+                artifacts, warning = self._resume_reuse_artifacts(
+                    pdf_path=pdf_path,
+                    parsed_path=parsed_path,
+                    completeness_path=completeness_path,
+                    external_path=external_path,
+                    packet_path=packet_path,
+                    case_path=case_path,
+                    local_literature_path=local_literature_path,
+                    review_path=review_path,
+                )
+                if not warning:
+                    item.status = PaperIngestStatus.SKIPPED
+                    for field, path in artifacts.items():
+                        setattr(item, field, path)
+                    item.source_sha256 = load_model(case_path, PaperCase).source_sha256
+                    item.warnings.append("resume_skip_existing_case")
+                    return item
+                item.warnings.append(warning)
+            else:
+                item.warnings.append("resume_reingest_config_changed")
 
         try:
             prompt_version = _prompt_version_for_evidence_mode(self.config.evidence_mode)
-            parsed = self.parser.parse(pdf_path, paper_id=paper_id)
-            completeness = build_completeness_report(parsed)
+            preparation = resolve_source_preparation(pdf_path)
+            parsed = self.parser.parse(preparation.parse_path, paper_id=paper_id)
             if not build_source_spans(parsed) and self.supplied_text_parser is not None:
-                supplied = self.supplied_text_parser.parse(pdf_path, paper_id=paper_id)
+                supplied = self.supplied_text_parser.parse(
+                    preparation.parse_path, paper_id=paper_id
+                )
                 if supplied.source_sha256 != parsed.source_sha256:
                     raise ValueError(
                         "supplied text hook source_sha256 does not match the primary PDF digest"
@@ -250,7 +415,8 @@ class PaperIngestPipeline:
                         f"supplied_text_hook_used:{self.supplied_text_parser.parser_name}"
                     )
                     parsed = supplied
-                    completeness = build_completeness_report(parsed)
+            parsed = apply_source_preparation(parsed, preparation)
+            completeness = build_completeness_report(parsed)
             external = self._lookup(parsed) if self.config.external_lookup else None
             packet = build_source_packet(
                 parsed=parsed,
@@ -263,6 +429,7 @@ class PaperIngestPipeline:
             item.cache_key = stable_hash(
                 {
                     "source": parsed.source_sha256,
+                    "source_preparation": preparation.preparation_digest,
                     "parser": parsed.parser_config_hash,
                     "provider": self.config.provider_name,
                     "model": self.config.model_name,
@@ -288,6 +455,7 @@ class PaperIngestPipeline:
                 return item
             if self.model_provider is None:
                 item.status = PaperIngestStatus.FAILED
+                item.failure_class = FailureClass.VALIDATION_FAILURE
                 item.errors.append("model_provider_required_for_extraction")
                 return item
 
@@ -305,10 +473,12 @@ class PaperIngestPipeline:
                     item.warnings.append("text_unavailable:no parser-owned citable text")
                 else:
                     item.status = PaperIngestStatus.FAILED
+                    item.failure_class = FailureClass.PROMPT_BUDGET
                     item.errors.append(result.blocked_reason)
                 return item
             if result.paper_case is None:
                 item.status = PaperIngestStatus.FAILED
+                item.failure_class = FailureClass.SCHEMA_ERROR
                 item.errors.append("model_returned_no_paper_case")
                 return item
             paper_case = result.paper_case
@@ -325,6 +495,7 @@ class PaperIngestPipeline:
                         lookup_providers=self.lookup_providers,
                         source_reference_providers=self.source_reference_providers,
                         min_local_reference_count=self.config.min_local_reference_count,
+                        citation_context_reader=self.citation_context_reader,
                     )
                     if self.config.select_key_citations and literature_context.cited_works:
                         assert self.model_provider is not None
@@ -373,15 +544,34 @@ class PaperIngestPipeline:
                 item.status = PaperIngestStatus.EXTRACTED
         except (TypeError, AssertionError):
             raise
+        except StructuredModelProviderError as exc:
+            item.status = PaperIngestStatus.FAILED
+            item.failure_class = (
+                FailureClass.SCHEMA_ERROR
+                if exc.kind
+                in {
+                    StructuredModelFailureKind.INVALID_RESPONSE,
+                    StructuredModelFailureKind.STRUCTURED_OUTPUT_INVALID,
+                    StructuredModelFailureKind.OUTPUT_TRUNCATED,
+                }
+                else FailureClass.PROVIDER_FAILURE
+            )
+            item.errors.append(f"model_provider_{exc.kind.value}")
+        except ValidationError as exc:
+            item.status = PaperIngestStatus.FAILED
+            item.failure_class = FailureClass.SCHEMA_ERROR
+            item.errors.append(f"model_output_validation_failed:{exc.error_count()}")
         except Exception as exc:
             item.status = PaperIngestStatus.FAILED
-            item.errors.append(str(exc))
+            item.failure_class = FailureClass.VALIDATION_FAILURE
+            item.errors.append(f"ingest_boundary_failed:{type(exc).__name__}")
         return item
 
     def _lookup(self, parsed) -> ExternalPaperRecord:
+        title_candidate = extract_title_candidate(parsed)
         query = PaperIdentityQuery(
-            doi=_extract_doi(parsed.full_text),
-            title=_extract_title(parsed.full_text),
+            doi=_extract_front_matter_doi(parsed),
+            title=title_candidate.title,
             source_pdf=parsed.source_pdf,
             source_sha256=parsed.source_sha256,
         )
@@ -406,6 +596,21 @@ class PaperIngestPipeline:
             records = [NullProcessedPaperLookupProvider().lookup(query)]
         merged = merge_external_records(parsed.paper_id, records)
         merged.warnings.extend(warnings)
+        if title_candidate.confidence == TitleConfidence.NO_CANDIDATE:
+            merged.warnings.extend(
+                f"title_candidate_rejected_{reason}" for reason in title_candidate.rejections
+            )
+        elif not query.doi:
+            # The whole identity rests on a page-1 line, and every provider writes
+            # `title=<response> or query.title` while the Null provider stamps the query straight
+            # through -- so a wrong line becomes the record's title with nothing marking it. That
+            # is how 11-baldwin-dunkerton, a Science paper, became "Handbook on Synchrotron
+            # Radiation": the string "10.1016" appears nowhere in its text, so that identity
+            # arrived through the title search. 15 of the 2026-08-04 leg's 20 papers take this
+            # route. No deterministic check can tell a title of the WRONG article from the right
+            # one -- 11's line is a real title, of a news item on the same scanned page -- so this
+            # records the basis and leaves the judgement to a reader or a reviewing model.
+            merged.warnings.append("identity_basis_title_only")
         return merged
 
     def _parsed_dir(self) -> Path:
@@ -429,17 +634,173 @@ class PaperIngestPipeline:
         return path
 
 
-def _extract_doi(text: str) -> str:
-    match = re.search(r"10\.\d{4,9}/[-._;()/:A-Z0-9]+", text, flags=re.IGNORECASE)
-    return match.group(0).rstrip(").,;") if match else ""
+_DOI_PATTERN = re.compile(r"10\.\d{4,9}/[-._;()/:A-Z0-9]+", re.IGNORECASE)
 
 
-def _extract_title(text: str) -> str:
-    for line in text.splitlines()[:30]:
-        cleaned = " ".join(line.split()).strip()
-        if len(cleaned) >= 12 and not cleaned.lower().startswith(("arxiv", "doi", "page ")):
-            return cleaned[:300]
+def _extract_front_matter_doi(parsed: ParsedPaper) -> str:
+    """The DOI the paper prints for ITSELF, from page 1 only -- or nothing.
+
+    Searching the whole document took the first DOI-shaped substring anywhere, which in a paper
+    carrying a reference list is a CITED work's identifier. That is not a wrong title; it is a
+    wrong PAPER: the record's abstract, authors, venue and year all come from the other work and
+    every downstream stage inherits them. Measured over the 2026-08-04 climate corpus, 5 of 20
+    papers resolved to another paper's identity -- 18-thackeray to Musselman et al. 2021,
+    15-held-soden to "Has the Hadley cell been strengthening in recent decades?",
+    17-wills to the CMIP6 overview it cites for methods.
+
+    Page 1 is where a paper states its own identity, and the measurement is unambiguous: every
+    correct DOI in that corpus sits on page 1 at 0.1-2.8% of the document, while every wrong one
+    sits at 64-92%, on pages 10-20. `extract_title_candidate` already bounds itself the same way.
+
+    Page 1 is not the only place a paper states its own identity. A scanned journal PDF can carry
+    the publisher's "cite this article" stamp instead -- 06-hurrell's page 1 OCRs to noise (the
+    scan begins mid-way through a DIFFERENT article in the same Science issue, on mouse
+    embryogenesis) while its own identity sits at 99.1% of the document:
+
+        Decadal Trends in the North Atlantic Oscillation: Regional Temperatures and Precipitation
+        James W. Hurrell
+        Science 269 (5224), .  DOI: 10.1126/science.269.5224.676
+        View the article online
+        https://www.science.org/doi/10.1126/science.269.5224.676
+
+    A stamp like that says the same identifier TWICE, once bare and once as a publisher link to the
+    article. A reference entry cites its DOI once.
+
+    The COUNT is what the corpus exercises: 18-thackeray's borrowed identifier also appears inside
+    a URL, because the reference line itself reads "https://doi.org/10.1038/s41558-021-01014-9", so
+    the link test alone would have kept it. The LINK is not exercised there -- measured, zero DOIs
+    in that corpus reach two occurrences without one -- and it defends a different failure: a work
+    cited in the text and again in the bibliography reaches two occurrences on its own. Mutation
+    testing found the link condition unguarded and it now has a constructed test, because a
+    condition no test can kill is decoration, not a guard.
+
+    Recovering the right answer, not merely refusing the wrong one: this returns 18-thackeray's OWN
+    DOI, stated twice under "Extended data is available for this paper at", where the whole-text
+    search returned the identity of a paper it cites.
+    """
+    page_one = next((page.text for page in parsed.pages if page.page_number == 1), "")
+    front_matter = _DOI_PATTERN.search(page_one)
+    if front_matter:
+        return front_matter.group(0).rstrip(").,;")
+
+    for match in _DOI_PATTERN.finditer(parsed.full_text):
+        doi = match.group(0).rstrip(").,;")
+        quoted = re.escape(doi)
+        stated_twice = len(re.findall(quoted, parsed.full_text, flags=re.IGNORECASE)) >= 2
+        publisher_link = re.search(rf"https?://[^\s]*{quoted}", parsed.full_text, re.IGNORECASE)
+        if stated_twice and publisher_link:
+            return doi
     return ""
+
+
+#: A scientific paper title is a phrase, not a token, and not a paragraph. Measured over the
+#: 20-paper climate corpus: the correct candidates run 7-16 words. Below them sat four non-titles
+#: at 1-2 words ("ARTICLE OPEN", "1234567890():,;", "SYNCHROTRON RADIATION",
+#: "Ij./l.bB&i.BPg.i.BIII."); above them sits running body prose, because the scan walks into the
+#: page once the junk is skipped -- 06-hurrell's next line is a 37-word sentence about interstellar
+#: C3 absorption and the ones after it are 51+. Both gaps are empty (3-6 and 17-36), so the bounds
+#: sit clear of every real title on both sides.
+#:
+#: A floor alone is not a fix: it moved 06 from visible garbage to a fluent 37-word sentence that
+#: reads like data, which is worse in an artifact a person skims. The ceiling caps that failure
+#: mode; it is honest to say it changes no IDENTITY outcome on this corpus, because 06 resolves
+#: through its DOI either way and 11's wrong line is 6 words. It has a constructed test rather than
+#: a corpus one for exactly that reason. Deliberately length bounds and never vocabulary ones.
+_TITLE_MINIMUM_WORDS = 4
+_TITLE_MAXIMUM_WORDS = 30
+
+
+# Journal banners, imprints, and download stamps that must never become a paper's search
+# identity. A miss here degrades to a rejected candidate, never to a crash.
+_TITLE_BANNER_PATTERN = re.compile(
+    r"(?i)(issn\b|©|\(c\)\s*\d{4}|all rights reserved|downloaded from|www\.|https?://"
+    r"|\bvol\.\s*\d|\bvolume\s+\d|\bno\.\s*\d+\s*,|\bissue\s+\d)"
+)
+_TITLE_PAGE_NUMBER_PATTERN = re.compile(r"(?i)^(page\s+)?[divxlcm\d]{1,7}(\s+of\s+\d+)?$")
+
+
+def _running_header_lines(parsed: ParsedPaper) -> set[str]:
+    """Case-folded lines appearing in the top of MULTIPLE pages — running headers, not titles."""
+    counts: dict[str, int] = {}
+    for page in parsed.pages:
+        top_lines = {
+            " ".join(line.split()).strip().casefold()
+            for line in page.text.splitlines()[:3]
+            if line.strip()
+        }
+        for line in top_lines:
+            counts[line] = counts.get(line, 0) + 1
+    return {line for line, count in counts.items() if count >= 2}
+
+
+def extract_title_candidate(parsed: ParsedPaper) -> TitleCandidateResult:
+    """Deterministic scored title-candidate pass (CLIM-01).
+
+    A running header, page number, DOI/arXiv stamp, or journal banner is rejected with a typed
+    reason; when nothing survives, the result is an honest ``NO_CANDIDATE`` and external
+    identity lookup proceeds without a title instead of searching on noise.
+    """
+
+    repeated = _running_header_lines(parsed)
+    rejections: list[str] = []
+
+    def _reject(reason: str) -> None:
+        if reason not in rejections:
+            rejections.append(reason)
+
+    for line in parsed.full_text.splitlines()[:30]:
+        cleaned = " ".join(line.split()).strip()
+        if not cleaned:
+            continue
+        if len(cleaned) < 12:
+            if _TITLE_PAGE_NUMBER_PATTERN.fullmatch(cleaned):
+                _reject("page_number_line")
+            else:
+                _reject("short_line")
+            continue
+        if cleaned.lower().startswith(("arxiv", "doi", "page ")):
+            _reject("identifier_stamp")
+            continue
+        if cleaned.casefold() in repeated:
+            _reject("running_header")
+            continue
+        if _TITLE_BANNER_PATTERN.search(cleaned):
+            _reject("journal_banner")
+            continue
+        # Length LAST, so a line with a specific reason keeps it. Placed second, this bound
+        # relabelled three genuinely-diagnosed lines on the 2026-08-04 corpus --
+        # 16-taszarek's repeated "1234567890():,;" lost `running_header`, and two DOI-URL lines
+        # lost `journal_banner` -- and those reasons are persisted as the paper's audit warnings.
+        #
+        # A character floor of 12 admitted "ARTICLE OPEN" (exactly 12), "1234567890():,;",
+        # "SYNCHROTRON RADIATION" and "Ij./l.bB&i.BPg.i.BIII.", all stamped CONFIDENT on that leg,
+        # and the title is the ONLY identity handle for the 15 of 20 papers whose front matter
+        # prints no DOI -- a noise title still becomes the record's title, because every provider
+        # writes `title=<response> or query.title` and the Null provider stamps the query straight
+        # through. That is how 11-baldwin, a Science paper, resolved to "Handbook on Synchrotron
+        # Radiation": the string "10.1016" appears nowhere in its text, so that identity arrived
+        # through the title search.
+        #
+        # These reject a LINE, not the paper: the scan continues, which is how skipping the junk
+        # recovers the real titles of 16-taszarek and 19-rousi one line below. A paper where
+        # nothing survives reaches the honest NO_CANDIDATE the enum documents.
+        words = len(cleaned.split())
+        if words < _TITLE_MINIMUM_WORDS:
+            _reject("too_few_words_for_a_title")
+            continue
+        if words > _TITLE_MAXIMUM_WORDS:
+            _reject("too_many_words_for_a_title")
+            continue
+        return TitleCandidateResult(
+            title=cleaned[:300],
+            confidence=TitleConfidence.CONFIDENT,
+            rejections=rejections,
+        )
+    return TitleCandidateResult(
+        title="",
+        confidence=TitleConfidence.NO_CANDIDATE,
+        rejections=rejections,
+    )
 
 
 def _prompt_version_for_evidence_mode(evidence_mode: str) -> str:

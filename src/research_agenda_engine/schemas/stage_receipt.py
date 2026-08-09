@@ -72,6 +72,11 @@ class StageReceipt(BaseModel):
     model_versions: dict[str, str] = Field(default_factory=dict)
     output_paths: list[str] = Field(default_factory=list)
     output_digests: dict[str, str] = Field(default_factory=dict)
+    # CLIM-10: a timestamp-free semantic digest per output artifact, parallel to the raw byte
+    # output_digests. The reuse gate compares these so a re-run that changes only provenance
+    # timestamps REUSES downstream; output_digests stays the exact-byte replay/corruption
+    # identity. Additive default-empty: pre-CLIM-10 receipts fall back to byte digests.
+    semantic_output_digests: dict[str, str] = Field(default_factory=dict)
     external_call_ids: list[str] = Field(default_factory=list)
     started_at: datetime | None = None
     ended_at: datetime | None = None

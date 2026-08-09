@@ -54,7 +54,7 @@ from ...schemas.question_family_branch import (
 )
 from ...schemas.stage_receipt import FailureClass
 from ..orchestration import QuestionFamilyBranchManager
-from .public_text_guard import find_public_markdown_jargon
+from .public_text_guard import find_public_markdown_id_leaks
 
 GENERIC_SCIENTIFIC_DOSSIER_WORKSPACE = "generic_scientific_dossier"
 GENERIC_SCIENTIFIC_DOSSIER_RENDERED_WORKSPACE = "generic_scientific_dossier_rendered"
@@ -1069,7 +1069,15 @@ def _build_writing_packet(
                     ),
                 )
             )
-        elif outcome.outcome_kind == GenericFamilyOutcomeKind.PLAN:
+        else:
+            # Every variant that did not produce a plan says why, whatever the family's terminal.
+            # Gating this on PLAN meant the families with the LEAST to show rendered the least: a
+            # plan-kind family printed "Rejected dataset mismatch. <reason>" for its declined
+            # variant, while a rejection-kind family -- where the decline IS the outcome -- printed
+            # nothing at all. On the 2026-08-04 leg that silenced all three rejected families, and
+            # what it silenced was the run's most useful output: the questions were sound and the
+            # dataset could not carry them. Shape (2) of the shepherd contract is a scientific "no"
+            # WITH its evidence; a bare label is the contract's named failure case.
             disposition = entry.decision.value.replace("_", " ").capitalize()
             variant_disposition_claims.append(
                 GenericDossierClaim(
@@ -1099,16 +1107,11 @@ def _build_writing_packet(
             text=source_snapshot.shared_scientific_tension,
             citation_ids=[source_snapshot.source_snapshot_id, outcome.outcome_packet_id],
         ),
+        *_terminal_reason_claims(outcome=outcome, source_snapshot=source_snapshot),
         GenericDossierClaim(
             claim_id="claim-dataset-leverage",
             scope=GenericDossierClaimScope.FEASIBILITY,
-            text=(
-                f"Dataset claim status is {outcome.dataset_claim_status.value}; observed-depth "
-                f"label is {outcome.dataset_grounding_level.value}. Dataset leverage remains a "
-                "planning hypothesis: "
-                f"{_join_sentences(v.dataset_leverage_hypothesis for v in source_snapshot.variants)} "
-                "No scientific-result generation was performed."
-            ),
+            text=_dataset_leverage_text(outcome=outcome, source_snapshot=source_snapshot),
             citation_ids=sorted(set(ledger.evidence_ids) | {source_snapshot.source_snapshot_id}),
         ),
         *variant_claims,
@@ -1117,13 +1120,13 @@ def _build_writing_packet(
         GenericDossierClaim(
             claim_id="claim-competing-explanations",
             scope=GenericDossierClaimScope.METHOD,
-            text=_competing_explanation_text(outcome.variant_scientific_outcomes),
+            text=_competing_explanation_text(outcome=outcome),
             citation_ids=[source_snapshot.source_snapshot_id, outcome.outcome_packet_id],
         ),
         GenericDossierClaim(
             claim_id="claim-outcome-meanings",
             scope=GenericDossierClaimScope.METHOD,
-            text=_outcome_meanings_text(outcome.variant_scientific_outcomes),
+            text=_outcome_meanings_text(outcome=outcome),
             citation_ids=[source_snapshot.source_snapshot_id, outcome.outcome_packet_id],
         ),
         GenericDossierClaim(
@@ -1166,6 +1169,7 @@ def _build_writing_packet(
             purpose="Explain why the family remains scientifically consequential.",
             claim_ids=["claim-scientific-motivation"],
         ),
+        *_terminal_reason_sections(outcome=outcome),
         GenericDossierSection(
             section_id="dataset_leverage",
             title="Dataset Leverage",
@@ -1282,6 +1286,20 @@ def _variant_claim_text(scientific: GenericVariantScientificOutcome) -> str:
     )
 
 
+def _as_markdown_sub_bullets(text: str, *, indent: str = "    ") -> str:
+    """Render a newline-separated field block as sub-bullets under a Markdown list item.
+
+    ``_variant_plan_text`` emits one labelled field per line so the plan is readable. A raw newline
+    inside a list item would break out of the bullet, so each continuation line is indented and
+    given its own marker.
+    """
+
+    first, *rest = text.split("\n")
+    if not rest:
+        return first
+    return "\n".join([first, *(f"{indent}- {line}" for line in rest if line.strip())])
+
+
 def _variant_plan_text(summary: str, plan: AnalysisPlan | None) -> str:
     """Render a public, inspectable plan description while preserving legacy summaries."""
 
@@ -1315,7 +1333,10 @@ def _variant_plan_text(summary: str, plan: AnalysisPlan | None) -> str:
         components.append(
             "Unresolved planning decisions: " + _join_sentences(plan.unresolved_decisions)
         )
-    return " ".join(component.strip() for component in components if component.strip())
+    # One labelled field per line. Joining ~20 labelled fields with a space produced a single
+    # ~900-word run-on line — every field present, none of it readable, and it is the main body of
+    # the end-user dossier. Callers that embed this in Markdown indent the continuation lines.
+    return "\n".join(component.strip() for component in components if component.strip())
 
 
 def _render_claim_ceiling(plan: AnalysisPlan) -> str:
@@ -1339,24 +1360,154 @@ def _plan_data_source_text(plan: AnalysisPlan) -> str:
     return " ".join(item if item.endswith(".") else item + "." for item in rendered)
 
 
-def _competing_explanation_text(
-    variant_outcomes: list[GenericVariantScientificOutcome],
+_TERMINAL_REASON_CLAIM_ID = "claim-terminal-reason"
+_TERMINAL_REASON_TITLE = "Why This Family Was Not Carried Forward"
+
+
+def _terminal_reason_text(outcome: GenericFamilyBranchOutcomePacket) -> str:
+    """The planner's family-level reason, and what data would answer the question instead.
+
+    `rejection_message_id` preserved the terminal message's IDENTITY and dropped its WORDS, so a
+    reader met "The scientific planning/review process closed this family without an accepted plan"
+    and nothing else. What was withheld was the run's most actionable output: on the 2026-08-04 leg
+    all three declines were dataset mismatches -- the questions were sound and the data could not
+    carry them -- each naming the data that would revive it.
+    """
+    parts = [outcome.terminal_reason.strip()]
+    if outcome.alternatives_for_future_data:
+        parts.append(
+            "What would make this answerable: "
+            + _join_sentences(outcome.alternatives_for_future_data)
+        )
+    return " ".join(part for part in parts if part)
+
+
+def _terminal_reason_claims(
+    *,
+    outcome: GenericFamilyBranchOutcomePacket,
+    source_snapshot: QuestionFamilyScientificSourceSnapshot,
+) -> list[GenericDossierClaim]:
+    if not outcome.terminal_reason.strip():
+        return []
+    return [
+        GenericDossierClaim(
+            claim_id=_TERMINAL_REASON_CLAIM_ID,
+            scope=GenericDossierClaimScope.FAMILY,
+            text=_terminal_reason_text(outcome),
+            citation_ids=[source_snapshot.source_snapshot_id, outcome.outcome_packet_id],
+        )
+    ]
+
+
+def _terminal_reason_sections(
+    *, outcome: GenericFamilyBranchOutcomePacket
+) -> list[GenericDossierSection]:
+    if not outcome.terminal_reason.strip():
+        return []
+    return [
+        GenericDossierSection(
+            section_id="terminal_reason",
+            title=_TERMINAL_REASON_TITLE,
+            purpose="State the planner's own reason for a non-plan terminal, and its alternatives.",
+            claim_ids=[_TERMINAL_REASON_CLAIM_ID],
+        )
+    ]
+
+
+def _terminal_reason_lines(
+    packet: GenericDossierWritingPacket, redacted_internal_ids: list[str]
+) -> list[str]:
+    if not any(claim.claim_id == _TERMINAL_REASON_CLAIM_ID for claim in packet.claims):
+        return []
+    return [
+        f"## {_TERMINAL_REASON_TITLE}",
+        "",
+        _redact_text(_claim_text(packet, _TERMINAL_REASON_CLAIM_ID), redacted_internal_ids),
+        "",
+    ]
+
+
+def _variant_attribution(*, outcome: GenericFamilyBranchOutcomePacket) -> dict[str, str]:
+    """variant_id -> the label naming the sibling that raised an item, and how it ended.
+
+    Family-level sections concatenate every sibling's scientific content. Unattributed, a reader
+    cannot tell an accepted variant's live commitment from a rejected sibling's ruled-out one --
+    on the 2026-08-04 leg, 4 of 7 competing explanations in one accepted dossier and 5 of 8 in the
+    other (leading the list) belonged to a variant the same file declines.
+    """
+    labels: dict[str, str] = {}
+    for index, entry in enumerate(outcome.variant_outcomes, start=1):
+        if entry.decision.is_accepted:
+            labels[entry.variant_id] = f"Variant {index}"
+        else:
+            disposition = entry.decision.value.replace("_", " ")
+            labels[entry.variant_id] = f"Variant {index}, not carried forward ({disposition})"
+    return labels
+
+
+def _attributed_items(*, lead: str, outcome: GenericFamilyBranchOutcomePacket, field: str) -> str:
+    """Render each sibling's items under the sibling that raised them.
+
+    Every item rendered before is still rendered -- a declined variant's competing explanations are
+    real scientific content and dropping them would lose information. The cross-variant
+    `dict.fromkeys` dedupe goes with the flattening: once items carry an owner, an explanation two
+    siblings both raise belongs under both.
+    """
+    labels = _variant_attribution(outcome=outcome)
+    blocks = []
+    for scientific in outcome.variant_scientific_outcomes:
+        items = getattr(scientific, field)
+        if not items:
+            continue
+        label = labels.get(scientific.variant_id, scientific.variant_id)
+        blocks.append(f"{label}: {_join_sentences(items)}")
+    if not blocks:
+        return f"{lead} {_join_sentences([])}"
+    return f"{lead} " + " ".join(blocks)
+
+
+def _dataset_leverage_text(
+    *,
+    outcome: GenericFamilyBranchOutcomePacket,
+    source_snapshot: QuestionFamilyScientificSourceSnapshot,
 ) -> str:
-    explanations = []
-    for outcome in variant_outcomes:
-        explanations.extend(outcome.competing_explanations)
-    return "Competing explanations that must remain visible: " + _join_sentences(
-        dict.fromkeys(explanations)
+    """The family's feasibility hypotheses, each named with the sibling that holds it.
+
+    Joining every variant's hypothesis into one family-scoped sentence let a capability the SAME
+    dossier rules out six to thirty lines later read as still open: on the 2026-08-04 leg both
+    accepted families opened with a leverage claim resting partly on the variant they decline.
+    """
+    labels = _variant_attribution(outcome=outcome)
+    blocks = []
+    for variant in source_snapshot.variants:
+        hypothesis = (variant.dataset_leverage_hypothesis or "").strip()
+        if not hypothesis:
+            continue
+        label = labels.get(variant.variant_id, variant.variant_id)
+        blocks.append(f"{label}: {_join_sentences([hypothesis])}")
+    hypotheses = " ".join(blocks) if blocks else _join_sentences([])
+    return (
+        f"Dataset claim status is {outcome.dataset_claim_status.value}; observed-depth "
+        f"label is {outcome.dataset_grounding_level.value}. Dataset leverage remains a "
+        f"planning hypothesis, by variant: {hypotheses} "
+        "No scientific-result generation was performed."
     )
 
 
-def _outcome_meanings_text(
-    variant_outcomes: list[GenericVariantScientificOutcome],
-) -> str:
-    meanings = []
-    for outcome in variant_outcomes:
-        meanings.extend(outcome.outcome_meanings)
-    return "Possible outcome meanings: " + _join_sentences(dict.fromkeys(meanings))
+def _competing_explanation_text(*, outcome: GenericFamilyBranchOutcomePacket) -> str:
+    return _attributed_items(
+        lead="Competing explanations that must remain visible, by variant:",
+        outcome=outcome,
+        field="competing_explanations",
+    )
+
+
+def _outcome_meanings_text(*, outcome: GenericFamilyBranchOutcomePacket) -> str:
+    return _attributed_items(
+        lead="Possible outcome meanings, by variant:",
+        outcome=outcome,
+        field="outcome_meanings",
+    )
 
 
 def _join_sentences(items: Iterable[object]) -> str:
@@ -1438,7 +1589,9 @@ def _render_machine_markdown(
         for claim_id in section.claim_ids:
             claim = claim_by_id[claim_id]
             citations = ", ".join(f"`{citation_id}`" for citation_id in claim.citation_ids)
-            lines.append(f"- `{claim.claim_id}` {claim.text} Citations: {citations}.")
+            body = _as_markdown_sub_bullets(claim.text, indent="  ")
+            lines.append(f"- `{claim.claim_id}` {body}")
+            lines.append(f"  Citations: {citations}.")
         lines.append("")
     lines.extend(
         [
@@ -1477,6 +1630,7 @@ def _render_public_markdown(
         "",
         _redact_text(_claim_text(packet, "claim-scientific-motivation"), redacted_internal_ids),
         "",
+        *_terminal_reason_lines(packet, redacted_internal_ids),
         "## Dataset Leverage",
         "",
         _redact_text(_claim_text(packet, "claim-dataset-leverage"), redacted_internal_ids),
@@ -1510,7 +1664,10 @@ def _render_public_markdown(
         )
         if plan_claim := plan_claims.get(variant.variant_id):
             lines.append(
-                "  - Planned analysis: " + _redact_text(plan_claim.text, redacted_internal_ids)
+                "  - Planned analysis: "
+                + _as_markdown_sub_bullets(
+                    _redact_text(plan_claim.text, redacted_internal_ids), indent="    "
+                )
             )
         elif disposition_claim := disposition_claims.get(variant.variant_id):
             lines.append(
@@ -1637,6 +1794,9 @@ def _source_snapshot_paths_for_claim(claim: GenericDossierClaim) -> list[str]:
         return ["family_summary"]
     if claim.claim_id == "claim-scientific-motivation":
         return ["shared_scientific_tension"]
+    if claim.claim_id == _TERMINAL_REASON_CLAIM_ID:
+        # The planner's own words about the family, not a snapshot field.
+        return []
     if claim.claim_id == "claim-dataset-leverage":
         return ["variants[].dataset_leverage_hypothesis"]
     if claim.claim_id == "claim-competing-explanations":
@@ -1671,7 +1831,12 @@ def validate_generic_public_dossier_quality(
     ]:
         if internal_id and internal_id in markdown:
             errors.append("public dossier leaked internal ID: " + internal_id)
-    for label in find_public_markdown_jargon(markdown):
+    # Only an escaped internal IDENTIFIER is an error. This dossier is model-written scientific prose
+    # and this check is single-shot with no revision loop, so a dev-era handle -- which discloses
+    # nothing, and whose two patterns collide with ordinary science ("CCR5-tropic (R5)", the
+    # start-codon variant "M1V") -- would cost a family its translated dossier over housekeeping.
+    # `scripts/check_public_markdown.py` still enforces all five over templates and renderer output.
+    for label in find_public_markdown_id_leaks(markdown):
         errors.append("public dossier contains internal jargon: " + label)
 
     variant_blocks = _public_variant_blocks(markdown)

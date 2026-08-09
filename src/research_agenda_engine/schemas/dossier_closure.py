@@ -8,7 +8,11 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from .family_failure import SAFE_FAMILY_FAILURE_REASON, sanitize_family_failure_text
+from .family_failure import (
+    SAFE_FAMILY_FAILURE_REASON,
+    sanitize_family_exception_text,
+    sanitize_family_failure_text,
+)
 from .stage_receipt import FailureClass
 
 
@@ -66,7 +70,7 @@ class DossierClosureDiagnostic(BaseModel):
         cleaned_errors: list[str] = []
         for item in value:
             normalized = " ".join(item.split())
-            cleaned = sanitize_family_failure_text(normalized)
+            cleaned = sanitize_family_exception_text(normalized)
             if cleaned and cleaned != SAFE_FAMILY_FAILURE_REASON:
                 cleaned_errors.append(cleaned)
                 continue

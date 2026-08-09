@@ -66,6 +66,8 @@ def normalize_gate_criterion(value: str) -> str:
 def resolve_criterion_assessments(
     assessments: Sequence[GateCriterionAssessment],
     required_criteria: Sequence[str],
+    *,
+    drop_unrequired: bool = False,
 ) -> CriterionAssessmentResolution:
     """Resolve criterion coverage without semantic paraphrase guessing.
 
@@ -96,7 +98,13 @@ def resolve_criterion_assessments(
         canonical = canonical_by_normalized.get(normalized, "")
         if not canonical:
             status = GateCriterionAuditStatus.UNKNOWN
-            unknown.append(assessment.criterion)
+            # `drop_unrequired` is set only when the HOST has decided a criterion does not apply to
+            # this artifact -- a formation trace with no citation to judge. Without it, a reviewer
+            # that answers the dropped criterion anyway makes it `unknown`, and any unknown blocks
+            # accept: the paper would go from a coin flip to certain death. The assessment is still
+            # recorded in the audit, so nothing is hidden; it just cannot decide.
+            if not drop_unrequired:
+                unknown.append(assessment.criterion)
         elif canonical not in first_by_canonical:
             status = GateCriterionAuditStatus.MATCHED
             first_by_canonical[canonical] = assessment
@@ -174,6 +182,7 @@ def run_structured_gate_review(
     generator_provider_ids: Sequence[str],
     candidate: BaseModel | None = None,
     candidate_digest: str | None = None,
+    drop_unrequired_criteria: bool = False,
 ) -> GateOutcome:
     """Send ``turn_input`` to an independent reviewer session and derive the EARNED ``GateOutcome``.
 
@@ -196,6 +205,7 @@ def run_structured_gate_review(
         content=content,
         required_criteria=required_criteria,
         evidence_resolved=evidence_resolved,
+        drop_unrequired_criteria=drop_unrequired_criteria,
         candidate_digest=digest,
         generator_provider_ids=generator_provider_ids,
         reviewer_execution_kind=session.execution_kind,
@@ -221,6 +231,7 @@ def resolve_gate_outcome(
     required_criteria: Sequence[str],
     evidence_resolved: bool,
     candidate_digest: str,
+    drop_unrequired_criteria: bool = False,
     generator_provider_ids: Sequence[str],
     reviewer_execution_kind: ReviewerExecutionKind,
     infrastructure_error: bool = False,
@@ -233,7 +244,7 @@ def resolve_gate_outcome(
     """Derive the EARNED gate outcome from the reviewer content (see module docstring)."""
 
     criterion_resolution = resolve_criterion_assessments(
-        content.criterion_assessments, required_criteria
+        content.criterion_assessments, required_criteria, drop_unrequired=drop_unrequired_criteria
     )
     cleaned_required_changes = clean_required_changes(content.required_changes)
 
@@ -280,19 +291,27 @@ def resolve_gate_outcome(
     unknown = list(criterion_resolution.unknown)
     conflicts = list(criterion_resolution.conflicts)
     unfaithful = bool(content.hallucination_findings) or not evidence_resolved
+    # `cleaned_required_changes` is deliberately NOT a blocker. Operator-approved minimum patch,
+    # 2026-07-30: an improvement the reviewer named while passing every criterion is an accept with a
+    # note, not a rejection. The old disjunct was the one member of this list with no independently
+    # enforced boundary behind it -- every other member is either a criterion result the reviewer
+    # itself recorded or a host-computed guard -- and the reviewer had been TOLD, by
+    # paper_case_fidelity_reviewer/v2, that such an accept would not be honored, so it pre-complied by
+    # returning `revise` instead. Measured across the live corpus: four verdicts where required_changes
+    # was the only signal, all with every criterion passed.
+    #
+    # Nothing else moves. `unfaithful` (hallucination findings or a failed host evidence closure) still
+    # forces REJECT, blocker findings still block, and a missing / failed / unknown / conflicting
+    # criterion still blocks. The asks now ride along on the accepted outcome so they can be shown to a
+    # reader instead of silently discarded.
     accept_blocked = bool(
-        missing
-        or failed
-        or unknown
-        or conflicts
-        or cleaned_required_changes
-        or content.blocker_findings
-        or unfaithful
+        missing or failed or unknown or conflicts or content.blocker_findings or unfaithful
     )
 
-    # (2) Earned accept: the model asked for accept AND nothing blocks it.
+    # (2) Earned accept: the model asked for accept AND nothing blocks it. Any improvement it named
+    # travels with the accept -- passing while dropping the note would be worse than not passing.
     if content.decision == GateModelDecision.ACCEPT and not accept_blocked:
-        return build(GateDecision.ACCEPT)
+        return build(GateDecision.ACCEPT, required_changes=cleaned_required_changes)
 
     # (3) The model claimed accept but something blocks it → downgrade (never a false accept).
     if content.decision == GateModelDecision.ACCEPT and accept_blocked:

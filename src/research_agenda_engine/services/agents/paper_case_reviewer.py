@@ -28,10 +28,10 @@ from ...schemas.gate_outcome import GateOutcome
 from ...schemas.paper_case import PaperCase, PaperCaseReview, PaperCaseReviewStatus
 from ..context.evidence_basis_labels import ABSTRACT_ONLY_PHRASE
 from .gate_kernel import run_structured_gate_review
-from .promotion import assert_promotion_binding
+from .promotion import assert_promoted_status_is_holdable, assert_promotion_binding
 from .reviewer_base import build_scientific_reviewer_provider_from_env
 
-PAPER_CASE_FIDELITY_REVIEWER_PROMPT_VERSION = "paper_case_fidelity_reviewer/v2"
+PAPER_CASE_FIDELITY_REVIEWER_PROMPT_VERSION = "paper_case_fidelity_reviewer/v3"
 PAPER_CASE_FIDELITY_GATE = "paper_case_fidelity"
 
 # Structural fidelity criteria — all dataset-agnostic (no domain vocabulary).
@@ -213,6 +213,14 @@ def promote_paper_case_to_ai_reviewed(
     )
     if cited_abstract_basis:
         note = f"{note} {cited_abstract_basis}"
+    # An improvement the reviewer named while accepting must reach a READER, not just the audit trail.
+    # `render_paper_case_summary` prints `evidence_requests` under "Open uncertainties" and prints
+    # neither `review.note` nor `review.corrections`, so the note alone would be invisible — which is
+    # how the citation-degrade limitation has been invisible all along.
+    for ask in outcome.required_changes:
+        request = f"ReviewerNote[accepted_with_improvement]: {ask}"
+        if request not in promoted.evidence_requests:
+            promoted.evidence_requests.append(request)
     promoted.review = PaperCaseReview(
         status=PaperCaseReviewStatus.AI_REVIEWED,
         previous_status=paper_case.review.status,
@@ -221,4 +229,8 @@ def promote_paper_case_to_ai_reviewed(
         corrections=list(paper_case.review.corrections),
         note=note,
     )
+    # `PaperCase.validate_reviewed_fields` gates on `review.status`, and constructing the inner
+    # `PaperCaseReview` does not re-run the outer rule -- so this stamp can mint an unholdable
+    # status exactly like the trace promoter did.
+    assert_promoted_status_is_holdable(promoted, expected_gate=PAPER_CASE_FIDELITY_GATE)
     return promoted

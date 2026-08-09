@@ -2,450 +2,475 @@
 
 These pages expand the compact PatternBank summary for scientific reading. They describe reviewed question-forming moves; they do not establish novelty, dataset feasibility, or a scientific result.
 
-## Pattern 001: Replace a magnitude heuristic with a structural-alignment test
+## Pattern 001: Use population structure to discriminate computational accounts
 
 - Review authority: `ai_reviewed`
 - Transfer scope: `cross_paper`
 
 ### Starting scientific state
 
-- Prior literature associates the overall magnitude of a population statistic, such as correlation or shared variability, with coding or behavior.
-- Contrasting cited results show that large, small, or reduced values of that statistic do not consistently determine the outcome.
-- Population-level methods provide precedents for representing variability as dimensions or covariance geometry.
+- Collective measurements exhibit heterogeneity, correlations, dimensional structure, trajectories, or subspaces whose computational meaning is unresolved.
+- The uncertainty may arise because component-level responses are difficult to interpret or because competing population-level theories predict different geometries or dynamics.
+- Prior theory supplies alternative accounts linking population structure to information, readout capacity, robustness, binding, generalization, selection, or behavior, but available observations have not yet distinguished them.
 
 ### Unresolved tension
 
-A coarse summary may correlate with an outcome while failing to identify the specific component that constrains information, predicts another system, or aligns with task-relevant representations.
+Observed population structure may be dismissed as disorder, nuisance variation, or limited sampling, interpreted as a collective computational resource, or attributed to one of several competing geometric or dynamical constraints. The unresolved tension is which interpretation makes discriminating predictions about structure under controlled variation and, where available, behavior.
 
 ### Dataset cues
 
-- Repeated multivariate observations permit estimation of covariance or latent dimensions.
-- An independently defined outcome-relevant direction, target population, or task representation is available.
-- Models or multiple datasets permit magnitude and geometry to be contrasted.
+- Measurements from many components across repeated conditions
+- Independent variation of multiple task-relevant factors, input statistics, effective dimensionality, identities, positions, or contexts
+- Contrasts or perturbations that separate candidate explanations of population geometry or dynamics
+- Behavioral outcomes, errors, or transfer conditions that can test functional interpretations
+- Time-resolved measurements when candidate accounts make dynamical predictions
 
 ### Question-forming move
 
-Reframe the problem from whether the summary statistic is large or small to whether its underlying structure is aligned with an independently defined outcome-relevant direction. Test whether alignment, rather than aggregate magnitude, predicts saturation, communication, behavior, or readout.
+Elevate collective structure to the level of explanation and turn it into a comparison among explicit alternatives. Depending on the starting tension, test whether heterogeneous activity preserves information, expands available readouts, or forms behavior-linked trajectories; or test which candidate geometry, dynamical account, eigenspectrum-generating constraint, or input-derived explanation best matches changes induced by controlled conditions. Require the favored account to explain observations beyond simpler component-wise, descriptive, or competing population-level alternatives.
 
 ### Scientific payoff
 
-Identifies which components of shared variability are mechanistically consequential and prevents generic correlation from being mistaken for information loss, communication, or behavioral relevance.
+This move converts ambiguous population structure into a discriminating test of computational organization. It can reveal when opaque heterogeneity has collective function and when one geometric or dynamical principle better explains information, generalization, binding, robustness, selection, or behavior without assuming specialized roles for every component.
 
 ### What different outcomes would mean
 
-- Positive: Reproducible alignment with an outcome-relevant direction would support a structured population mechanism and provide a more discriminating criterion than magnitude alone.
-- Negative: Absent or non-reproducible alignment would weaken the proposed structural mechanism and leave nuisance-state, alternative geometry, or uncoupled explanations viable even if the aggregate statistic remains associated with the outcome.
+- Positive: If a prespecified population account uniquely predicts the observed information, geometry, dynamics, responses to controlled variation, or behavioral patterns better than relevant alternatives, it would support that account as an organizing explanation of collective computation.
+- Negative: If population structure provides no advantage or behavioral relevance beyond simpler representations, or if candidate geometries, dynamics, and generating constraints fail to make distinguishable or supported predictions, the proposed collective account would be weakened. The findings would instead favor a simpler explanation, an alternative population account, task-irrelevant variability, or the conclusion that the theoretical comparison remains unresolved.
 
 ### Common failure modes
 
-- Treating all correlations or latent dimensions as equivalent.
-- Defining the outcome-relevant direction from the same noise used to test alignment without adequate separation.
-- Interpreting predictive alignment as causal connectivity.
-- Using magnitude differences as a substitute for a direct structural comparison.
-- Assuming that geometry estimated in one task, population size, or decoder setting transfers unchanged.
+- Treating dimensionality reduction, a fitted geometry, or an eigenspectrum as evidence of mechanism without discriminating predictions
+- Equating decodability with functional use
+- Comparing candidate geometries or dynamical accounts without identifying the distinct observations each predicts
+- Testing only a preferred intermediate or complex geometry while omitting simpler and theoretically relevant alternatives
+- Attributing population structure to an organizing constraint without separating it from input statistics, sampling limitations, or measurement noise
+- Ignoring recording scale, trial count, repeated-observation reliability, or simultaneity limitations
+- Selecting a geometry or dynamical description after inspecting the same outcomes used to support it
+- Transferring a mathematical or mechanistic interpretation without checking the assumptions under which its predictions follow
+- Failing to connect population-level structure to controlled condition changes or behavior when such validation is available
 
 ### Details that should not be transferred
 
-- Tuning-derivative covariance and Fisher-information asymptotics belong to one model family.
-- Specific cortical areas, visual tasks, species, and communication-subspace implementations are source-case details.
-- Circuit interpretations depend on the supplied recurrent-network and sampling assumptions.
+- Specific cortical regions, species, and task factors used in the source studies
+- Particular definitions of mixed selectivity, task axes, semi-orthogonality, binding, abstraction, or generalization
+- Specific classifier, dimensionality, eigenspectrum, smoothness, or recurrent-network implementations
+- Source-specific assumptions about stimulus spaces, differentiable mappings, recording simultaneity, and population coverage
+- Source-specific correct-versus-error, filtering, stimulus-statistics, and risky-choice contrasts
 
 ### Source PaperCases and formation traces
 
-- Source 1: [Information-limiting correlations; Moreno-Bote et al.; doi:10.1038/nn.3807](papers/nn-3807.md) · [Question-formation trace](formation_traces/nn-3807.md)
+- Source 1: [Rigotti, Mattia; Barak, Omri; Warden, Melissa R.; Wang, Xiao-Jing; Daw, Nathaniel D.; Miller, Earl K.; Fusi, Stefano. “The importance of mixed selectivity in complex cognitive tasks.” Nature, 2013.](papers/nature12160.md) · [Question-formation trace](formation_traces/nature12160.md)
+- Source 2: [Mante, V., Sussillo, D., Shenoy, K. V. &amp; Newsome, W. T. (2013). Context-dependent computation by recurrent dynamics in prefrontal cortex.](papers/nature12742.md) · [Question-formation trace](formation_traces/nature12742.md)
+- Source 3: [Stringer, Carsen; Pachitariu, Marius; Steinmetz, Nicholas; Carandini, Matteo; Harris, Kenneth D. (2019), “High-dimensional geometry of population responses in visual cortex,” Nature.](papers/s41586-019-1346-5.md) · [Question-formation trace](formation_traces/s41586-019-1346-5.md)
+- Source 4: [Johnston, W. Jeffrey; Fine, Justin M.; Yoo, Seng Bum Michael; Ebitz, R. Becket; Hayden, Benjamin Y. “Semi-orthogonal subspaces for value mediate a binding and generalization trade-off.” Nature Neuroscience, 2024. DOI: 10.1038/s41593-024-01758-5](papers/s41593-024-01758-5.md) · [Question-formation trace](formation_traces/s41593-024-01758-5.md)
+
+## Pattern 002: Replace an aggregate-statistic claim with a structural-alignment test
+
+- Review authority: `ai_reviewed`
+- Transfer scope: `cross_paper`
+
+### Starting scientific state
+
+- A broad literature claim links the magnitude of an aggregate statistic to performance or information.
+- Contrasting findings show that large changes in the statistic do not always produce the expected functional consequence.
+- Theory suggests that alignment, configuration, or task relevance may matter more than overall magnitude.
+
+### Unresolved tension
+
+The same aggregate level can conceal components with different functional consequences, making a magnitude-only interpretation incompatible with observed performance or decoding results.
+
+### Dataset cues
+
+- Repeated population measurements that permit estimation of covariance or latent structure
+- Independent estimates of signal-relevant, task-relevant, or behaviorally used directions
+- Behavioral, decoding, perturbational, or information-based outcomes
+- Controlled models or comparisons that hold upstream signal content approximately fixed
+
+### Question-forming move
+
+Decompose the aggregate phenomenon into structurally distinct components and ask whether functional consequences depend on alignment with signal- or task-relevant dimensions rather than on global magnitude. Where possible, connect analytic predictions to observable decoding, behavior, or perturbation effects.
+
+### Scientific payoff
+
+The pattern replaces a coarse association with a mechanistic criterion for identifying which part of a measured population statistic matters and why.
+
+### What different outcomes would mean
+
+- Positive: Selective effects of aligned or task-relevant structure would explain why aggregate changes can be behaviorally inconsistent and would identify a candidate circuit or coding dimension.
+- Negative: If alignment or configuration adds no explanatory value and global magnitude consistently predicts outcomes, the simpler aggregate account remains viable and the proposed structural mechanism is weakened.
+
+### Common failure modes
+
+- Inferring alignment from the same data without out-of-sample validation
+- Treating principal components as uniquely mechanistic axes
+- Changing signal strength or tuning while claiming only covariance was manipulated
+- Assuming a statistically detectable component is behaviorally used
+- Generalizing from an idealized information measure to unrelated tasks
+
+### Details that should not be transferred
+
+- Tuning-curve derivative alignment and Fisher-information assumptions
+- A first principal component as the operational variability axis
+- Specific recurrent excitatory-inhibitory models
+- Particular visual tasks, species, or perturbation methods
+
+### Source PaperCases and formation traces
+
+- Source 1: [Moreno-Bote et al. (2014), Information-limiting correlations](papers/nn-3807.md) · [Question-formation trace](formation_traces/nn-3807.md)
 - Source 2: [The structure of correlated variability reflects task-relevant information in sensory neurons](papers/srinath-et-al-2026-the-structure-of-correlated-variability-reflects-task-relevant-information-in-sensory-neurons.md) · [Question-formation trace](formation_traces/srinath-et-al-2026-the-structure-of-correlated-variability-reflects-task-relevant-information-in-sensory-neurons.md)
-- Source 3: [Cortical Areas Interact through a Communication Subspace — Semedo et al., 2019](papers/1-s2-0-s0896627319300534-main.md) · [Question-formation trace](formation_traces/1-s2-0-s0896627319300534-main.md)
 
-## Pattern 002: Test a predicted collective structure and then test its invariance
+## Pattern 003: Translate a mechanistic theory into a global state-space signature
 
 - Review authority: `ai_reviewed`
 - Transfer scope: `cross_paper`
 
 ### Starting scientific state
 
-- A mechanistic theory predicts a global geometry, topology, or low-dimensional organization of collective activity.
-- Earlier work supplies theoretical and analytic precedents but lacks sufficient population scale or controlled comparisons.
-- Competing mechanisms may produce the same static signature.
+- A mechanistic theory predicts a global organization of coordinated activity, such as a manifold, subspace, spectrum, trajectory, or selective mapping between populations.
+- Earlier measurements or component-wise analyses could not resolve that organization.
+- Alternative mechanisms may produce similar local responses, so detecting structure alone is not fully discriminating.
+- The comparison axis used to distinguish mechanisms may involve altered external input, context, or stimulus structure, or may instead contrast within-population organization with across-population or across-area organization.
 
 ### Unresolved tension
 
-Finding the predicted structure may establish descriptive compatibility without distinguishing whether it is intrinsic to the system, inherited from inputs, or generated by an alternative mechanism.
+A theory is plausible at the level of individual responses or pairwise relationships but remains untested at the population scale where its defining topology, geometry, spectrum, subspace, or selective cross-population mapping resides.
 
 ### Dataset cues
 
-- Large simultaneous or otherwise comparable population measurements make global structure estimable.
-- Repeated observations support reliability assessment.
-- The same system is observed across changes in input statistics, environment, condition, or internal state.
+- Sufficiently large simultaneous or coordinated population measurements
+- Repeated observations supporting reliable state-space or cross-population structure estimation
+- Discriminating comparisons that either alter external input, context, or stimulus structure or contrast within-population organization with across-population or across-area organization
+- A theory-derived prediction about topology, dimensionality, invariance, mapping, or selective subspace structure
 
 ### Question-forming move
 
-Estimate the predicted collective structure without imposing it in advance, then test whether defining features and element-specific organization persist across contexts that alter external inputs or operating conditions. Use invariance as the mechanistic discriminator when static structure is non-unique.
+Express the mechanism as a population-level structural prediction, measure that structure at the relevant scale, and test its mapping, invariance, or selectivity using comparisons chosen to separate the focal mechanism from plausible alternatives. Depending on the theory, those comparisons may span external conditions or contrast within-population with across-population organization.
 
 ### Scientific payoff
 
-Converts a qualitative model prediction into a population-level test that separates intrinsic organization from input-bound or alternative explanations.
+This pattern turns an abstract model into a falsifiable population-level signature and clarifies which observations constrain mechanism rather than merely describe activity.
 
 ### What different outcomes would mean
 
-- Positive: Reliable structure that persists across informative context changes would strengthen an intrinsic or stable-organizing-principle account, subject to remaining model non-uniqueness.
-- Negative: Failure to recover the structure or its invariance would weaken the proposed mechanism, reveal strong context dependence, or indicate that measurement scale and assumptions are insufficient.
+- Positive: Recovery of the predicted structure together with its expected mapping, invariance, or selectivity across the relevant comparison would strengthen the mechanistic account and constrain how population organization relates to external inputs, internal organization, or interactions between systems.
+- Negative: Absent, unstable, nonselective, or incorrectly mapped structure would weaken the proposed mechanism and preserve alternatives based on different organizing principles, broadly distributed interactions, condition-specific geometry, or insufficiently resolved population structure.
 
 ### Common failure modes
 
-- Using an analysis that presupposes the predicted geometry.
-- Treating a static signature as uniquely identifying a mechanism.
-- Comparing contexts that also change sampling or measurement quality.
-- Ignoring reliability and finite-sample effects in high-dimensional structure estimates.
-- Calling approximate persistence exact invariance.
+- Declaring mechanism proven from structural detection alone
+- Testing a topology, geometry, or subspace selected after viewing the data
+- Ignoring sample-size and noise sensitivity of structural estimators
+- Confusing low-dimensional visualization with intrinsic dimensionality
+- Using conditions or within-versus-across comparisons that do not actually distinguish the competing mechanisms
 
 ### Details that should not be transferred
 
-- Toroidal organization and cell locations are specific to grid-cell attractor predictions.
-- Power-law eigenspectrum and smoothness-exponent claims are framework-specific.
-- Particular recording scales, stimulus ensembles, environments, and sleep states are not generic requirements.
+- A torus as the predicted topology for a particular spatial code
+- Specific power-law and smoothness assumptions for visual representations
+- Specific cortical communication or value-coding subspaces
+- Particular topology, eigenspectrum, dimensionality, or predictive-subspace estimators
 
 ### Source PaperCases and formation traces
 
-- Source 1: [Toroidal topology of population activity in grid cells](papers/s41586-021-04268-7.md) · [Question-formation trace](formation_traces/s41586-021-04268-7.md)
-- Source 2: [Stringer, Pachitariu, Steinmetz, Carandini &amp; Harris, “High-dimensional geometry of population responses in visual cortex”](papers/s41586-019-1346-5.md) · [Question-formation trace](formation_traces/s41586-019-1346-5.md)
+- Source 1: [Gardner et al., “Toroidal topology of population activity in grid cells,” Nature, 2022.](papers/s41586-021-04268-7.md) · [Question-formation trace](formation_traces/s41586-021-04268-7.md)
+- Source 2: [Stringer, Carsen; Pachitariu, Marius; Steinmetz, Nicholas; Carandini, Matteo; Harris, Kenneth D. (2019), “High-dimensional geometry of population responses in visual cortex,” Nature.](papers/s41586-019-1346-5.md) · [Question-formation trace](formation_traces/s41586-019-1346-5.md)
+- Source 3: [Semedo et al., 2019, “Cortical Areas Interact through a Communication Subspace”](papers/1-s2-0-s0896627319300534-main.md) · [Question-formation trace](formation_traces/1-s2-0-s0896627319300534-main.md)
+- Source 4: [Johnston, W. Jeffrey; Fine, Justin M.; Yoo, Seng Bum Michael; Ebitz, R. Becket; Hayden, Benjamin Y. “Semi-orthogonal subspaces for value mediate a binding and generalization trade-off.” Nature Neuroscience, 2024. DOI: 10.1038/s41593-024-01758-5](papers/s41593-024-01758-5.md) · [Question-formation trace](formation_traces/s41593-024-01758-5.md)
 
-## Pattern 003: Use controlled task contrasts to discriminate population-dynamical mechanisms
-
-- Review authority: `ai_reviewed`
-- Transfer scope: `cross_paper`
-
-### Starting scientific state
-
-- Competing mechanistic accounts predict different relationships between controlled inputs, population activity, and behavior, but heterogeneous unit-level responses do not resolve those alternatives.
-- Population-level geometry and temporal trajectories provide a level of description at which input-driven, selectively coupled, and autonomous dynamics can make distinguishable predictions.
-- The available manipulation controls either the behavioral relevance of an input across contexts or the timing and sign of inputs within a trial.
-
-### Unresolved tension
-
-Observed population evolution may reflect context-dependent coupling of available inputs, continued input-driven accumulation, a transition toward autonomous dynamics, or another organization not captured by a single fixed mechanism. The unresolved issue is which account best explains how controlled inputs shape trajectories and behavior across contexts or time.
-
-### Dataset cues
-
-- A controlled manipulation changes either which available input is behaviorally relevant within a task or when and in what direction discrete inputs arrive within a trial.
-- Population activity is observed with sufficient temporal resolution to characterize geometry, trajectories, or changes in dynamical regime.
-- Behavioral outcomes provide an independent consequence of the proposed mechanism, such as selective use of relevant evidence or changing influence of evidence over time.
-- The controlled contrast permits predictions about input sensitivity, trajectory evolution, or output coupling without assuming that both source cases used a relevance switch.
-
-### Question-forming move
-
-Use a controlled experimental contrast—such as a within-task relevance manipulation or a temporally controlled input stream—to derive distinct population-geometric and temporal predictions from competing dynamical mechanisms. Compare those predictions at the population level, test whether the inferred mechanism has its expected behavioral consequence, and use task-constrained models only to sharpen or interpret the mechanistic alternatives rather than to establish biological implementation.
-
-### Scientific payoff
-
-Turns complex population responses into a discriminating test of how controlled inputs interact with intrinsic dynamics, revealing whether behavior depends on context-dependent input coupling, sustained input-driven evolution, a change in dynamical regime, or another mechanism.
-
-### What different outcomes would mean
-
-- Positive: If population geometry, temporal input sensitivity, and behavior jointly match one mechanism's distinguishing predictions—such as selective coupling of relevant evidence or an input-driven-to-autonomous transition—that mechanism would gain support over alternatives lacking those coordinated signatures.
-- Negative: If the predicted geometry, temporal transition, or behavioral consequence is absent, the proposed mechanism would be weakened; alternatives such as earlier input selection, continued input-driven evolution, a single dynamical mode, or another account of input–population coupling would remain viable or gain relative support.
-
-### Common failure modes
-
-- Changing multiple task properties simultaneously so the controlled contrast cannot be attributed to relevance or input timing.
-- Inferring filtering, autonomy, or commitment solely from weak decodability or a descriptive change in activity.
-- Treating a fitted recurrent, attractor, or flow-field model as proof of biological implementation.
-- Relying on single-unit categories when the competing predictions concern population geometry or trajectories.
-- Failing to test the behavioral consequence expected from the inferred population mechanism.
-- Interpreting temporal coincidence between a neural change and behavior as evidence for a regime transition without testing input sensitivity.
-
-### Details that should not be transferred
-
-- Motion-versus-colour relevance switching and macaque prefrontal recordings are specific to source paper 1.
-- Randomly timed auditory pulses, rat frontal-cortical and striatal recordings, and the proposed input-driven-to-autonomous commitment transition are specific to source paper 2.
-- Pooling units across sessions in source paper 1 is not equivalent to simultaneous population recording.
-- The source recurrent-network architecture and the paper-specific flow-field and dynamical analyses should not be transferred as biological facts or generic requirements.
-
-### Source PaperCases and formation traces
-
-- Source 1: [Context-dependent computation by recurrent dynamics in prefrontal cortex — Valerio Mante, David Sussillo, Krishna V. Shenoy, and William T. Newsome](papers/nature12742.md) · [Question-formation trace](formation_traces/nature12742.md)
-- Source 2: [Transitions in dynamical regime and neural mode during perceptual decisions](papers/s41586-025-09528-4-1.md) · [Question-formation trace](formation_traces/s41586-025-09528-4-1.md)
-
-## Pattern 004: Operationalize an underspecified explanatory variable and compare localized versus distributed representation
+## Pattern 004: Use coordinated common-design measurements to resolve the organization of cross-system signals
 
 - Review authority: `ai_reviewed`
 - Transfer scope: `cross_paper`
 
 ### Starting scientific state
 
-- A theoretically meaningful variable or source of structured variability is suspected to affect population activity, but its representation and spatial scale remain unsettled.
-- The variable may be an internal construct inferred from task history and behavior, or an observed multidimensional state that could explain activity previously treated as noise.
-- Localized-stage and distributed-network accounts make competing predictions about where the relevant representation appears and how it relates to sensory or task-driven activity.
+- Prior evidence establishes that a signal or interaction exists across relevant units or systems, but its population- or system-level organization remains unresolved.
+- Earlier studies or analyses use incomparable sampling or lower-level summaries that cannot distinguish broad involvement from selective organization.
+- Competing accounts predict that the relevant signal or interaction is broadly expressed across available units or dimensions versus concentrated in particular units, stages, or subspaces.
 
 ### Unresolved tension
 
-An apparent population representation may reflect a distinct internal construct, structured ongoing behavior, immediate sensory or task variables, or unexplained intrinsic variability; even when predictive, it may be localized to one processing stage, distributed across levels, or shared with other representational dimensions.
+Observed signals or interactions may reflect broad participation of the measured system or selective organization within it, but differences in sampling, conditions, or analytical scale leave these alternatives underdetermined.
 
 ### Dataset cues
 
-- Simultaneous measurements allow a candidate explanatory variable to be inferred from behavior or directly operationalized from multidimensional behavioral state.
-- Contrasting task, spontaneous, or stimulus contexts help distinguish the candidate representation from immediate sensory drive or other competing interpretations without requiring a specific evidence-removal condition.
-- Comparable population measurements span multiple regions or processing levels.
-- Behavioral measurements can serve either as the representation of interest or as measured alternatives to an inferred internal construct, depending on the scientific question.
+- Coordinated measurements from the relevant units, populations, regions, or systems under a common design
+- Repeated or matched observations that support comparisons of shared variation or interaction structure
+- Coverage at the population or system scale needed to distinguish broad from selective organization
+- An internal reference, comparator, or alternative measurement that helps determine whether the inferred organization is specific to the interaction of interest
 
 ### Question-forming move
 
-Turn a latent or previously underspecified source of population variability into a predictive representation question: operationalize it either by inferring an internal construct from task history and behavior or by treating measured multidimensional behavior as the explanatory signal, use informative context contrasts to distinguish competing interpretations, and compare its spatial distribution, timing, and relation to other representational dimensions across processing levels.
+Use coordinated common-design measurements to compare broad and selective accounts of where a signal is expressed or which activity dimensions participate in an interaction, then evaluate the inferred structure against an internal reference or supported alternative explanation.
 
 ### Scientific payoff
 
-Makes localized-stage, distributed-network, sensory-overlap, behavioral-state, and unexplained-variability accounts empirically comparable while preserving the distinct role that behavior can play as either the construct of interest or an alternative explanation.
+This move elevates evidence from isolated signals or pairwise relationships to a discriminating account of system-level organization, clarifying whether apparent breadth or selectivity reflects the phenomenon of interest, limited sampling, or structure shared with a reference condition.
 
 ### What different outcomes would mean
 
-- Positive: Reliable prediction of population activity from the operationalized variable across multiple processing levels would support a distributed representation; persistence across informative context contrasts would strengthen an internal-construct interpretation when the variable is inferred, whereas prediction from rich behavioral measurements would reclassify apparently unexplained activity as structured behavioral representation. Shared or separable dimensions with sensory activity would further distinguish interaction from concurrent coding.
-- Negative: A signal confined to a restricted processing level would favor a localized account. Failure of an inferred construct to remain distinguishable from measured sensory, motor, or task variables would favor those alternatives, while failure of multidimensional behavior to predict the putatively spontaneous structure would leave simpler state variables, sensory recapitulation, or intrinsic variability as viable explanations.
+- Positive: A reproducible distinction between broad and selective organization, relative to the available reference, would favor the account matching that structure and clarify how earlier partial or lower-level observations fit together.
+- Negative: If the alternatives cannot be distinguished, the inferred structure is unstable, or it resembles the reference comparison, claims of specifically broad or selective organization would be weakened and the existing evidence would remain compatible with more generic shared activity or sampling-dependent explanations.
 
 ### Common failure modes
 
-- Equating an experimenter's manipulated value with a subject's internal estimate.
-- Treating behavioral measurements uniformly as nuisance covariates even when behavior is the explanatory construct of interest.
-- Assuming a context contrast removes every correlated sensory, task, or state variable.
-- Comparing regions or processing levels measured with incompatible sensitivity without qualification.
-- Interpreting temporal precedence or predictability as anatomical or causal influence.
-- Assuming recorded behavioral features exhaust the organism's relevant state.
+- Treating the measured coverage as complete or uniformly informative
+- Comparing units, populations, or systems without accounting for differences in measurement quality or dimensionality
+- Inferring mechanistic transmission or anatomical causation from predictive association alone
+- Using a reference comparison that does not address the alternative explanation it is meant to exclude
+- Equating a compact or widespread statistical representation with a uniquely identified biological mechanism
 
 ### Details that should not be transferred
 
-- For source paper 1 paired with formation trace 1, the core move is instantiated by inferring an uncued subjective prior, using reduced-evidence trials to distinguish it from immediate stimulus information, comparing brain-wide representations, and evaluating measured embodied alternatives.
-- For source paper 2 paired with formation trace 2, the core move is instantiated by treating multidimensional behavior as the explanatory signal for apparently spontaneous activity, predicting neural population activity from behavior, and comparing local, brain-wide, behavioral, and sensory dimensions.
-- The uncued block structure, zero-evidence trials, and left-right visual choice task belong specifically to the IBL case and are not requirements of the cross-paper pattern.
-- The facial-motion representation, spontaneous-period comparison, and particular sensory-context comparison belong specifically to the aav7893 case.
-- Cross-region registration, aggregation, behavioral coverage, and recording sensitivity are dataset-specific.
-- Directionality metrics and predictive relationships do not establish direct causal connectivity or causal influence.
+- The brain-wide public-dataset setting, common anatomical registration, multimodal coverage, and literature-wide localization dispute in the first source
+- The first source's behavioral, movement, reward, trial-history, and embodied controls, including its task-specific low-evidence conditions
+- The two-area source-target design, repeated visual stimuli, trial-to-trial spike-count fluctuations, and held-out within-area comparator in the second source
+- The particular species, sensory tasks, anatomical systems, recording modalities, and directional or dimensional analysis methods used by either source
+- Claims about complete anatomical coverage, synaptic direction, or causal transmission that are not established by the observational measurements
 
 ### Source PaperCases and formation traces
 
 - Source 1: [Brain-wide representations of prior information in mouse decision-making](papers/ibl-s41586-025-09226-1.md) · [Question-formation trace](formation_traces/ibl-s41586-025-09226-1.md)
-- Source 2: [C. Stringer et al., Science 364, eaav7893 (2019)](papers/science-aav7893.md) · [Question-formation trace](formation_traces/science-aav7893.md)
+- Source 2: [Semedo et al., 2019, “Cortical Areas Interact through a Communication Subspace”](papers/1-s2-0-s0896627319300534-main.md) · [Question-formation trace](formation_traces/1-s2-0-s0896627319300534-main.md)
 
-## Pattern 005: Turn unexplained variability into a predictive representation question
-
-- Review authority: `ai_reviewed`
-- Transfer scope: `cross_paper`
-
-### Starting scientific state
-
-- A large component of population activity is labeled spontaneous, noisy, or nuisance variability.
-- Cited work offers competing intrinsic-network, prior-experience, global-state, and ongoing-behavior explanations.
-- New measurement precedents permit richer simultaneous observation of population activity and organismal state.
-
-### Unresolved tension
-
-The unexplained signal may be intrinsic noise, a low-dimensional global state, a representation of multidimensional ongoing behavior, or a mixture that also interacts with task-evoked activity.
-
-### Dataset cues
-
-- Population activity and high-dimensional behavioral or state measurements are simultaneous.
-- Baseline and stimulus or perturbation periods are both available.
-- Measurements cover enough units or regions to compare local and distributed dimensions.
-
-### Question-forming move
-
-Use rich simultaneous state measurements to predict the formerly unexplained population activity, compare them against simpler state summaries, and examine whether identified dimensions are local or distributed and separable from or overlapping with task-evoked representations.
-
-### Scientific payoff
-
-Reclassifies ambiguous variance according to testable explanatory structure and clarifies how ongoing state shapes measurements commonly interpreted as sensory or task coding.
-
-### What different outcomes would mean
-
-- Positive: Reliable prediction from multidimensional state beyond coarse covariates would support a structured behavioral or organismal-state representation rather than a mere-noise account.
-- Negative: Weak incremental prediction would preserve intrinsic-network, unmeasured-state, or stochastic explanations and caution against attributing spontaneous structure to the recorded behavior.
-
-### Common failure modes
-
-- Using incomplete behavioral measurements and interpreting residuals as intrinsic noise.
-- Allowing temporal autocorrelation to inflate prediction.
-- Confusing predictability with neural causation of behavior.
-- Comparing subspaces without reliability or dimensionality controls.
-- Assuming one-dimensional arousal measures exhaust organismal state.
-
-### Details that should not be transferred
-
-- Facial motion, running, pupil, and whisking are particular observables, not a universal behavioral basis.
-- Awake-mouse imaging and electrode configurations are source-specific.
-- The sampled brain regions and sensory contexts limit claims about brain-wide distribution.
-
-### Source PaperCases and formation traces
-
-- Source 1: [C. Stringer et al., Science 364, eaav7893 (2019)](papers/science-aav7893.md) · [Question-formation trace](formation_traces/science-aav7893.md)
-- Source 2: [Brain-wide representations of prior information in mouse decision-making](papers/ibl-s41586-025-09226-1.md) · [Question-formation trace](formation_traces/ibl-s41586-025-09226-1.md)
-- Source 3: [The structure of correlated variability reflects task-relevant information in sensory neurons](papers/srinath-et-al-2026-the-structure-of-correlated-variability-reflects-task-relevant-information-in-sensory-neurons.md) · [Question-formation trace](formation_traces/srinath-et-al-2026-the-structure-of-correlated-variability-reflects-task-relevant-information-in-sensory-neurons.md)
-
-## Pattern 006: Test a mechanistic relation across operating points and deliberate boundary conditions
+## Pattern 005: Use controlled within-task contrasts to test latent population-dynamics mechanisms
 
 - Review authority: `ai_reviewed`
 - Transfer scope: `cross_paper`
 
 ### Starting scientific state
 
-- Theory predicts a relationship between two observable population-level quantities under specified structural assumptions.
-- Prior literature supplies mechanistic and construct precedents but also indicates that state, input covariance, or network structure may alter the relation.
-- A single-condition correlation would not establish either mechanism or scope.
+- Competing mechanistic accounts can explain similar behavior while predicting different population dynamics, such as one versus sequential processing regimes or early filtering versus context-dependent selection within the measured population.
+- Complex, heterogeneous time-varying responses make isolated-unit or predefined single-trajectory interpretations inadequate.
+- The task contains a controlled within-task contrast that changes either when an input should matter or which concurrently available input should matter.
 
 ### Unresolved tension
 
-The predicted relation may reflect a general organizing principle, a local-circuit regularity, or an artifact of idealized assumptions, sampling, or heterogeneous pooling.
+Similar behavioral outcomes can arise from different latent dynamics, leaving it unclear whether population activity reflects a mechanistically meaningful change in input processing or only a descriptive trajectory that does not distinguish the competing accounts.
 
 ### Dataset cues
 
-- Repeated observations span multiple conditions or states within comparable units.
-- Condition changes provide multiple operating points while some background structure is plausibly stable.
-- Cross-unit, cross-region, or pooled comparisons expose structural heterogeneity.
-- A functional readout is available as an optional consequence.
+- Time-resolved measurements that support population-level trajectory or task-related-dimension analysis; simultaneous recordings may be required for trial-resolved transition claims, whereas pooled recordings can support condition-level population contrasts.
+- Timing-based cue from source paper 1: precisely timed, variable sensory inputs and trial-level choices permit comparison of input influence before versus after an inferred within-trial transition.
+- Context-based cue from source paper 2: the same concurrently available sensory dimensions are paired with different contextual rules, permitting comparison of relevant and irrelevant input representations across conditions.
+- Behavioral or physiological observations that provide an external criterion for comparing the alternative dynamical mechanisms.
 
 ### Question-forming move
 
-Test the predicted relation within coherent units across operating points, then deliberately alter structural scale or pooling to find where it persists or breaks. Evaluate a functional consequence separately rather than assuming the mechanistic relation is beneficial.
+Characterize time-varying population activity without assuming that one candidate mechanism is correct, then use a controlled within-task contrast to test whether the observed dynamics and their relation to behavior change as competing accounts predict. The contrast may be timing-based, testing input influence around an inferred transition, or context-based, testing how the relevance of concurrently available inputs alters their population-level representation or integration.
 
 ### Scientific payoff
 
-Distinguishes a robust organizing relation from a context-bound one and treats informative failure as evidence about structural scope.
+This pattern connects population dynamics to an experimentally controlled criterion and distinguishes mechanisms that can produce similar choices but differ in when inputs influence behavior, which inputs are selected or integrated, or where that selection occurs. Timing-based evidence can evaluate sequential versus single-regime accounts, whereas context-based evidence can evaluate early-filtering versus within-population selection accounts.
 
 ### What different outcomes would mean
 
-- Positive: Persistence within coherent units would support the proposed mechanistic link; a corresponding functional consequence would additionally connect organization to computation without being required for the mechanism itself.
-- Negative: Breakdown under structured inputs, pooling, or state changes would bound the theory and may reveal where hidden heterogeneity or coupling invalidates its assumptions.
+- Positive: A reproducible correspondence between population dynamics and the controlled contrast would support the mechanism making that prediction: for a timing-based contrast, a transition accompanied by the predicted change in later input sensitivity would support sequential regimes; for a context-based contrast, predicted context-dependent effects of relevant and irrelevant inputs would support the corresponding selection-and-integration account.
+- Negative: Failure of population dynamics or behavior to vary as predicted by the controlled contrast would weaken the proposed mechanism without presuming a common temporal transition across cases. Stable input influence across an inferred transition could favor a single-regime account or undermine the transition's behavioral interpretation, while absent or mismatched context effects could favor an alternative filtering or geometrical account or leave the mechanism unresolved.
 
 ### Common failure modes
 
-- Assuming the background mechanism is stable across conditions without justification.
-- Pooling heterogeneous units before testing local relations.
-- Treating cross-condition association as a direct estimate of an unobserved parameter.
-- Equating absence of a functional benefit with absence of population organization.
-- Ignoring sampling and measurement effects on estimated dimensionality.
+- Overfitting population trajectories, task-related dimensions, or regime transitions with an overly flexible model.
+- Using the same observations to define a dynamical feature and validate its interpretation without safeguards.
+- Ignoring sensory, motor, timing, contextual, or choice-related covariates.
+- Assuming a model-derived state change or population axis is automatically a cognitive mechanism.
+- Treating a context-dependent relevance contrast as evidence for a within-trial temporal regime switch.
+- Treating pooled, separately recorded units as if they supported the same trial-resolved claims as simultaneous population recordings.
+- Using timing or contextual manipulations that do not sufficiently distinguish the competing mechanistic predictions.
+- Treating a fitted dynamical model as a replacement for correspondence with observed physiological and behavioral patterns.
 
 ### Details that should not be transferred
 
-- The specific firing-rate-diversity and covariance-dimension relation is paper-specific.
-- The source random-circuit assumptions, transfer functions, and connectivity symmetries are not universal.
-- Particular species, regions, stimuli, and decoder measures should not be transferred.
-
-### Source PaperCases and formation traces
-
-- Source 1: [Firing rate diversity lowers the dimension of population covariability in neuronal networks. doi:10.1101/2024.08.30.610535](papers/2024-08-30-610535v3-full.md) · [Question-formation trace](formation_traces/2024-08-30-610535v3-full.md)
-- Source 2: [Stringer, Pachitariu, Steinmetz, Carandini &amp; Harris, “High-dimensional geometry of population responses in visual cortex”](papers/s41586-019-1346-5.md) · [Question-formation trace](formation_traces/s41586-019-1346-5.md)
-- Source 3: [Toroidal topology of population activity in grid cells](papers/s41586-021-04268-7.md) · [Question-formation trace](formation_traces/s41586-021-04268-7.md)
-
-## Pattern 007: Use structured dimensions and matched controls to test selective organization
-
-- Review authority: `ai_reviewed`
-- Transfer scope: `cross_paper`
-
-### Starting scientific state
-
-- Prior literature establishes that a signal, latent variable, or population fluctuation is associated with behavior, another system, or multiple processing levels, but does not resolve the structure or specificity of that relationship.
-- Competing accounts attribute the relationship either to selective organization around particular dimensions or locations, or to broad distribution, dominant generic variability, prediction constraints, or behavioral and task confounds.
-- Available measurements permit the focal signal or dimension to be defined separately from at least one comparison used to test specificity.
-
-### Unresolved tension
-
-An observed association may reflect selective alignment, routing, or distribution of a scientifically meaningful dimension, but it may instead reflect broad representation, dominant local fluctuations, generic prediction structure, target dimensionality, or measured confounds. Not every instantiation involves a separately recorded source and target or a predictive subspace.
-
-### Dataset cues
-
-- A focal latent variable, population dimension, or task-relevant representation can be isolated or independently defined.
-- Measurements permit comparison across systems, processing levels, task conditions, or representational dimensions.
-- A matched comparison, negative control, or measured-confound control can test whether the observed structure is more specific than a generic association.
-- For the strict cross-system predictive instantiation, source and target populations are jointly observed on repeated events and local modes can be estimated independently of cross-system prediction.
-- When distinct source and target populations are unavailable, task contrasts, feature-relevance contrasts, spatial comparisons, behavioral-confound controls, or other matched controls can supply the specificity test.
-
-### Question-forming move
-
-Replace a generic association question with a specificity question: isolate a scientifically meaningful signal or dimension, characterize where it appears or which independently defined dimensions it relates to, and compare that structure against plausible generic or confounded alternatives using an appropriate matched or negative control. In the strict jointly observed source-target form, identify source dimensions predictive of the target and compare their dimensionality and alignment with dominant local modes and matched within-system prediction. Other supported forms compare a controlled latent variable across processing levels while accounting for behavioral confounds, or compare a variability dimension with independently defined task-relevant representations and control contrasts.
-
-### Scientific payoff
-
-Distinguishes selective organization from broad, generic, or confounded association while accommodating predictive coupling, distributed representation, and representational alignment as related but non-identical instantiations.
-
-### What different outcomes would mean
-
-- Positive: Specific structure that differs from appropriate controls—such as restricted predictive dimensions distinct from dominant local modes, selective alignment with independently defined task information, or a distribution pattern not explained by measured confounds—would support a selective organization account at the level measured.
-- Negative: Broad or absent structure, alignment dominated by generic local variability, equivalence to matched controls, or attenuation after accounting for plausible confounds would favor nonselective, generic, localized-stage, nuisance-variable, or constraint-based explanations, depending on the instantiation.
-
-### Common failure modes
-
-- Treating prediction, temporal ordering, or geometric alignment as direct causal, anatomical, or mechanistic transmission.
-- Using a control that is not comparable to the focal analysis or omitting plausible behavioral, task, population, or dimensionality confounds.
-- Attributing restricted structure solely to a source while ignoring target dimensionality or generic estimation constraints.
-- Comparing focal and control dimensions estimated with incompatible definitions or procedures.
-- Conflating distinct instantiations—predictive cross-system coupling, spatial distribution of a latent variable, and task-relevant alignment—as if they supplied identical evidence.
-- Generalizing a pattern observed in one system, task, species, or dataset to a universal organizational principle.
-
-### Details that should not be transferred
-
-- The jointly observed source-predicts-target analysis, matched within-system prediction, and dominant-local-mode contrast constitute the strictest instantiation and are supplied by the Semedo case; they are not supported as common features of all cited sources.
-- The Srinath case supports comparing a restricted variability dimension with independently defined task-relevant representations and using task or control contrasts, but it does not supply a jointly observed source-to-target prediction analysis.
-- The IBL case supports comparing a controlled latent variable across processing levels, examining inter-area temporal relationships, and controlling behavioral confounds; it does not supply a matched within-system prediction control or a predictive-subspace-versus-local-modes test.
-- A matched within-system prediction control is required only for the strict source-target instantiation. Where a distinct source and target population is not recorded, another justified matched, negative, task-contrast, or confound control may replace it.
-- The visual-area pairing, species, task designs, recording modalities, within-area split, correlated-variability axis, and uncued-prior manipulation are source-specific.
-- Particular fluctuation measures, dimensionality-reduction implementations, temporal-directionality analyses, and circuit models are not required by the abstract pattern.
-- An interaction subspace, temporal relationship, or geometric alignment is not itself an anatomical pathway or proof of causal influence.
-
-### Source PaperCases and formation traces
-
-- Source 1: [Cortical Areas Interact through a Communication Subspace — Semedo et al., 2019](papers/1-s2-0-s0896627319300534-main.md) · [Question-formation trace](formation_traces/1-s2-0-s0896627319300534-main.md)
-- Source 2: [Brain-wide representations of prior information in mouse decision-making](papers/ibl-s41586-025-09226-1.md) · [Question-formation trace](formation_traces/ibl-s41586-025-09226-1.md)
-- Source 3: [The structure of correlated variability reflects task-relevant information in sensory neurons](papers/srinath-et-al-2026-the-structure-of-correlated-variability-reflects-task-relevant-information-in-sensory-neurons.md) · [Question-formation trace](formation_traces/srinath-et-al-2026-the-structure-of-correlated-variability-reflects-task-relevant-information-in-sensory-neurons.md)
-
-## Pattern 008: Discriminate population-dynamical mechanisms with controlled within-task contrasts
-
-- Review authority: `ai_reviewed`
-- Transfer scope: `cross_paper`
-
-### Starting scientific state
-
-- Competing theories attribute behavior to different population-level mechanisms, but heterogeneous neural activity does not by itself distinguish them.
-- Population trajectories offer a level of description at which mechanistic accounts can make contrasting predictions.
-- Controlled changes in input timing or behavioral relevance provide within-task contrasts that can test whether a candidate dynamical feature has the consequence expected under a proposed mechanism.
-
-### Unresolved tension
-
-A population-level trajectory or dynamical feature may reflect the proposed mechanism or merely describe complex activity; distinguishing these possibilities requires competing mechanistic predictions and a controlled within-task contrast linking the feature to input influence, information flow, or behavior.
-
-### Dataset cues
-
-- Population activity and trial-level behavior are observed while inputs vary in controlled ways within a task.
-- The design provides contrasts across input timing, contextual relevance, or another manipulation that changes how the same class of evidence should affect computation.
-- Population trajectories can be related to mechanistically discriminating signatures without assuming a particular regime change or recurrent architecture in advance.
-
-### Question-forming move
-
-Move from complex unit-level activity to population trajectories, derive distinct predictions from competing mechanistic accounts, and use a controlled within-task contrast to test whether the observed dynamics have the predicted consequence for input influence, information flow, or behavior. One source contributes a temporal before-versus-after contrast that tests whether a candidate regime transition predicts altered behavioral influence of later input; the other contributes a relevant-versus-irrelevant context contrast that tests whether population information flow supports early filtering or recurrent selection and integration. Treat these as different instantiations of the shared move, not as evidence that every application contains an input-sensitive-to-autonomous transition.
-
-### Scientific payoff
-
-Turns difficult-to-interpret population activity into a discriminating test of mechanism by requiring correspondence between neural dynamics and a separately defined within-task consequence. Across the sources, the shared payoff is comparison of competing population-level accounts; transition-linked commitment and context-dependent selection are distinct, case-specific realizations.
-
-### What different outcomes would mean
-
-- Positive: If population dynamics exhibit the signature predicted by one account and that signature corresponds to the appropriate controlled contrast, the result would support that account over alternatives—for example, a transition linked to changed later input influence or population trajectories showing context-dependent routing of relevant and irrelevant information.
-- Negative: If the predicted population signature is absent, fails to track the controlled contrast, or is equally compatible with competing accounts, the proposed mechanism would be weakened and continuous, early-filtering, alternative selective-integration, or other dynamical explanations would remain viable as appropriate to the case.
-
-### Common failure modes
-
-- Defining a neural feature and validating its consequence with the same statistic or contrast.
-- Using an analysis or model that presupposes the transition, geometry, filtering operation, or recurrent architecture under evaluation.
-- Treating any population trajectory change as evidence for a specific mechanism without deriving predictions that distinguish alternatives.
-- Conflating differential input influence across a temporal transition with context-dependent information flow; these are distinct consequences supported by different source cases.
-- Mistaking changes imposed by stimulus timing or contextual instructions for intrinsic population dynamics.
-- Ignoring trial-to-trial variability or heterogeneity that could obscure the relationship between population activity and the controlled contrast.
-- Treating a task-matched computational model as direct proof of a biological circuit implementation.
-
-### Details that should not be transferred
-
-- The auditory pulse task, recorded regions, species, and interpretation of a temporal transition as decision commitment are specific to the first source case.
-- Differential behavioral influence of evidence before and after an inferred transition is the first source's independent consequence; it is not established by the context-dependent source.
-- The motion-versus-colour task, prefrontal recordings, pooled population construction, and relevant-versus-irrelevant context contrast are specific to the second source case.
-- Context-dependent information flow is the second source's discriminating consequence; it should not be redescribed as loss of input influence after a within-episode transition.
-- The source-specific flow-field, decision-model, population-geometry, and recurrent-network procedures are not generic requirements.
+- The timing-based transition interpretation depends on the source-specific auditory pulse-counting task, precisely timed evidence sequences, simultaneous recordings, and a choice readout that supports pre-versus-post-transition sensitivity tests.
+- The context-based selection interpretation depends on the source-specific motion-versus-colour task and contextual rules governing which concurrently available sensory dimension is relevant.
+- Source-specific frontal, striatal, prefrontal, or frontal-eye-field recordings cannot establish the same dynamics in other regions, species, or task designs.
+- Particular deep-learning flow-field and recurrent-network models are source-specific implementations rather than required components of the shared move.
+- Trial-resolved commitment and context-dependent relevance are distinct source-specific interpretations and should not be treated as interchangeable.
+- Most units in the context-based source were recorded separately, and one colour-related comparison was equivocal for one animal, limiting transfer of simultaneous or uniformly supported population claims.
 
 ### Source PaperCases and formation traces
 
 - Source 1: [Transitions in dynamical regime and neural mode during perceptual decisions](papers/s41586-025-09528-4-1.md) · [Question-formation trace](formation_traces/s41586-025-09528-4-1.md)
-- Source 2: [Context-dependent computation by recurrent dynamics in prefrontal cortex — Valerio Mante, David Sussillo, Krishna V. Shenoy, and William T. Newsome](papers/nature12742.md) · [Question-formation trace](formation_traces/nature12742.md)
+- Source 2: [Mante, V., Sussillo, D., Shenoy, K. V. &amp; Newsome, W. T. (2013). Context-dependent computation by recurrent dynamics in prefrontal cortex.](papers/nature12742.md) · [Question-formation trace](formation_traces/nature12742.md)
+
+## Pattern 006: Turn ambiguous population structure into discriminating task contrasts and functional predictions
+
+- Review authority: `ai_reviewed`
+- Transfer scope: `cross_paper`
+
+### Starting scientific state
+
+- Population activity contains heterogeneous, mixed, or geometrically structured responses whose computational role is unresolved.
+- Competing accounts attribute the observed activity to different mechanisms, such as upstream filtering versus within-population selection, specialized representations versus distributed computational capacity, or separation versus reuse of information.
+- A dataset varies task-relevant inputs, identities, relations, or contextual rules and includes neural population measurements together with behavioral outcomes.
+- Descriptive decoding or single-neuron selectivity alone cannot distinguish the competing accounts.
+
+### Unresolved tension
+
+The same complex population activity may be incidental or reducible to a simpler mechanism, or it may be structured in a way that performs a task-relevant computation. The shared unresolved issue is not whether one particular intermediate geometry exists, but whether population organization makes discriminating neural and behavioral predictions beyond simpler filtering, specialized-code, or task-irrelevant alternatives.
+
+### Dataset cues
+
+- Independent or contextual variation of multiple task-relevant factors within a common paradigm
+- Population measurements across conditions that place different computational demands on the same inputs
+- Behavioral outcomes, including choices, characteristic errors, or correct-versus-error trials, that can constrain functional interpretation
+- A basis for comparing population-level accounts with simpler alternatives or with a constrained mechanistic model
+
+### Question-forming move
+
+Use within-task contrasts to identify predictions that differ across candidate accounts of population computation, then test whether population organization explains both condition-dependent neural structure and task-relevant behavioral outcomes. The concrete contrast may concern preserved identity alongside reuse, upstream filtering versus context-dependent integration, or specialized coding versus distributed representational capacity; an intermediate geometry, cross-condition transfer, or characteristic error pattern should be required only when the source-specific theory supports it. When a mechanistic model is available, ask whether it jointly reproduces the relevant behavioral and physiological patterns rather than treating model fit or decoding alone as sufficient.
+
+### Scientific payoff
+
+This pattern converts difficult-to-interpret population activity into a test of computational function by requiring competing accounts to make distinct predictions across controlled task conditions and behavioral outcomes. It supports mechanistic interpretation without assuming that every source shares the same representational trade-off or geometry.
+
+### What different outcomes would mean
+
+- Positive: If the proposed population account uniquely explains condition-dependent neural organization and the associated behavioral pattern—and, where applicable, a constrained model reproduces both—it would support that organization as a functional computational mechanism rather than incidental heterogeneity or a merely descriptive code.
+- Negative: If the predicted neural contrasts, behavioral associations, transfer patterns, or model correspondences fail, the proposed population-level account would be weakened. Depending on the source-specific alternatives, the evidence could instead favor upstream filtering, simpler or more specialized representations, one extreme of a separation–reuse trade-off, or task-irrelevant heterogeneity; it could also leave the alternatives unresolved.
+
+### Common failure modes
+
+- Treating decoding accuracy, representational similarity, or dimensionality alone as evidence of mechanism
+- Assuming that all sources instantiate an intermediate binding–abstraction geometry
+- Failing to vary the factors or contextual demands needed to distinguish competing accounts
+- Defining candidate mechanisms too loosely to yield different neural and behavioral predictions
+- Using a model as a substitute for physiological observations rather than requiring correspondence with both physiology and behavior
+- Interpreting behavioral errors or correct-versus-error differences without considering alternative causes
+- Inferring shared downstream readout or functional capacity directly from population structure
+
+### Details that should not be transferred
+
+- The binding-versus-generalization framing, semi-orthogonal subspaces, and predictions about transfer and misbinding are specific to source paper 1; they instantiate the broader move through competing geometries linked to characteristic choice errors.
+- The early-filtering-versus-within-prefrontal-selection contrast and recurrent-network reproduction of behavioral and physiological patterns are specific to source paper 2; they instantiate the broader move through contextual contrasts and model-constrained population dynamics, not through an intermediate binding geometry.
+- Residual information after removal of classical selectivity, expanded readout diversity, high dimensionality, and comparison of correct with error trials are specific to source paper 3; they instantiate the broader move by testing mixed selectivity as a population resource, not by requiring cross-condition transfer or binding errors.
+- The particular species, cortical regions, sensory or memory tasks, response modalities, recording arrangements, model architectures, and population-analysis choices of the source papers
+- Any claim that factorial variation, an intermediate geometry, transfer testing, recurrent modeling, or dimensionality analysis is mandatory in every application
+
+### Source PaperCases and formation traces
+
+- Source 1: [Johnston, W. Jeffrey; Fine, Justin M.; Yoo, Seng Bum Michael; Ebitz, R. Becket; Hayden, Benjamin Y. “Semi-orthogonal subspaces for value mediate a binding and generalization trade-off.” Nature Neuroscience, 2024. DOI: 10.1038/s41593-024-01758-5](papers/s41593-024-01758-5.md) · [Question-formation trace](formation_traces/s41593-024-01758-5.md)
+- Source 2: [Mante, V., Sussillo, D., Shenoy, K. V. &amp; Newsome, W. T. (2013). Context-dependent computation by recurrent dynamics in prefrontal cortex.](papers/nature12742.md) · [Question-formation trace](formation_traces/nature12742.md)
+- Source 3: [Rigotti, Mattia; Barak, Omri; Warden, Melissa R.; Wang, Xiao-Jing; Daw, Nathaniel D.; Miller, Earl K.; Fusi, Stefano. “The importance of mixed selectivity in complex cognitive tasks.” Nature, 2013.](papers/nature12160.md) · [Question-formation trace](formation_traces/nature12160.md)
+
+## Pattern 007: Use an empirical comparator or theoretical anchor to interpret observed structure
+
+- Review authority: `ai_reviewed`
+- Transfer scope: `cross_paper`
+
+### Starting scientific state
+
+- A compact, low-dimensional, aligned, or intermediate structure is observed or theoretically expected.
+- Generic dimensionality, shared complexity, measurement artifacts, or multiple functionally distinct geometries could produce superficially similar observations.
+- The scientific claim depends on showing either that the structure is specific to an interaction or task role, or that it occupies a meaningful position between competing theoretical extremes.
+
+### Unresolved tension
+
+Detection of structure alone does not determine whether it is specifically tied to the focal mechanism, reflects generic properties of the system or measurement process, or lies between theoretical extremes that support competing functions such as abstraction and feature binding. Resolving this ambiguity requires either an empirically matched comparator or theoretically defined baseline geometries that serve as classification anchors.
+
+### Dataset cues
+
+- An empirically matched internal comparator, such as a held-out within-system population or a task-irrelevant representation
+- A theoretically defined baseline or extreme structure against which the observation can be classified
+- Relevant-versus-irrelevant task dimensions or other matched functional contrasts
+- Competing candidate geometries or representations with distinct functional implications
+- Repeated observations enabling matched predictive, representational, or behavioral comparisons
+
+### Question-forming move
+
+Place the focal structure against an appropriate reference: either compare it with an empirically matched internal alternative or classify it relative to theoretically defined baseline and extreme geometries. Ask whether it differs in compactness, alignment, mapping, or behavioral consequence from the empirical comparator, or whether its position between theoretical anchors resolves a functional trade-off rather than merely reproducing one endpoint.
+
+### Scientific payoff
+
+A comparator or classification anchor converts a descriptive structural finding into a discriminating test. It can reveal whether an observation is specific rather than generic, or whether an intermediate organization reconciles competing functional demands that neither theoretical extreme satisfies alone.
+
+### What different outcomes would mean
+
+- Positive: A focal structure that differs meaningfully from an empirical reference would support interaction-specific routing, task-organized variability, or another specialized representational role. An observed structure that occupies a functionally consequential position between theoretical extremes would instead support a trade-off account, such as preserving feature binding while retaining some abstraction or generalization.
+- Negative: Similarity to an empirical reference would weaken claims of specialization and favor explanations based on generic shared activity, common dimensionality, or target complexity. Placement near a theoretical endpoint, absence of the predicted intermediate organization, or failure to relate geometry to the expected functional consequences would weaken the proposed trade-off mechanism and favor the function associated with one extreme or leave the structure mechanistically unresolved.
+
+### Common failure modes
+
+- Choosing an empirical comparator that differs in data quality or sample size
+- Treating a theoretical anchor as though it were a separately observed control
+- Interpreting any numerical difference or intermediate value as mechanistic specificity
+- Failing to match prediction targets or nuisance variables across empirical comparisons
+- Using a reference contaminated by the focal interaction
+- Ignoring uncertainty in subspace, alignment, or geometric classification estimates
+- Assigning functional meaning to geometry without checking its predicted behavioral or representational consequences
+
+### Details that should not be transferred
+
+- The held-out within-area comparator from the inter-system recording study
+- Specific relevant-versus-irrelevant visual features
+- Paper-specific definitions of parallel, orthogonal, and intermediate value-position geometries and their error consequences
+- Exact source and target anatomical assignments
+
+### Source PaperCases and formation traces
+
+- Source 1: [Semedo et al., 2019, “Cortical Areas Interact through a Communication Subspace”](papers/1-s2-0-s0896627319300534-main.md) · [Question-formation trace](formation_traces/1-s2-0-s0896627319300534-main.md)
+- Source 2: [The structure of correlated variability reflects task-relevant information in sensory neurons](papers/srinath-et-al-2026-the-structure-of-correlated-variability-reflects-task-relevant-information-in-sensory-neurons.md) · [Question-formation trace](formation_traces/srinath-et-al-2026-the-structure-of-correlated-variability-reflects-task-relevant-information-in-sensory-neurons.md)
+- Source 3: [Johnston, W. Jeffrey; Fine, Justin M.; Yoo, Seng Bum Michael; Ebitz, R. Becket; Hayden, Benjamin Y. “Semi-orthogonal subspaces for value mediate a binding and generalization trade-off.” Nature Neuroscience, 2024. DOI: 10.1038/s41593-024-01758-5](papers/s41593-024-01758-5.md) · [Question-formation trace](formation_traces/s41593-024-01758-5.md)
+
+## Pattern 008: Separate input-bound structure from model-predicted internal organization
+
+- Review authority: `ai_reviewed`
+- Transfer scope: `cross_paper`
+
+### Starting scientific state
+
+- A measured system-level pattern could reflect current input statistics, environmental context, or embodied behavior rather than internal organization.
+- Competing models predict different internal signatures, such as a constrained population geometry, persistence across contexts, or distributed versus localized representation and inter-area interaction.
+- A dataset combines coordinated system-wide measurements with contrasts in input statistics, effective dimensionality, environment, or sensory availability and, where relevant, measurements of plausible behavioral confounds.
+
+### Unresolved tension
+
+The same observed structure can be attributed to inherited input statistics, environment-specific or feedforward construction, embodied covariates, or a model-predicted internal organization expressed through population geometry, persistence, anatomical distribution, or directed inter-component dynamics.
+
+### Dataset cues
+
+- Controlled contrasts in input statistics, effective dimensionality, environment, or sensory availability, including conditions with weak or absent task-relevant input
+- Repeated or coordinated measurements that make the focal population structure reliable and comparable across conditions
+- Broad coverage at the spatial or population scale needed to distinguish localized from distributed organization
+- Measurements of movement, posture, or other embodied variables that could mimic the focal representation
+- Temporal measurements suitable for assessing directed statistical information between system components when interaction patterns discriminate competing models
+
+### Question-forming move
+
+Translate competing explanations into distinct predictions for an observable system-level signature, then use selective contrasts in input statistics, dimensionality, context, or availability to ask whether that signature tracks external conditions or instead exhibits the geometry, persistence, anatomical distribution, or inter-component dynamics predicted by an internal model. When sensory evidence is reduced or absent, use behavioral measurements to test embodied alternatives; when the internal account predicts distributed recurrent organization rather than a mathematical invariant, compare broad spatial representation and directed statistical information against a localized late-stage account.
+
+### Scientific payoff
+
+This move goes beyond detecting correspondence between inputs and measured activity by determining whether the structure is input-bound, behaviorally confounded, localized to a late processing stage, or consistent with a broader model-predicted internal organization. It also clarifies which aspects of internal organization remain supported across geometric, contextual, anatomical, and dynamical tests.
+
+### What different outcomes would mean
+
+- Positive: A signature that remains detectable under altered or reduced input and matches the relevant model prediction—whether a dimensionality-dependent geometry, cross-context population organization, or distributed representation with compatible inter-component dynamics—would strengthen the corresponding internal-organization account, provided behavioral alternatives are not sufficient to explain it.
+- Negative: A signature that follows specific input statistics, changes only with the original environment, localizes to the predicted late processing stage, lacks the model-predicted geometry or interactions, or is explained by embodied variables would weaken the proposed broader internal organization and favor input-bound, feedforward, localized, context-specific, or behavioral alternatives.
+
+### Common failure modes
+
+- Changing several input or contextual properties at once and losing the ability to attribute the observed change
+- Calling persistence invariance without testing whether the representation or mapping remains comparable across conditions
+- Ignoring differences in sampling, state, coverage, or measurement reliability across conditions or system components
+- Treating weak or absent task-relevant input as absence of all external or embodied influence
+- Failing to test movement, posture, reward history, or other behavioral variables that could mimic an internally maintained signal
+- Inferring distributed organization from broad coverage without accounting for uneven sampling or common task covariates
+- Treating directed statistical information as proof of anatomical causation or a uniquely recurrent mechanism
+- Assuming persistence, topology, or distributed decoding uniquely identifies one mechanism
+- Applying a mathematical, geometric, or network-model prediction outside its stated assumptions
+
+### Details that should not be transferred
+
+- Specific natural-image manipulations, visual response spectra, and smooth differentiable mapping assumptions
+- The source-specific spatial environments, sleep states, and particular toroidal topology prediction
+- The specific trial-history prior, zero-contrast condition, visual decision task, and localized-versus-brain-wide anatomical alternatives
+- Source-specific decoding, Granger-causality, video-feature, and pose-estimation implementations
+- Exact species, recording technologies, sensory modalities, anatomical registration, and coverage
+
+### Source PaperCases and formation traces
+
+- Source 1: [Stringer, Carsen; Pachitariu, Marius; Steinmetz, Nicholas; Carandini, Matteo; Harris, Kenneth D. (2019), “High-dimensional geometry of population responses in visual cortex,” Nature.](papers/s41586-019-1346-5.md) · [Question-formation trace](formation_traces/s41586-019-1346-5.md)
+- Source 2: [Gardner et al., “Toroidal topology of population activity in grid cells,” Nature, 2022.](papers/s41586-021-04268-7.md) · [Question-formation trace](formation_traces/s41586-021-04268-7.md)
+- Source 3: [Brain-wide representations of prior information in mouse decision-making](papers/ibl-s41586-025-09226-1.md) · [Question-formation trace](formation_traces/ibl-s41586-025-09226-1.md)

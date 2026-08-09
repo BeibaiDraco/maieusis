@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "maieusis"
-version = "0.1.0"
+version = "0.1.1"
 description = "Maieusis: inspectable, dataset-aware scientific question development before analysis"
 readme = "README.md"
 requires-python = ">=3.11,<3.14"
@@ -98,14 +98,15 @@ packages = ["src/research_agenda_engine"]
 ".codex/agents/dataset-planner.toml" = "research_agenda_engine/_builtin/roles/codex/dataset-planner.toml"
 
 [tool.pytest.ini_options]
-addopts = "-q --strict-markers -m 'not live_openai and not agent_host and not live_agent'"
+addopts = "-q --strict-markers -m 'not live_openai and not live_web and not agent_host and not live_agent'"
 testpaths = ["tests"]
 markers = [
   "slow: heavy pipeline tests excluded from `make test-fast`",
   "agent_host: opt-in coding-agent host adapter tests; default-skipped everywhere (like live_openai), run only via `-m agent_host` (Phase 2 dual-host milestone)",
   "live_agent: opt-in gated real coding-agent spawn; default-skipped everywhere, never in CI, run only via `-m live_agent` with a logged-in coding-agent CLI",
   "live_openai: opt-in tests that call the OpenAI API",
-  "local_artifacts: tests that read the gitignored runs/ artifact dir (present locally, absent on a fresh CI checkout); deselected on CI until they are made hermetic in Phase 3",
+  "live_web: opt-in tests that invoke a real server-side web-search provider; default-skipped everywhere and never run in CI",
+  "local_artifacts: tests that read local-only evidence — the gitignored runs/ artifact dir or the full local clone's archive refs/objects/history (present locally, absent on a fresh shallow CI checkout); deselected on CI",
 ]
 
 [tool.coverage.run]

@@ -31,7 +31,8 @@ from the API keys used by Maieusis scientific-model roles.
 ### Claude Code
 
 Follow the current [official Claude Code setup](https://docs.anthropic.com/en/docs/claude-code/getting-started).
-The npm route requires Node.js 22 or newer:
+The current npm route requires Node.js 18 or newer. Run `claude doctor` after installation so the
+CLI can report its version and installer type:
 
 ```bash
 node --version
@@ -62,14 +63,30 @@ maieusis init
 
 The command is idempotent: it prints `skip` rather than overwriting an existing
 file. It creates `AGENTS.md`, `CLAUDE.md`, `PROJECT_LAYOUT.md`,
-`maieusis.yaml`, `.codex/agents/dataset-planner.toml`, and
-`.claude/agents/dataset-planner.md`.
+`maieusis.yaml`, `.codex/agents/dataset-planner.toml`,
+`.claude/agents/dataset-planner.md`, and a `maieusis-setup` skill under both
+`.claude/skills/` and `.codex/skills/`.
 
 Open Codex or Claude Code in this project directory. Keep the generated files
-in place; they define the operating rules and the isolated Dataset Planner
-role.
+in place; they define the operating rules, the isolated Dataset Planner role,
+and the setup interview.
 
-## 3. Prepare the scientific inputs
+## 3. Ask the agent to set the project up
+
+This is the whole guided route:
+
+```text
+Help me set up this Maieusis project.
+```
+
+Both hosts load the `maieusis-setup` skill from this project, so the agent
+already knows what to ask for, in what order, what it must show you before
+spending anything, and how to read the result. You do not need to paste
+instructions. Everything below documents what that interview will cover, and
+the long prompt near the end remains available if you prefer to drive it
+yourself.
+
+## 4. Prepare the scientific inputs
 
 Give the coding agent only what the run needs:
 
@@ -85,7 +102,7 @@ Do not commit PDFs, restricted data, runtime credentials, or run outputs. The
 International Brain Laboratory (IBL) and Neural Latents Benchmark (NLB)
 demo pages identify their papers and datasets without redistributing them.
 
-## 4. Configure credentials separately
+## 5. Configure credentials separately
 
 A standard run uses scientific model APIs as well as the coding-agent host.
 The Question Owner and independent reviewer must use different providers, so
@@ -105,7 +122,15 @@ MAIEUSIS_ALLOW_PRO_MODEL=1   # only when you deliberately selected a gated model
 ```
 
 Put the required assignments in `~/.config/maieusis/runtime.env`, one per line,
-then restrict access to that file:
+then restrict access to that file. This is the recommended location because it
+sits outside your project and cannot be committed by accident.
+
+Maieusis reads credentials from exported environment variables first, then from
+`.env.local`, `runtime.env`, and `.env` in the directory you run it from, and
+finally from `~/.config/maieusis/runtime.env`. The first place a variable is
+found wins, so a project-local file **silently overrides** the user-level one.
+If your keys ever seem to be the wrong ones, look for a stray project-local file
+before anything else, and keep any you do use out of version control.
 
 ```bash
 mkdir -p ~/.config/maieusis
@@ -117,7 +142,7 @@ chmod 600 ~/.config/maieusis/runtime.env
 Do not ask the coding agent to print secret values. Provider/model names belong
 in `maieusis.yaml`; credentials do not.
 
-## 5. Give the coding agent this prompt
+## 6. Fallback: drive the interview yourself
 
 ```text
 You are helping me operate Maieusis, not perform the scientific analysis.
@@ -153,7 +178,7 @@ deferred or warning outcomes, and incomplete work. Do not claim novelty or a
 scientific result that the run did not establish.
 ```
 
-## 6. Review the zero-paid-call preflight
+## 7. Review the zero-paid-call preflight
 
 Before authorizing a run, confirm that the coding agent has shown you:
 
@@ -173,7 +198,7 @@ you accept the disclosed cost and egress, run:
 maieusis run --project maieusis.yaml
 ```
 
-## 7. Read the result
+## 8. Read the result
 
 Open the path printed by the CLI. Start with the run-local `README.md` and
 `summary.md`, then read `questions/question_families_detailed.md` and the

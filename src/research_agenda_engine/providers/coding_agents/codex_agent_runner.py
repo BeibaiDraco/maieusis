@@ -1370,8 +1370,15 @@ class CodexAgentRunner:
         return version
 
     def _parse_result_payload(self, spawn: _CodexSpawnResult) -> _ParsedCodexResult:
+        # An unreadable stdout stream is the host failing to deliver, not planning material
+        # failing review: these three raises fire before `_result_failure` is ever consulted, so
+        # they can never carry a provider marker and used to escape as a bare ValueError. The
+        # orchestrator's broad handler then closed the family as FAILED_VALIDATION — "the
+        # returned planning material could not be fully validated" — when nothing was returned
+        # at all. Typing them keeps the fail-closed behaviour (this class is a ValueError) and
+        # only corrects which terminal the reader is shown.
         if not spawn.stdout.strip():
-            raise ValueError(
+            raise CodingAgentProviderUnavailable(
                 f"codex exec returned empty stdout (fail-closed); returncode={spawn.returncode}, "
                 f"stderr={tail(spawn.stderr, 500)!r}"
             )
@@ -1384,9 +1391,13 @@ class CodexAgentRunner:
             try:
                 data = json.loads(line)
             except json.JSONDecodeError as exc:
-                raise ValueError(f"codex exec emitted malformed JSONL on line {lineno}") from exc
+                raise CodingAgentProviderUnavailable(
+                    f"codex exec emitted malformed JSONL on line {lineno}"
+                ) from exc
             if not isinstance(data, Mapping):
-                raise ValueError(f"codex exec JSONL line {lineno} was not an object")
+                raise CodingAgentProviderUnavailable(
+                    f"codex exec JSONL line {lineno} was not an object"
+                )
             events.append(data)
             event_type = str(data.get("type", ""))
             event_counts[event_type] += 1

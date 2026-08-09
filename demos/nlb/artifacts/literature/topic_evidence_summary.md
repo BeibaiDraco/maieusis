@@ -1,23 +1,24 @@
 # Topic evidence
 
+> ⚠️ Evidence basis: 3 of 3 open gaps / strong claims rest on ABSTRACT-ONLY literature (full text was not available to this system). These are literature-motivated, NOT fulltext-verified — see the fulltext-enrichment receipt for the per-route fetch breakdown.
+
 - Review authority: `draft` (automated unless expert)
 - Scope: neural population geometry, dynamical systems models, neural dynamics, neural population code, neural co-variability, neural manifolds, representational geometry, neural circuit models
 
 ## Close priors (already answered — avoid redundant questions)
 
-- A cross-area visual-discrimination analysis has already tested whether within-session reproducibility of representational distance geometry relates to neural-behavioral coupling, reporting a positive association for geometric stability and no corresponding association for centroid drift.
+- _(none recorded)_
 
 ## Open gaps (still open — NOT a novelty claim)
 
-- In freely moving conditions, the balance between idiothetic and allocentric hippocampal representations, and the downstream transmission of CA1/CA3 temporal and distance codes, remains unresolved.
+- How stable task-relevant population representations are preserved across contexts when spatial coding remaps remains an open mechanistic question, with current evidence in the supplied set limited to a hippocampal conditioning study and theory-oriented work.
 
 ## Unresolved tensions
 
-- The supplied evidence supports both context-dependent stability of low-dimensional population organization and substantial remapping or representational drift, but does not establish which geometric invariants generalize across brain systems, tasks, timescales, or recording modalities.
-- Evidence relevant to dynamic causal modeling identifies reliability as a necessary methodological concern, but the supplied abstract excerpt does not provide enough result detail to determine which parameter estimates or model-selection conclusions are robust across sessions.
-- The close-prior coverage is narrow: it directly covers within-session geometric stability and neural-behavioral coupling, not the broader range of possible questions about mechanisms, causal control, cross-context generalization, or individual differences.
-- No supplied, claim-supporting record documents reuse of a specific dataset resource for this topic; dataset-reuse precedent is therefore uncharacterized in this brief.
-- Several retrieved records are preprints, posted content, reviews, or broadly framed cross-domain work, so mechanistic conclusions should remain bounded to the reported systems and analyses.
+- The supplied evidence is concentrated in a single scope-term-acquisition lane; required coverage for competing explanations, boundary conditions, close priors, dataset-resource reuse, and dedicated open-gap retrieval is absent.
+- The literature supports geometric descriptions and model-based links to readout or behavior, but the mapping from those descriptions to unique biological mechanisms and cognitive content remains underdetermined.
+- Evidence spans retina, hippocampus, neuroimaging, and theoretical neural-circuit models; the supplied material does not establish when findings generalize across these preparations, tasks, and measurement scales.
+- No source-backed close prior was supplied that directly answers a narrowly specified prospective question; accordingly, no already-answered claim is asserted.
 
 ## If this looks wrong
 

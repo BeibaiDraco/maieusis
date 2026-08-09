@@ -28,14 +28,30 @@ console = Console()
 _RUNTIME_ENV_RESULT: RuntimeEnvLoadResult | None = None
 
 
-def _project_root() -> Path:
+def _asset_root() -> Path:
+    """Where BUNDLED assets live: the wheel's ``_builtin`` tree, or a source checkout."""
+
     return asset_root()
+
+
+def _user_project_root() -> Path:
+    """Where the USER'S project lives: the directory the command was invoked in.
+
+    These two were one function, and the conflation was a real defect. Runtime-env discovery asked
+    for "the project root" and received the asset root, so from an installed wheel it looked for
+    ``.env.local`` / ``runtime.env`` / ``.env`` inside ``site-packages/research_agenda_engine/
+    _builtin`` -- meaning a credentials file sitting next to a user's own ``maieusis.yaml`` was
+    never read, while the shipped example told them it would be. Only the user-level file and
+    exported environment variables worked, and nothing said so.
+    """
+
+    return Path.cwd()
 
 
 def _ensure_runtime_env_loaded(project_root: Path | None = None) -> RuntimeEnvLoadResult:
     global _RUNTIME_ENV_RESULT
     if _RUNTIME_ENV_RESULT is None:
-        _RUNTIME_ENV_RESULT = load_runtime_env(project_root=project_root or _project_root())
+        _RUNTIME_ENV_RESULT = load_runtime_env(project_root=project_root or _user_project_root())
     return _RUNTIME_ENV_RESULT
 
 
@@ -54,7 +70,7 @@ def check_cli(
     from .schemas.maieusis_project_config import MaieusisProjectConfig
     from .services.preflight import run_preflight
 
-    load_runtime_env(project_root=_project_root())
+    load_runtime_env(project_root=_user_project_root())
     config = load_model(project, MaieusisProjectConfig)
     if config.is_demo:
         console.print(f"[yellow]{config.demo_banner}[/yellow]")
@@ -106,7 +122,7 @@ def run_cli(
     )
     from .services.preflight import run_preflight
 
-    load_runtime_env(project_root=_project_root())
+    load_runtime_env(project_root=_user_project_root())
     config = load_model(project, MaieusisProjectConfig)
     if config.is_demo:
         console.print(f"[yellow]{config.demo_banner}[/yellow]")
@@ -184,7 +200,7 @@ def resume_cli(
         execute_resume_from_config,
     )
 
-    load_runtime_env(project_root=_project_root())
+    load_runtime_env(project_root=_user_project_root())
     config = load_model(project, MaieusisProjectConfig)
     if config.is_demo:
         console.print(f"[yellow]{config.demo_banner}[/yellow]")
@@ -215,7 +231,34 @@ def resume_cli(
     except (RunArtifactCorruptionError, RunLockedError, StaleRunLockError, ValueError) as exc:
         console.print(f"[red]Resume failed:[/red] {exc}")
         raise typer.Exit(code=1) from exc
-    console.print(f"[green]Resume complete.[/green] Summary: {summary_path}")
+    from .schemas.run_manifest import RunProcessingState
+    from .schemas.stage_receipt import StageStatus
+    from .services.orchestration.run_envelope import load_run_manifest
+    from .services.orchestration.run_layout import RunPaths, read_stage_receipt
+
+    resumed_paths = RunPaths(root=summary_path.parent)
+    resumed_manifest = load_run_manifest(resumed_paths)
+    scientific_terminal = any(
+        (receipt := read_stage_receipt(resumed_paths, stage.stage.value)) is not None
+        and receipt.status == StageStatus.SCIENTIFIC_TERMINAL
+        for stage in resumed_manifest.stages
+    )
+    if resumed_manifest.run_state == RunProcessingState.COMPLETE and scientific_terminal:
+        console.print(
+            "[yellow]Resume command completed; the run retained an honest scientific terminal "
+            "before downstream dossiers.[/yellow] "
+            f"Summary: {summary_path}"
+        )
+    elif resumed_manifest.run_state == RunProcessingState.COMPLETE:
+        console.print(
+            f"[green]Resume completed; run state is complete.[/green] Summary: {summary_path}"
+        )
+    else:
+        console.print(
+            f"[yellow]Resume command completed; run state is "
+            f"{resumed_manifest.run_state.value}.[/yellow] Summary: {summary_path}\n"
+            f"Next action: {resumed_manifest.next_action}"
+        )
     _print_presentation_outcome(summary_path.parent)
 
 
@@ -242,7 +285,7 @@ def status_cli(
     from .services.orchestration.run_envelope import load_run_manifest, render_run_readme
     from .services.orchestration.run_layout import RunPaths, read_stage_receipt
 
-    load_runtime_env(project_root=_project_root())
+    load_runtime_env(project_root=_user_project_root())
     config = load_model(project, MaieusisProjectConfig)
     run_root = Path(config.run.output_root) / run_id
     if not run_root.is_dir() or not any(run_root.iterdir()):
@@ -252,7 +295,17 @@ def status_cli(
     try:
         manifest = load_run_manifest(paths)
     except (FileNotFoundError, ValueError) as exc:
-        console.print(f"[red]Run envelope is unavailable or invalid:[/red] {exc}")
+        from .services.orchestration.run_envelope import record_detected_integrity_failure
+
+        mismatched = record_detected_integrity_failure(paths) if isinstance(exc, ValueError) else []
+        if mismatched:
+            console.print(
+                "[red]Integrity failure recorded:[/red] indexed artifacts were mutated after "
+                f"promotion ({', '.join(mismatched)}). The run is honestly FAILED; retained "
+                "sibling products remain readable and the mutated bytes hold no authority."
+            )
+        else:
+            console.print(f"[red]Run envelope is unavailable or invalid:[/red] {exc}")
         raise typer.Exit(code=1) from exc
     console.print(render_run_readme(manifest))
     try:
@@ -268,7 +321,11 @@ def status_cli(
     console.print(f"[bold]Run {run_id} — stage state[/bold]")
     for stage in STAGE_ORDER:
         decision = plan.stage_decisions[stage]
-        color = "green" if decision.decision == StageResumeDecisionKind.REUSE else "yellow"
+        color = {
+            StageResumeDecisionKind.REUSE: "green",
+            StageResumeDecisionKind.RUN: "yellow",
+            StageResumeDecisionKind.TERMINAL_NOT_APPLICABLE: "cyan",
+        }[decision.decision]
         # ``ended_at`` is the receipt's persisted completion time. On a resume it stays UNCHANGED for
         # every REUSE stage (the receipt is not rewritten) — the operator's no-re-pay eyeball check:
         # snapshot it before the kill, compare after resume (REUSE rows identical, re-run rows newer).
@@ -280,7 +337,7 @@ def status_cli(
         )
         console.print(
             f"  {stage:<14} receipt={decision.receipt_status:<20} "
-            f"[{color}]{decision.decision.value:<6}[/{color}] "
+            f"[{color}]{decision.decision.value:<24}[/{color}] "
             f"ended={ended:<25} {decision.reason.value}"
         )
     if plan.family_decisions:
@@ -304,6 +361,11 @@ def status_cli(
     console.print(
         f"Would reuse {plan.reused_stage_count} stage(s), re-run {plan.rerun_stage_count} stage(s)."
     )
+    if plan.terminal_not_applicable_count:
+        console.print(
+            f"Would mark {plan.terminal_not_applicable_count} downstream stage(s) not "
+            "applicable after the upstream scientific terminal."
+        )
 
 
 def _print_presentation_outcome(run_root: Path) -> None:
@@ -324,9 +386,26 @@ def _print_presentation_outcome(run_root: Path) -> None:
     if decision is not None and decision.decision == PresentationResumeDecisionKind.REUSE:
         console.print("[green]Detailed presentation pages are ready.[/green]")
         return
-    console.print(
-        "[yellow]Detailed presentation is not ready; scientific run state and compact products "
-        "remain unchanged. Run `maieusis resume` to retry the add-on.[/yellow]"
+    # Prefer the run's own derived sentence over a blanket retry instruction: telling the reader to
+    # resume is useless advice when the pages exist and one entry simply could not be resolved.
+    console.print(f"[yellow]{_presentation_not_ready_message(run_root)}[/yellow]")
+
+
+def _presentation_not_ready_message(run_root: Path) -> str:
+    """The add-on's own warning when one was recorded, else the honest generic fallback."""
+    from .schemas.run_manifest import RunManifest
+    from .services.orchestration.run_layout import RunPaths
+
+    manifest_path = RunPaths(root=run_root).run_manifest
+    try:
+        record = load_model(manifest_path, RunManifest).presentation_addon
+    except (OSError, ValueError):
+        record = None
+    if record is not None and record.warning.strip():
+        return record.warning
+    return (
+        "Detailed presentation is not ready; scientific run state and compact products remain "
+        "unchanged. Retrying the add-on may complete it."
     )
 
 
@@ -336,13 +415,20 @@ _LAYOUT_EXPLAINER = """\
 `maieusis init` scaffolded this project. Next:
 
 1. Start Codex or Claude Code in this directory. Codex reads `AGENTS.md`; Claude Code reads
-   `CLAUDE.md`, which imports the same operating contract.
+   `CLAUDE.md`, which imports the same operating contract. Both also load the `maieusis-setup`
+   skill from their own skills directory -- ask the agent to help you set the project up and it
+   will run that interview.
 2. Put lawfully obtained source PDFs in `paperbank.inbox_dir` (default `papers/inbox/`). Keep PDFs,
    datasets, and credentials untracked.
 3. Edit `maieusis.yaml` — set the real `dataset.seed.link`, read-only
-   `dataset.inspection_runtime.dataset_root`, and distinct Owner/Reviewer providers. When running an
-   installed wheel outside its source checkout, also point `source_tree_root` at a clean Maieusis
-   source-integrity checkout with HEAD. Keep API keys only in an untracked runtime.env, never in
+   `dataset.inspection_runtime.dataset_root`, and distinct Owner/Reviewer providers.
+   If you installed from the package index, you also need a clean Maieusis checkout for
+   source-integrity checks, and you do not have one yet. This is the most common first-run failure:
+
+       git clone https://github.com/BeibaiDraco/maieusis.git ~/maieusis-source
+
+   Then set `source_tree_root` to that absolute path. `git init` in this project does not work --
+   the checkout has to be Maieusis. Keep API keys only in an untracked runtime.env, never in
    this YAML. The coding-host login/subscription is separate from scientific model API credentials.
 4. Run `maieusis check --project maieusis.yaml`. It preflights the inputs and reports the estimated
    model calls/planner spawns with ZERO paid calls. Resolve failures, show the report, and ask the
@@ -361,7 +447,7 @@ service exist.
 
 def _resolve_bundled(*candidates: str) -> Path | None:
     """Find a bundled asset, trying each relative candidate under the asset root (wheel or source)."""
-    root = _project_root()
+    root = _asset_root()
     for rel in candidates:
         p = root / rel
         if p.exists():
@@ -400,6 +486,17 @@ def init_cli(
         (
             "CLAUDE.md",
             _resolve_bundled("examples/project/CLAUDE.template.md"),
+        ),
+        # ONE source file, two destinations. Both hosts read a project-level skill from their own
+        # directory, and shipping two source files would need a checker to keep them identical.
+        # Copying one file twice makes byte-identity structural instead: it cannot drift.
+        (
+            ".claude/skills/maieusis-setup/SKILL.md",
+            _resolve_bundled("examples/project/maieusis-setup.SKILL.md"),
+        ),
+        (
+            ".codex/skills/maieusis-setup/SKILL.md",
+            _resolve_bundled("examples/project/maieusis-setup.SKILL.md"),
         ),
     ]
     for dst_rel, src in materialized:

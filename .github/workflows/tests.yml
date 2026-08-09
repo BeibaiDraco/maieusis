@@ -1,26 +1,34 @@
 name: checks
 
+# PR heads run once through pull_request; only merged main runs through push. This removes
+# the duplicate same-SHA run the old any-branch push + pull_request pair produced.
 on:
-  push:
   pull_request:
+  push:
+    branches:
+      - main
 
 permissions:
   contents: read
+
+concurrency:
+  group: public-checks-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   full-offline:
     name: Full offline, static, and package checks
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: "3.11"
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
         with:
           enable-cache: true
       - name: Validate CITATION.cff against CFF 1.2
-        uses: citation-file-format/cffconvert-github-action@2.0.0
+        uses: citation-file-format/cffconvert-github-action@4cf11baa70a673bfdf9dad0acc7ee33b3f4b6084 # 2.0.0
         with:
           args: "--validate"
       - name: Resolve development environment
@@ -36,13 +44,13 @@ jobs:
           ANTHROPIC_API_KEY: ""
         run: >-
           uv run pytest
-          -m "not live_openai and not local_artifacts and not agent_host and not live_agent"
+          -m "not live_openai and not live_web and not local_artifacts and not agent_host and not live_agent"
           tests
       - name: Build distributions
         run: uv build
       - name: Check distributions
         run: uvx twine check dist/*
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: checked-python-package-distributions
           path: dist/
@@ -61,11 +69,11 @@ jobs:
           - "3.12"
           - "3.13"
     steps:
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: ${{ matrix.python-version }}
-      - uses: astral-sh/setup-uv@v5
-      - uses: actions/download-artifact@v4
+      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: checked-python-package-distributions
           path: dist/

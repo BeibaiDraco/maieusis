@@ -27,7 +27,7 @@ from ...schemas.question_pattern import (
     QuestionPatternTransferScope,
 )
 from .gate_kernel import run_structured_gate_review
-from .promotion import assert_promotion_binding
+from .promotion import assert_promoted_status_is_holdable, assert_promotion_binding
 from .reviewer_base import build_scientific_reviewer_provider_from_env
 
 QUESTION_PATTERN_REVIEWER_PROMPT_VERSION = "question_pattern_reviewer/v2"
@@ -136,12 +136,19 @@ def promote_pattern_to_ai_reviewed(
 ) -> QuestionPatternCard:
     """Stamp ``AI_REVIEWED`` on a pattern-accepted card, or raise (fail closed).
 
-    The AI promoter never writes ``EXPERT_REVIEWED`` — an AI verdict cannot masquerade as human. The
-    card's own traceability validator (source ids + cross-paper ≥2) re-enforces closure on construction.
+    The AI promoter never writes ``EXPERT_REVIEWED`` — an AI verdict cannot masquerade as human.
+
+    The card's own traceability validator (source ids + cross-paper ≥2) is re-enforced explicitly
+    below. It is NOT enforced by the ``model_copy`` on the next line, which this docstring used to
+    claim: ``model_copy(update=...)`` skips validation entirely, so the stamp could mint an
+    ``AI_REVIEWED`` card whose cross-paper claim rests on a single source. Found 2026-07-30 while
+    fixing the sibling trace promoter, whose identical gap ended a live climate leg.
     """
     assert_promotion_binding(
         candidate=pattern, outcome=outcome, expected_gate=QUESTION_PATTERN_GATE
     )
-    return pattern.model_copy(
+    promoted = pattern.model_copy(
         deep=True, update={"review_status": QuestionPatternReviewStatus.AI_REVIEWED}
     )
+    assert_promoted_status_is_holdable(promoted, expected_gate=QUESTION_PATTERN_GATE)
+    return promoted

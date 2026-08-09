@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
-from ...io import dump_data, load_model
+from pydantic import ValidationError
+
+from ...io import dump_data, load_data, load_model
 from ...provenance import sha256_file, stable_hash
 from ...schemas.dataset_narrative import DatasetNarrative
 from ...schemas.question_pattern import QuestionPatternCard
@@ -50,6 +53,7 @@ from ...schemas.scientific_context import (
     TopicEvidenceClaimStatus,
 )
 from ..paper_patterns.retrieval import QuestionPatternBank
+from ..retrieval.generic_topic_lanes import GENERIC_SCOPE_TERM_QUERY_LANE
 from .evidence_basis_labels import (
     abstract_only_gap_and_strong_claim_counts,
     provenance_evidence_basis_note,
@@ -58,6 +62,7 @@ from .export_gate import build_proposer_source_evidence_card, require_exportable
 from .review_gates import assert_question_scientist_inputs_are_reviewed
 from .topic_evidence import (
     R5TopicEvidenceSourceTable,
+    R5TopicSourceRecordEvidence,
     TopicSourceSnippetKind,
     build_source_evidence_cards,
     claim_supporting_source_ids,
@@ -72,6 +77,22 @@ class QuestionScientistContextReadinessError(ValueError):
     schema, provenance, and identity invariant failures.  Only this exception is eligible for the
     Stage-C scientific-terminal path.
     """
+
+
+@dataclass(frozen=True)
+class RightsSafeTopicSourceProjection:
+    """One validated legacy source-table projection for deterministic Stage-C compilation.
+
+    This is deliberately not a general alternate source loader.  Resume constructs it only after
+    verifying the dataset receipt and rights-degradation sidecar.  The context builder then binds
+    it back to the immutable legacy bytes and permits only the exact removal of unverified fetched
+    passages; independently retained abstracts/provider snippets remain usable.
+    """
+
+    source_table: R5TopicEvidenceSourceTable
+    original_semantic_digest: str
+    excluded_source_record_ids: tuple[str, ...]
+    projection_reason: Literal["legacy_v0_1_rights_degradation"] = "legacy_v0_1_rights_degradation"
 
 
 def _topic_basis_note(topic_pack: TopicLiteratureContextPack) -> str:
@@ -94,6 +115,152 @@ def _require_stage_artifact(path: Path, *, artifact: str, produced_by: str) -> P
     return path
 
 
+def _validate_rights_safe_topic_source_projection(
+    source_table_path: Path,
+    projection: RightsSafeTopicSourceProjection,
+) -> R5TopicEvidenceSourceTable:
+    """Bind a legacy-only projection to raw bytes without widening the normal loader."""
+
+    raw_payload = load_data(source_table_path)
+    if stable_hash(raw_payload) != projection.original_semantic_digest:
+        raise ValueError(
+            "rights-safe topic projection does not match the immutable source-table semantics"
+        )
+    try:
+        R5TopicEvidenceSourceTable.model_validate(raw_payload)
+    except ValidationError:
+        pass
+    else:
+        raise ValueError(
+            "rights-safe topic projection is reserved for the validated legacy no-provenance path"
+        )
+    if not isinstance(raw_payload, dict) or not isinstance(raw_payload.get("records"), list):
+        raise ValueError("legacy rights-safe topic projection requires a typed table envelope")
+
+    excluded_ids = tuple(projection.excluded_source_record_ids)
+    if not excluded_ids or len(excluded_ids) != len(set(excluded_ids)):
+        raise ValueError("legacy rights-safe topic projection requires unique excluded source IDs")
+    raw_records = raw_payload["records"]
+    if any(not isinstance(record, dict) for record in raw_records):
+        raise ValueError("legacy rights-safe topic projection requires object records")
+    raw_by_id = {
+        record.get("source_record_id"): record
+        for record in raw_records
+        if isinstance(record.get("source_record_id"), str)
+    }
+    if len(raw_by_id) != len(raw_records):
+        raise ValueError("legacy rights-safe topic projection requires unique source IDs")
+    projected_by_id = {
+        record.source_record_id: record for record in projection.source_table.records
+    }
+    if len(projected_by_id) != len(projection.source_table.records) or set(projected_by_id) != set(
+        raw_by_id
+    ):
+        raise ValueError("legacy rights-safe topic projection changed the source identity set")
+    if not set(excluded_ids).issubset(raw_by_id):
+        raise ValueError("legacy rights-safe topic projection excludes an unknown source ID")
+
+    for source_id, raw_record in raw_by_id.items():
+        projected_record = projected_by_id[source_id]
+        if source_id not in excluded_ids:
+            try:
+                unchanged_record = R5TopicSourceRecordEvidence.model_validate(raw_record)
+            except ValidationError as exc:
+                raise ValueError(
+                    "legacy rights-safe topic projection cannot validate an independently "
+                    "retained source"
+                ) from exc
+            if projected_record != unchanged_record:
+                raise ValueError(
+                    "legacy rights-safe topic projection changed an independently retained source"
+                )
+            continue
+        if raw_record.get("snippet_kind") != "fulltext_excerpt":
+            raise ValueError("legacy rights-safe projection may exclude only fetched full text")
+        safe_payload = {
+            **raw_record,
+            "abstract_or_snippet": "",
+            "abstract_status": "metadata_only",
+            "snippet_kind": "metadata",
+            "source_quality_flags": [
+                *raw_record.get("source_quality_flags", []),
+                "fulltext_rights_unverified",
+                "legacy_fulltext_removed_from_safe_projection",
+            ],
+        }
+        try:
+            expected_degraded_record = R5TopicSourceRecordEvidence.model_validate(safe_payload)
+        except ValidationError as exc:
+            raise ValueError(
+                "legacy rights-safe projection could not construct the exact degraded record"
+            ) from exc
+        if projected_record != expected_degraded_record:
+            raise ValueError(
+                "legacy rights-safe projection did not remove the unverified fetched passage"
+            )
+
+    for field_name in ("table_id", "query_plan_id", "protocol_version", "lane_coverage"):
+        if projection.source_table.model_dump(mode="json").get(field_name) != raw_payload.get(
+            field_name
+        ):
+            raise ValueError("legacy rights-safe topic projection changed table identity")
+    expected_table_flags = [
+        *raw_payload.get("source_quality_flags", []),
+        "legacy_v0_1_rights_safe_projection",
+    ]
+    if projection.source_table.source_quality_flags != expected_table_flags:
+        raise ValueError("legacy rights-safe topic projection changed table quality flags")
+    return projection.source_table
+
+
+def _project_brief_onto_rights_safe_sources(
+    brief: TopicEvidenceBrief,
+    *,
+    excluded_source_record_ids: set[str],
+) -> tuple[TopicEvidenceBrief, int]:
+    """Retain only claims whose complete cited basis survives the rights downgrade.
+
+    A mixed-source claim is dropped: co-citation does not prove that the remaining abstract alone
+    supports the original synthesis.  Free-prose field-state summaries are likewise not carried
+    across the boundary; the only scientific tension/prior text retained is rebuilt from surviving
+    typed claims.
+    """
+
+    projected_claims: list[TopicEvidenceClaim] = []
+    dropped_claim_count = 0
+    for claim in brief.claims:
+        source_ids = _claim_source_ids(claim)
+        if not source_ids or set(source_ids) & excluded_source_record_ids:
+            dropped_claim_count += 1
+            continue
+        projected_claims.append(claim)
+    open_or_contested = [
+        claim.claim
+        for claim in projected_claims
+        if claim.status
+        in {TopicEvidenceClaimStatus.OPEN_QUESTION, TopicEvidenceClaimStatus.CONTESTED}
+    ]
+    answered = [
+        claim.claim
+        for claim in projected_claims
+        if claim.status == TopicEvidenceClaimStatus.ALREADY_ANSWERED
+    ]
+    return (
+        brief.model_copy(
+            update={
+                "claims": projected_claims,
+                "canonical_scope": (
+                    "Rights-safe projection of independently supported reviewed claims."
+                ),
+                "nearest_dataset_reuse_work": [],
+                "questions_already_answered": answered,
+                "unresolved_tensions": open_or_contested,
+            }
+        ),
+        dropped_claim_count,
+    )
+
+
 def build_question_scientist_context_payload_v2(
     *,
     corpus_root: str | Path = "corpus",
@@ -102,6 +269,7 @@ def build_question_scientist_context_payload_v2(
     pattern_limit: int = 8,
     max_topic_sources: int = 30,
     provisional_inspiration: bool = False,
+    rights_safe_topic_source_projection: RightsSafeTopicSourceProjection | None = None,
 ) -> QuestionScientistContextPayloadV2:
     root = Path(corpus_root)
     intent_path = Path(intent_path)
@@ -136,7 +304,20 @@ def build_question_scientist_context_payload_v2(
     )
     dataset_narrative = load_model(dataset_path, DatasetNarrative)
     topic_brief = load_model(topic_path, TopicEvidenceBrief)
-    source_table = load_model(source_table_path, R5TopicEvidenceSourceTable)
+    source_table = (
+        _validate_rights_safe_topic_source_projection(
+            source_table_path,
+            rights_safe_topic_source_projection,
+        )
+        if rights_safe_topic_source_projection is not None
+        else load_model(source_table_path, R5TopicEvidenceSourceTable)
+    )
+    # A legacy rights downgrade cannot retain the old verified topic-context authority.  It enters
+    # the existing provisional-inspiration lane automatically, preserving usable lower-authority
+    # abstracts/snippets without presenting the derived context as freshly reviewed.
+    provisional_inspiration = (
+        provisional_inspiration or rights_safe_topic_source_projection is not None
+    )
     if provisional_inspiration:
         assert_question_scientist_inputs_are_reviewed(
             paperbank_question_patterns=reviewed_patterns,
@@ -157,6 +338,16 @@ def build_question_scientist_context_payload_v2(
         source_table,
         max_topic_sources=max_topic_sources,
         provisional_inspiration=provisional_inspiration,
+        original_source_table_digest=(
+            rights_safe_topic_source_projection.original_semantic_digest
+            if rights_safe_topic_source_projection is not None
+            else None
+        ),
+        excluded_source_record_ids=(
+            set(rights_safe_topic_source_projection.excluded_source_record_ids)
+            if rights_safe_topic_source_projection is not None
+            else None
+        ),
     )
     dataset_pack = _compile_dataset_context_pack(dataset_narrative)
 
@@ -202,6 +393,14 @@ def build_question_scientist_context_payload_v2(
                 "Raw review Markdown, raw source tables, blocked drafts, and full abstracts are excluded.",
                 # DP-2 surface 2: honest, ID-free, cause-neutral basis note the Question Scientist sees.
                 *([_topic_basis_note(topic_pack)] if _topic_basis_note(topic_pack) else []),
+                *(
+                    [
+                        "A receipt-bound legacy rights projection removed unverified fetched "
+                        "passages; independently retained lower-authority source text remains."
+                    ]
+                    if rights_safe_topic_source_projection is not None
+                    else []
+                ),
             ],
         ).model_dump(mode="json"),
         "source_artifact_digests": {
@@ -210,6 +409,11 @@ def build_question_scientist_context_payload_v2(
             "dataset_narrative": sha256_file(dataset_path),
             "topic_evidence_brief": sha256_file(topic_path),
             "topic_source_table": sha256_file(source_table_path),
+            **(
+                {"topic_source_table_safe_projection": stable_hash(source_table)}
+                if rights_safe_topic_source_projection is not None
+                else {}
+            ),
         },
     }
     payload_id, context_id, digest = question_scientist_context_v2_ids(base)
@@ -413,12 +617,15 @@ def _compile_topic_literature_context_pack(
     *,
     max_topic_sources: int,
     provisional_inspiration: bool = False,
+    original_source_table_digest: str | None = None,
+    excluded_source_record_ids: set[str] | None = None,
 ) -> TopicLiteratureContextPack:
     source_record_ids = [record.source_record_id for record in source_table.records]
     if len(source_record_ids) != len(set(source_record_ids)):
         raise ValueError("topic source table contains duplicate source_record_id values")
     actual_source_table_digest = stable_hash(source_table)
-    if brief.source_table_digest != actual_source_table_digest:
+    source_table_binding_digest = original_source_table_digest or actual_source_table_digest
+    if brief.source_table_digest != source_table_binding_digest:
         raise ValueError("TopicEvidenceBrief source_table_digest does not match source table")
     topic_card_review_status: Literal["expert_reviewed", "ai_reviewed", "provisional"] = (
         "provisional"
@@ -436,13 +643,35 @@ def _compile_topic_literature_context_pack(
     # insufficient when a record was explicitly classified off-topic/non-primary; provisional mode
     # may retain partial evidence, but it must never re-export a source the curator blocked.
     claim_supporting_ids = claim_supporting_source_ids(source_table)
+    projected_brief = brief
+    dropped_rights_claim_count = 0
+    if excluded_source_record_ids:
+        projected_brief, dropped_rights_claim_count = _project_brief_onto_rights_safe_sources(
+            brief,
+            excluded_source_record_ids=excluded_source_record_ids,
+        )
+        unknown_projected_sources = sorted(
+            {
+                source_id
+                for claim in projected_brief.claims
+                for source_id in _claim_source_ids(claim)
+                if source_id not in record_by_id
+            }
+        )
+        if unknown_projected_sources:
+            raise ValueError(
+                "legacy rights-safe TopicEvidenceBrief cites sources absent from its immutable "
+                "source table: " + ", ".join(unknown_projected_sources)
+            )
     safe_claims = [
         claim
-        for claim in brief.claims
+        for claim in projected_brief.claims
         if _claim_source_ids(claim) and set(_claim_source_ids(claim)).issubset(claim_supporting_ids)
     ]
     working_brief = (
-        brief.model_copy(update={"claims": safe_claims}) if provisional_inspiration else brief
+        projected_brief.model_copy(update={"claims": safe_claims})
+        if provisional_inspiration
+        else projected_brief
     )
     ready, issues = evaluate_topic_evidence_readiness(
         working_brief,
@@ -647,6 +876,7 @@ def _compile_topic_literature_context_pack(
                 ),
             )
             for lane, count in sorted(source_table.lane_coverage.items())
+            if lane != GENERIC_SCOPE_TERM_QUERY_LANE
         ],
         field_state_capsule=(
             _field_state_capsule_from_brief(working_brief) if working_brief.claims else []
@@ -671,6 +901,22 @@ def _compile_topic_literature_context_pack(
                 *(
                     [f"Provisional topic readiness issue: {issue}" for issue in issues]
                     if provisional_inspiration and issues
+                    else []
+                ),
+                *(
+                    [
+                        "Legacy rights-safe projection omitted every claim touching unverified "
+                        "fetched text while retaining independently supported claims."
+                    ]
+                    if excluded_source_record_ids
+                    else []
+                ),
+                *(
+                    [
+                        f"Legacy rights-safe projection omitted {dropped_rights_claim_count} "
+                        "claim(s) with no remaining independent support."
+                    ]
+                    if dropped_rights_claim_count
                     else []
                 ),
             ],

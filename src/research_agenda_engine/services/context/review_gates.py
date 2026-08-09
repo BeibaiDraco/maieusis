@@ -35,20 +35,6 @@ class ArtifactGateResult(BaseModel):
         }
 
 
-REQUIRED_R5_TOPIC_LANES = [
-    "geometry_theory_methods",
-    "noise_shared_variability_geometry",
-    "latent_dynamics_state_space",
-    "multi_area_coding_communication",
-    "temporal_latency_dynamics",
-    "circuit_interpretation",
-    "movement_body_state_confound",
-    "ibl_bwm_public_reuse",
-    "cross_subject_session_lab_generalization",
-    "close_priors_already_answered",
-    "live_tensions_and_limitations",
-]
-
 LEGACY_TOPIC_REGION_LANES = {
     "target_regions_cp_po_lp",
     "target_region_cp",
@@ -96,13 +82,6 @@ def gate_topic_evidence_review_item(
         reasons.append("missing R5 topic source table")
         actions.append("Rebuild topic source table with R5 lane protocol.")
     else:
-        lane_coverage = getattr(r5_source_table, "lane_coverage", {}) or {}
-        missing_lanes = [
-            lane for lane in REQUIRED_R5_TOPIC_LANES if lane_coverage.get(lane, 0) == 0
-        ]
-        if missing_lanes:
-            reasons.append("required topic lanes lack sources: " + ", ".join(missing_lanes))
-            actions.append("Rebuild retrieval with geometry/noise/circuit lanes and curated seeds.")
         legacy_records = [
             record.source_record_id
             for record in getattr(r5_source_table, "records", [])

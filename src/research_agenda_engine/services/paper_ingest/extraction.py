@@ -43,21 +43,18 @@ STRUCTURED_OUTPUT_MAX_ATTEMPTS = 3
 class _ExtractionPaperCase(PaperCase):
     """Model-facing PaperCase used ONLY as the extraction ``output_model``.
 
-    Blocker #1: the extractor asks the model to fill the WHOLE PaperCase, so the model also supplies the
-    self-declared verification statuses. A ``formation_trace`` the model marks ``span_verified`` whose
-    ``evidence_bindings`` cite span ids outside ``evidence_span_ids`` crashes ``PaperCase.model_validate``
-    (the ⊆ rule fires DURING construction), discarding the whole good case before any in-repo logic runs.
-    This variant pins the model-supplied ``formation_trace.review_status`` to DRAFT BEFORE field
-    validation — the pre-validation mirror of the post-construction ``_reset_model_supplied_review_status``
-    (which handles the sibling ``review.status``) — so the case survives; the repo then EARNS promotion
-    from verified spans. The strict PaperCase /
-    QuestionFormationTrace validators are UNCHANGED (never weakened); the extractor converts this back to
-    a plain ``PaperCase`` immediately after parsing.
+    The extractor asks the model to fill the WHOLE PaperCase, including fields whose authority belongs
+    to later local stages. This variant normalizes those fields BEFORE strict construction: it pins the
+    self-declared formation-trace review status to DRAFT, and clears paper-local literature identity that
+    only ``build_paper_local_literature_context`` may mint. The repo then EARNS review promotion and local
+    literature identity from verified bytes. The strict PaperCase / QuestionFormationTrace validators are
+    UNCHANGED (never weakened); the extractor converts this back to a plain ``PaperCase`` immediately
+    after parsing.
     """
 
     @model_validator(mode="before")
     @classmethod
-    def _pin_model_supplied_formation_trace_status(cls, data: Any) -> Any:
+    def _pin_model_supplied_local_authority(cls, data: Any) -> Any:
         # Accept a parent PaperCase instance (mock/test providers hand back an instance, not a dict) by
         # dumping to a dict first — pydantic will not coerce a parent instance into this subclass.
         if isinstance(data, BaseModel):
@@ -70,6 +67,39 @@ class _ExtractionPaperCase(PaperCase):
             trace = data.get("formation_trace")
             if isinstance(trace, dict):
                 trace["review_status"] = QuestionFormationTraceReviewStatus.DRAFT.value
+            # The extraction packet contains no built paper-local literature context, so an ID or
+            # digest supplied here cannot be evidence identity. In the 2026-08-06 climate leg, 22 of
+            # 39 real extraction responses invented the same top-level and inline-trace identity;
+            # every one then failed strict construction because its literature-side bindings were
+            # correctly source-span-only. Clear only those later-stage-owned locators. The literature
+            # builder writes genuine values after the extracted PaperCase is safely persisted.
+            model_supplied_literature_identity = bool(
+                str(data.get("local_literature_context_id", "")).strip()
+                or str(data.get("local_literature_context_digest", "")).strip()
+                or (
+                    isinstance(trace, dict)
+                    and (
+                        str(trace.get("local_literature_context_id", "")).strip()
+                        or str(trace.get("local_literature_context_digest", "")).strip()
+                    )
+                )
+            )
+            data["local_literature_context_id"] = ""
+            data["local_literature_context_digest"] = ""
+            if isinstance(trace, dict):
+                trace["local_literature_context_id"] = ""
+                trace["local_literature_context_digest"] = ""
+            if model_supplied_literature_identity:
+                review = data.get("review")
+                if not isinstance(review, dict):
+                    review = {}
+                    data["review"] = review
+                corrections = list(review.get("corrections") or [])
+                corrections.append(
+                    "Ignored model-supplied paper-local literature identity; local enrichment "
+                    "controls that identity."
+                )
+                review["corrections"] = corrections
         return data
 
 
@@ -281,6 +311,9 @@ class PaperCaseExtractionPipeline:
                 require_source_spans=self.evidence_mode == "source_span",
             )
         )
+        # Runs AFTER materialization on purpose: that step is what puts a cited packet span into
+        # `evidence_spans`, and this step will only declare a span that is already there.
+        paper_case.review.corrections.extend(_reconcile_formation_trace_binding_spans(paper_case))
         trace_requests = _formation_trace_evidence_requests(
             paper_case,
             packet,
@@ -956,6 +989,59 @@ def _materialize_formation_trace_evidence_spans(
             f"Materialized formation-trace evidence from parser source span {source_span.span_id}."
         )
     return corrections
+
+
+def _reconcile_formation_trace_binding_spans(paper_case: PaperCase) -> list[str]:
+    """Declare, in ``evidence_span_ids``, the real spans the trace's own bindings already cite.
+
+    ``_materialize_formation_trace_evidence_spans`` above closes the CASE-side containment (a span the
+    trace cites must exist in ``PaperCase.evidence_spans``). This closes the TRACE-INTERNAL one that
+    ``QuestionFormationTrace`` also requires: ``evidence_bindings[].source_span_ids`` must be a subset
+    of the trace's declared ``evidence_span_ids``. Nothing was closing it, and the model routinely
+    cites a real span in a binding without repeating it in the declaration.
+
+    Measured on the 2026-07-29 climate leg: 12 of 13 non-null draft traces violated this, across 138
+    span references -- and ALL 138 were spans genuinely present in the same paper's ``evidence_spans``.
+    Zero were invented. The consequence was severe and indirect: the trace could never earn
+    SPAN_VERIFIED, the extractor raised ``formation_trace_not_span_verifiable``, and the paid fidelity
+    reviewer then failed ``supports_formation_trace`` and returned ``revise`` -- which the gate turned
+    into a discard. Eight of twenty papers were lost that way, on a draft field that
+    ``promote_paper_case_to_ai_reviewed`` deletes moments later anyway.
+
+    The reviewer asked for exactly this repair, in these words: "Reconcile
+    formation_trace.evidence_bindings source_span_ids with formation_trace.evidence_span_ids: either
+    add span00071/span00072/span00073 to evidence_span_ids or correct the binding to use only spans
+    already listed."
+
+    Deliberately narrow. A binding span absent from ``PaperCase.evidence_spans`` is NOT declared --
+    declaring it would immediately violate the case-side rule in ``PaperCase.validate_reviewed_fields``
+    and would be exactly the invention this repair must not commit. Such a span keeps raising its
+    evidence request and the trace stays DRAFT, which is the honest outcome.
+    """
+    trace = paper_case.formation_trace
+    if trace is None:
+        return []
+    declared = set(trace.evidence_span_ids)
+    # A trace that declared NOTHING is a different case, and it already has a deliberate owner: the
+    # extractor drops it and the dedicated trace stage generates a fresh draft. Unioning bindings into
+    # an empty declaration would override that design decision, not repair a bookkeeping slip. Every
+    # one of the 12 live traces this repair recovers had a non-empty declaration and merely missed a
+    # few of the spans its own bindings cited, so the narrowing costs nothing measured.
+    if not declared:
+        return []
+    cited = {span_id for binding in trace.evidence_bindings for span_id in binding.source_span_ids}
+    available = {span.source_span_id for span in paper_case.evidence_spans if span.source_span_id}
+    declarable = sorted((cited - declared) & available)
+    if not declarable:
+        return []
+    trace.evidence_span_ids.extend(declarable)
+    return [
+        "Declared "
+        + str(len(declarable))
+        + " formation-trace evidence span(s) already cited by its own bindings: "
+        + ", ".join(declarable)
+        + "."
+    ]
 
 
 def _find_same_page_exact_source_anchor(

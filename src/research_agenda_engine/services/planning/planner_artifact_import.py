@@ -151,8 +151,21 @@ def import_returned_planner_artifacts(
             probe_map.construct_probe_id for probe_map in construct_probe_maps
         ),
         imported_event_ids=imported_event_ids,
+        # `artifact_paths`, deliberately NOT `all_paths`. The repair-audit files in the other half
+        # of `all_paths` are described by their own schema as "private audit files, intentionally
+        # excluded from ordinary artifact projection" (schemas/planner_run.py), and no supported
+        # model type can parse them -- so listing them here guaranteed that any family needing a
+        # lossless shape repair hit the hardest terminal in the system. Measured: 1 of 57 planner
+        # branches produced a repair-audit directory, and it is the only hard-integrity terminal
+        # in the live corpus, closed with nothing retained while both of its completed reviews sat
+        # unread on disk. Their integrity is not weakened by this: the repair ledger is separately
+        # hard-validated at import with per-record sha256 over both raw and canonical payloads,
+        # and bound here by `presentation_repair_ledger_digest`.
         checked_paths=sorted(
-            {str(Path(path)) for path in (*resolved_bundle.all_paths, str(validation_report_path))}
+            {
+                str(Path(path))
+                for path in (*resolved_bundle.artifact_paths, str(validation_report_path))
+            }
         ),
         validation_report_digest=validation_report_digest,
         manifest_path=str(manifest_path),

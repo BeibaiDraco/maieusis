@@ -29,7 +29,7 @@ flowchart TB
     B --> Branch
     C --> IR["Independent plan reviewer"]
     IR --> D["End-user dossier + audit record"]
-    D -. "not available in v0.1.0" .-> X["Analysis execution"]
+    D -. "not available" .-> X["Analysis execution"]
 ```
 
 ## Two coding-agent responsibilities
@@ -113,7 +113,7 @@ trusted or promoted, and the run remains incomplete.
 
 ## The execution boundary
 
-Maieusis v0.1.0 ends at the scientific question dossier. An accepted dossier
+Maieusis v0.1.1 ends at the scientific question dossier. An accepted dossier
 is still a plan, not an analysis contract or result. No model output, config
 change, demo, or accepted plan can authorize downstream analysis execution.
 

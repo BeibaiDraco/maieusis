@@ -81,6 +81,15 @@ FORBIDDEN_TEXT_TOKENS = (
     "approved for execution",
 )
 
+# The stable phrase a caller can key off to report that the FIREWALL, rather than a malformed reply,
+# rejected generated prose. Callers must relay this cause without echoing the matched text.
+FIREWALL_REJECTION_MARKER = "proposer-forbidden evidence"
+
+# What makes a claim about columns a DISCLOSURE rather than domain prose: a token shaped like a
+# machine identifier -- snake_case, camel_snake (`stimOn_times`), or an explicitly quoted/backticked
+# name. Scientific writing does not produce these; a leaked schema is made of them.
+_SCHEMA_IDENTIFIER_TOKEN = r"(?:[`'\"][A-Za-z_][\w.]*[`'\"]|\b[A-Za-z][A-Za-z0-9]*_[A-Za-z0-9_]+\b)"
+
 FORBIDDEN_TEXT_PATTERNS = (
     re.compile(r"\bn[_\s-]?(trials|sessions|subjects|rows)\s*[=:]\s*\d+", re.IGNORECASE),
     re.compile(r"\b(row|trial|session|subject)\s+count\s*(is|=|:)?\s*\d+", re.IGNORECASE),
@@ -89,9 +98,57 @@ FORBIDDEN_TEXT_PATTERNS = (
         r"\b(choice|feedback_times|stim_on_times|probability_left)\s+column\b", re.IGNORECASE
     ),
     re.compile(r"\b(?:column|columns|schema)\s*(?:named|=|:)\s*\S+", re.IGNORECASE),
+    # A schema noun is schema language on its own and needs no identifier.
     re.compile(
-        r"\b(?:exact\s+)?(?:column|columns|table\s+schema|dataframe\s+schema|parquet\s+schema)\b"
+        r"\b(?:exact\s+)?(?:table|dataframe|parquet)\s+schema\b"
         r".{0,60}\b(?:exists?|includes?|contains?|verified|available)\b",
+        re.IGNORECASE,
+    ),
+    # The bare noun does NOT. `column` alone is ordinary science vocabulary -- "the water column
+    # contains", "total column ozone is available", "the atmospheric column includes", "a cortical
+    # column contains" -- and this was the ONE pattern in this family with no identifier requirement
+    # (:89 names real column identifiers, :91 requires `named|=|:` plus a token, the bridge/receipt
+    # patterns below require a digit-bearing token). It runs inside the generation mirror, where the
+    # batch is one list parse, so a single variant's sentence failed the WHOLE QuestionFamilyBatch --
+    # and `first_raw = _generate()` has no retry, so the run ended at Stage D with zero families and
+    # zero dossiers. One ordinary word could zero a leg.
+    #
+    # The boundary is unchanged and the SCOPE stays batch-wide: a genuine disclosure contaminates the
+    # shared context, so failing closed is right there. Only the predicate is fixed -- a claim about
+    # columns must carry what makes it a disclosure: a data-container qualifier, or an
+    # identifier-shaped token. "total column ozone is available" names no column; "Columns include
+    # stimOn_times, feedback_times, and choice" does, and that exact phrasing is what a real
+    # branch-to-proposer leak looks like in this project's own planner evidence.
+    # `exact column(s)` is the disclosure by itself -- it asserts that the real schema was inspected,
+    # and no scientific writer describes "the exact atmospheric column". No identifier required.
+    re.compile(
+        r"\bexact\s+columns?\b.{0,60}\b(?:exists?|includes?|contains?|verified|available)\b",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"\b(?:table|dataframe|parquet|csv|data|dataset|trials?|sessions?)\s+columns?\b"
+        r".{0,60}\b(?:exists?|includes?|contains?|verified|available)\b",
+        re.IGNORECASE,
+    ),
+    # The identifier may sit in any of three positions relative to the `column ... verb` core, and
+    # all three are the same disclosure: "the probability_left column exists", "exact column
+    # trials.feedback_times exists", "Columns include stimOn_times". Enumerated rather than merged so
+    # each window stays bounded and readable.
+    re.compile(
+        _SCHEMA_IDENTIFIER_TOKEN + r".{0,40}\b(?:exact\s+)?columns?\b"
+        r".{0,60}\b(?:exists?|includes?|contains?|verified|available)\b",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"\b(?:exact\s+)?columns?\b.{0,60}?"
+        + _SCHEMA_IDENTIFIER_TOKEN
+        + r".{0,60}\b(?:exists?|includes?|contains?|verified|available)\b",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"\b(?:exact\s+)?columns?\b"
+        r".{0,60}\b(?:exists?|includes?|contains?|verified|available)\b"
+        r".{0,80}" + _SCHEMA_IDENTIFIER_TOKEN,
         re.IGNORECASE,
     ),
     re.compile(r"\bconfirmation\s+(?:outcome|result)\s+(?:was|is|=|:)", re.IGNORECASE),
@@ -244,7 +301,7 @@ def assert_proposal_safe_payload(value: Any, *, context: str) -> None:
 
     found = _find_forbidden_payload(value, path=context)
     if found:
-        raise ValueError(f"{context} contains proposer-forbidden evidence: {found}")
+        raise ValueError(f"{context} contains {FIREWALL_REJECTION_MARKER}: {found}")
 
 
 def _find_forbidden_payload(value: Any, *, path: str) -> str:

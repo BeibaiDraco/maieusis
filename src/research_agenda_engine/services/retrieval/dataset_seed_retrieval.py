@@ -33,7 +33,7 @@ BytesGetter = Callable[[str], bytes]
 
 LinkKind = Literal["dandi", "doi", "url"]
 
-_USER_AGENT = "maieusis/0.1.0"
+_USER_AGENT = "maieusis/0.1.1"
 _DANDI_API = "https://api.dandiarchive.org/api"
 _CROSSREF_API = "https://api.crossref.org/works"
 _DANDI_ID_RE = re.compile(r"(?:dandi[:/]|dandiset/|dandisets/)\s*0*(\d{3,6})", re.IGNORECASE)

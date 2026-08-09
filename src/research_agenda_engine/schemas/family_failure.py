@@ -15,6 +15,8 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from .stage_receipt import FailureClass
 
+# Raw exception views stay bounded. Typed scientific/reviewer rationales are safe after the full
+# hazard scan and must not lose the evidence that makes a rejection useful.
 MAX_PUBLIC_FAMILY_FAILURE_TEXT = 500
 MAX_INTERNAL_FAMILY_FAILURE_TEXT = 2000
 SAFE_FAMILY_FAILURE_REASON = (
@@ -52,7 +54,7 @@ _UNSAFE_FAMILY_FAILURE_PATTERNS: tuple[re.Pattern[str], ...] = (
 
 
 def sanitize_family_failure_text(value: str) -> str:
-    """Return bounded public text without treating ordinary scientific prose as secret.
+    """Return safe public scientific/reviewer text without treating length as a hazard.
 
     The public sanitizer is intentionally about transport/internal identifiers, credentials,
     local paths, raw payload size, and serialized authority/result fields.  Method language such
@@ -63,11 +65,25 @@ def sanitize_family_failure_text(value: str) -> str:
     cleaned = " ".join(value.split())
     if not cleaned:
         return ""
-    if len(cleaned) > MAX_PUBLIC_FAMILY_FAILURE_TEXT:
-        return SAFE_FAMILY_FAILURE_REASON
+    # Hazards are scanned on the WHOLE string first, so a credential or path straddling the cut
+    # cannot survive by being truncated in half.
     if any(pattern.search(cleaned) for pattern in _UNSAFE_FAMILY_FAILURE_PATTERNS):
         return SAFE_FAMILY_FAILURE_REASON
     return cleaned
+
+
+def sanitize_family_exception_text(value: str) -> str:
+    """Return a bounded public view of raw exception transport after the same full hazard scan."""
+    cleaned = sanitize_family_failure_text(value)
+    if not cleaned or cleaned == SAFE_FAMILY_FAILURE_REASON:
+        return cleaned
+    if len(cleaned) <= MAX_PUBLIC_FAMILY_FAILURE_TEXT:
+        return cleaned
+    prefix = cleaned[: MAX_PUBLIC_FAMILY_FAILURE_TEXT + 1]
+    if " " not in prefix:
+        return "An internal failure message exceeded the public display bound; see run diagnostics."
+    bounded = prefix.rsplit(" ", 1)[0].rstrip(" ,;:")
+    return bounded + " [bounded exception view; see run diagnostics]"
 
 
 class BackHalfLineage(BaseModel):

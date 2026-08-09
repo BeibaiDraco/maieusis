@@ -28,6 +28,17 @@ def _demo_root() -> Path:
     return source_root if source_root.is_dir() else ROOT / "demos"
 
 
+def _docs_root() -> Path:
+    """Where the published docs live: under `public/` in this tree, at the root in the projection.
+
+    Derived from the demo root rather than written out, because the exporter rewrites exactly one
+    literal spelling of that path and a second copy would ship unprojected into the public tree.
+    Both trees keep docs and demos in the same shape, so one answers for the other.
+    """
+    demo_root = _demo_root()
+    return ROOT / "docs" / demo_root.name if demo_root.name == "public" else ROOT / "docs"
+
+
 def _public_roots() -> list[Path]:
     public_roots = [ROOT / "docs", ROOT / "demos"]
     if public_roots[0].is_dir():
@@ -80,7 +91,7 @@ def _assert_mapping_contains(actual: dict[str, object], expected: dict[str, obje
 def test_release_identity_and_license_are_consistent() -> None:
     pyproject = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]
     assert pyproject["name"] == "maieusis"
-    assert pyproject["version"] == __version__ == "0.1.0"
+    assert pyproject["version"] == __version__ == "0.1.1"
     assert pyproject["license"] == "Apache-2.0"
     assert pyproject["license-files"] == ["LICENSE", "NOTICE", "THIRD_PARTY_NOTICES.md"]
     assert [author["name"] for author in pyproject["authors"]] == [
@@ -100,8 +111,8 @@ def test_citation_metadata_names_only_the_two_software_authors() -> None:
     citation = yaml.safe_load((ROOT / "CITATION.cff").read_text(encoding="utf-8"))
     assert citation["cff-version"] == "1.2.0"
     assert citation["title"] == "Maieusis"
-    assert citation["version"] == "0.1.0"
-    assert str(citation["date-released"]) == "2026-07-16"
+    assert citation["version"] == "0.1.1"
+    assert str(citation["date-released"]) == "2026-08-07"
     assert citation["license"] == "Apache-2.0"
     assert citation["repository-code"] == "https://github.com/BeibaiDraco/maieusis"
     assert len(citation["authors"]) == 2
@@ -113,7 +124,10 @@ def test_citation_metadata_names_only_the_two_software_authors() -> None:
         "https://orcid.org/0000-0003-2589-7232",
         "https://orcid.org/0000-0002-6916-5511",
     ]
-    assert citation["doi"] == "10.5281/zenodo.21388806"
+    # Concept DOI on purpose. A version DOI cannot exist here: Zenodo mints it from the
+    # published GitHub Release, while the release workflow validates this file during the
+    # freeze that precedes publication, so a version DOI could only be invented or stale.
+    assert citation["doi"] == "10.5281/zenodo.21388805"
     assert "preferred-citation" not in citation
     assert all("email" not in author for author in citation["authors"])
 
@@ -127,21 +141,24 @@ def test_public_citation_surfaces_bind_the_released_version_and_concept_dois() -
     guide = (docs_root / "CITATION.md").read_text(encoding="utf-8")
     index = (docs_root / "INDEX.md").read_text(encoding="utf-8")
 
-    version_doi = "10.5281/zenodo.21388806"
+    released_version_doi = "10.5281/zenodo.21388806"  # v0.1.0, which stays citable forever
     concept_doi = "10.5281/zenodo.21388805"
     expected_citation = (
-        "Xu, Y., & Doiron, B. (2026). *Maieusis* (Version v0.1.0) [Computer software]. Zenodo."
+        "Xu, Y., & Doiron, B. (2026). *Maieusis* (Version v0.1.1) [Computer software]. Zenodo."
     )
     readme_prose = " ".join(readme.replace("\n> ", " ").split())
     guide_prose = " ".join(guide.replace("\n> ", " ").split())
 
+    # The current release's citation resolves through the CONCEPT DOI, because its own version DOI
+    # does not exist until Zenodo mints it from the published release. Both surfaces must still
+    # carry the earlier version DOI so a reader who ran v0.1.0 can cite exactly what they ran.
     for text in (readme, guide):
-        assert version_doi in text
         assert concept_doi in text
+        assert released_version_doi in text
     assert expected_citation in readme_prose
     assert expected_citation in guide_prose
-    assert "use this when reporting work performed with Maieusis v0.1.0" in guide_prose
-    assert "without identifying a particular version" in guide_prose
+    assert f"https://doi.org/{concept_doi}" in readme_prose
+    assert "Version v0.1.0" in guide_prose
     assert "[Citation guide](CITATION.md)" in index
     assert "package is available from PyPI" not in readme
     assert "DOI will be added" not in readme
@@ -150,11 +167,13 @@ def test_public_citation_surfaces_bind_the_released_version_and_concept_dois() -
         "https://img.shields.io/pypi/v/maieusis.svg",
         "https://img.shields.io/pypi/pyversions/maieusis.svg",
         "https://github.com/BeibaiDraco/maieusis/actions/workflows/tests.yml/badge.svg?branch=main&event=push",
-        "https://zenodo.org/badge/DOI/10.5281/zenodo.21388806.svg",
+        # Concept DOI badge: a version-DOI badge goes stale on every release and cannot be correct
+        # before the release it names has been published.
+        "https://zenodo.org/badge/DOI/10.5281/zenodo.21388805.svg",
         "https://img.shields.io/pypi/l/maieusis.svg",
     )
     assert all(badge in readme for badge in badges)
-    assert "https://pypi.org/project/maieusis/0.1.0/" in readme
+    assert "https://pypi.org/project/maieusis/0.1.1/" in readme
 
 
 def test_public_source_tree_contains_no_raw_papers_or_private_release_records() -> None:
@@ -187,14 +206,59 @@ def test_public_source_tree_contains_no_raw_papers_or_private_release_records() 
                 assert not target.endswith((".pdf", ".nwb")), (path, target)
 
 
+# `cc` (citation context) belongs in the DIGEST-SHAPED alternation, never beside `cw`: the loose
+# `[A-Za-z0-9]` branch would match `CC-BY` under re.I, and the climate cohort cites CC-BY licensed
+# articles. Real identifiers are `cc-<12 hex>`, which the hex branch catches while leaving licence
+# names alone. `test_internal_identifier_scan_separates_digests_from_licence_names` pins both
+# halves of that behaviour.
+# Three internal tracker ids and one dangling redaction marker shipped in published dossiers while
+# this guard was green, because the pattern below did not name them. `review-change-` was the leak;
+# `[internal id]` is worse, because it is the sanitizer's own residue -- it means a citation was
+# stripped and the sentence left pointing at nothing. Both are now matched. When a new internal id
+# shape appears, it belongs here BEFORE it appears in an artifact.
+_INTERNAL_ID_RE = re.compile(
+    r"\b(?:cw|qfamily|qvariant|qpattern)-[A-Za-z0-9]"
+    r"|\b(?:branch|cc|event|evidence|claim|context|request|session|thread|review-change)-"
+    r"(?:[0-9a-f]{6,}|[0-9]{3,})\b"
+    r"|\[internal id\]",
+    re.I,
+)
+
+
+def test_internal_identifier_scan_separates_digests_from_licence_names() -> None:
+    """The demo scan must catch citation-context identifiers without eating licence names.
+
+    The four positive samples are verbatim identifiers from the 2026-08-06 climate leg's PaperBank
+    summary, which the pre-D0 audit found the scan did not match at all.
+    """
+
+    for identifier in (
+        "cc-217e489593e2",
+        "cc-3bc2d4091d98",
+        "cc-aadb6a28b306",
+        "cc-e3a5463a88ad",
+        "see cc-217e489593e2 for the surrounding sentence",
+        "cw-abc123",
+        "branch-1a2b3c4d",
+    ):
+        assert _INTERNAL_ID_RE.search(identifier) is not None, identifier
+
+    for licence in (
+        "CC-BY",
+        "cc-by",
+        "CC-BY-4.0",
+        "cc-by-nc-sa",
+        "published under CC-BY 4.0",
+        "Creative Commons CC BY",
+        "CC0",
+    ):
+        assert _INTERNAL_ID_RE.search(licence) is None, licence
+
+
 def test_curated_demo_artifacts_do_not_leak_internal_identifiers_or_private_payloads() -> None:
-    artifact_roots = [_demo_root() / demo / "artifacts" for demo in ("ibl", "nlb")]
-    internal_id = re.compile(
-        r"\b(?:cw|qfamily|qvariant|qpattern)-[A-Za-z0-9]"
-        r"|\b(?:branch|event|evidence|claim|context|request|session|thread)-"
-        r"(?:[0-9a-f]{6,}|[0-9]{3,})\b",
-        re.I,
-    )
+    artifact_roots = [_demo_root() / demo / "artifacts" for demo in ("climate", "ibl", "nlb")]
+    expected_counts = {"climate": 50, "ibl": 43, "nlb": 44}
+    internal_id = _INTERNAL_ID_RE
     private_field = re.compile(
         r"\b(?:provider_)?session_id\b|\brequest_id\b|\braw_payload\b|"
         r"\bhidden_audit\b|\bsource_tree_root\b|\bcapture_path\b",
@@ -203,7 +267,7 @@ def test_curated_demo_artifacts_do_not_leak_internal_identifiers_or_private_payl
 
     for root in artifact_roots:
         files = sorted(path for path in root.rglob("*") if path.is_file())
-        assert len(files) == 43
+        assert len(files) == expected_counts[root.parent.name]
         for path in files:
             if path.suffix.lower() not in {".md", ".yaml", ".yml"}:
                 continue
@@ -213,24 +277,27 @@ def test_curated_demo_artifacts_do_not_leak_internal_identifiers_or_private_payl
             assert "EvidenceRequest[" not in text, path
 
 
-def test_public_runtime_contains_no_retired_network_product_identity() -> None:
-    retired_tokens = (
-        "quae" + "ro",
-        "zete" + "sis",
-        "xete" + "sis",
-        "research" + "-agenda-engine",
-    )
-    retired = re.compile(
-        r"(?i)\b(?:" + "|".join(re.escape(token) for token in retired_tokens) + r")\b"
-    )
-    offenders = []
-    for path in sorted((ROOT / "src").rglob("*.py")):
-        if retired.search(path.read_text(encoding="utf-8")):
-            offenders.append(path.relative_to(ROOT).as_posix())
-    assert offenders == []
+def test_public_runtime_names_exactly_one_product_identity() -> None:
+    """The published runtime presents one product name, and the packaging agrees with the prose.
+
+    This guard used to enumerate retired codenames literally, split across a `+` so the regex would
+    not match itself. The concatenation hid those strings from the regex and from nobody else -- it
+    was the only place they appeared in the published tree. The check is positive now: the console
+    script, the distribution name, and the prose brand must be the same one word.
+    """
+    pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    assert 'name = "maieusis"' in pyproject
+    assert 'maieusis = "research_agenda_engine.product_cli:app"' in pyproject
+
+    # `research_agenda_engine` is an import package name. It must never be used as the product's
+    # name in user-facing prose, which is where a retired brand would surface.
+    cli = (ROOT / "src" / "research_agenda_engine" / "product_cli.py").read_text(encoding="utf-8")
+    for sentence in re.findall(r"[A-Z][^.\n]{10,200}\.", cli):
+        assert "research_agenda_engine is" not in sentence
+        assert "research-agenda-engine" not in sentence
 
 
-def test_public_demo_paper_cohort_is_frozen_from_all_twelve_unique_sources() -> None:
+def test_shared_neuroscience_cohort_serves_both_demos_from_twelve_unique_sources() -> None:
     demo_root = _demo_root()
     shared = yaml.safe_load(
         (demo_root / "shared" / "paper_sources.yaml").read_text(encoding="utf-8")
@@ -256,7 +323,7 @@ def test_public_demo_paper_cohort_is_frozen_from_all_twelve_unique_sources() -> 
     filenames = [paper["filename"] for paper in shared["papers"]]
     hashes = [paper["pdf_sha256"] for paper in shared["papers"]]
     dois = [paper["doi"] for paper in shared["papers"]]
-    cohort_status = "frozen_twelve_source_release_input"
+    cohort_status = "shared_twelve_source_neuroscience_cohort"
 
     assert len(shared["papers"]) == len(expected) == 12
     assert len(filenames) == len(set(filenames))
@@ -277,15 +344,7 @@ def test_public_demo_paper_cohort_is_frozen_from_all_twelve_unique_sources() -> 
     assert "leading `2`: M1" in dataset_note
     assert "adding 96" in dataset_note
     assert "| train | 72 | 70 | 142 |" in dataset_note
-    assert nlb["dataset"]["files"] == {
-        "dandiset.yaml": "2492a05c49b2e3024797b45bc8db263a1bf12078891ec668b0623f0db1e0ba5a",
-        "sub-Jenkins_ses-small_desc-train_behavior+ecephys.nwb": (
-            "dcaf3a524e2b2f65f163ee3b07789b8474bdfc6ca66098bc542ab93dff489884"
-        ),
-        "sub-Jenkins_ses-small_desc-test_ecephys.nwb": (
-            "ca8a0bef5f189eafb9db1961d617e065cb461360718fde1c16a538922a6fa5fe"
-        ),
-    }
+    assert nlb["dataset"]["access_mode"] == "external_readonly"
 
     private_manifest_path = ROOT / "docs" / "release" / "maieusis-v0.1.0-paper-cohort.private.yaml"
     if private_manifest_path.is_file():
@@ -360,122 +419,56 @@ def test_public_demo_paper_cohort_is_frozen_from_all_twelve_unique_sources() -> 
         )
 
 
-def test_public_demo_manifests_bind_the_sealed_pair_and_presentation_replay() -> None:
-    ibl = _load_demo_manifest("ibl")
-    nlb = _load_demo_manifest("nlb")
-    expected_candidate = {
-        "immutable_rc_commit": IMMUTABLE_RC_COMMIT,
-        "immutable_rc_version": "0.1.0",
-        "rc_wheel_sha256": RC_WHEEL_SHA256,
-        "pair_receipt_sha256": PAIR_RECEIPT_SHA256,
-    }
+def test_public_demo_manifests_separate_demo_provenance_from_release_identity() -> None:
+    """A demo says which run produced it; release-byte identity lives where it can be true.
 
-    for manifest in (ibl, nlb):
-        assert manifest["schema_version"] == "maieusis.public_demo/v1"
-        assert manifest["release"] == "0.1.0"
-        assert manifest["release_ready"] is True
-        assert manifest["release_readiness_scope"] == "curated_demo_artifacts_only"
-        assert manifest["publication_gate"] == "operator_pending"
-        assert manifest["release_blocker"] is None
-        assert manifest["raw_pdfs_included"] is False
-        assert manifest["release_candidate"] == expected_candidate
-        assert manifest["bridge_status"] == "closed"
+    The 0.1.0 manifests carried a `release_candidate` block asserting one immutable wheel and one
+    sealed pair receipt, identical across demos. That shape cannot survive: the contract is a
+    three-dataset set rather than a pair, the three legs ran on four distinct builds, and under the
+    build-once contract the package is built FROM the tree containing these files, so no file inside
+    it can carry the resulting hash. Per-demo provenance stays here; wheel, sdist, tree, and seal
+    digests move to the release receipt published after the build.
+    """
 
-    _assert_mapping_contains(
-        ibl["live_proof"],
-        {
-            "status": "passed",
-            "run_id": "20260715T173301Z-4eefe86a",
-            "config_sha256": ("be105e5d66291a6cb8b21b7f92f3802fb1cc3b36bd5fc02a7f871332df68198f"),
-            "run_manifest_sha256": (
-                "f8d73dda365f02ffedf336d1b5d25c4ee586e9133bce583bd18a30a0e3ff6a90"
-            ),
-            "family_count": 6,
-            "variants_per_family": 2,
-            "terminal_family_count": 6,
-            "accepted_dossier_stack_count": 6,
-            "mixed_family_count": 1,
-            "run_used_resume": False,
-            "planning_only": True,
-        },
-    )
-    _assert_mapping_contains(
-        nlb["live_proof"],
-        {
-            "status": "passed",
-            "run_id": "20260715T182133Z-ec7b6cde",
-            "config_sha256": ("8a6674564fd455a4c5d9def8dfec623abbe5f19e9f9d42625b3b5046d7b7a999"),
-            "run_manifest_sha256": (
-                "bf69416ff18dcda3478911b57400068169f75b5e8ed8a94f5e35fee85f95abf2"
-            ),
-            "family_count": 6,
-            "variants_per_family": 2,
-            "terminal_family_count": 6,
-            "accepted_dossier_stack_count": 5,
-            "validation_warning_family_count": 1,
-            "run_used_resume": False,
-            "planning_only": True,
-        },
-    )
-    _assert_mapping_contains(
-        nlb["paperbank_import"],
-        {
-            "status": "receipt_bound_exact_reuse",
-            "source_demo": "ibl-brain-wide-map",
-            "source_run_id": "20260715T173301Z-4eefe86a",
-            "source_paper_half_receipt_sha256": PAPER_HALF_RECEIPT_SHA256,
-            "import_receipt_sha256": PAPERBANK_IMPORT_RECEIPT_SHA256,
-            "public_provenance_path": "artifacts/provenance/paperbank_import.yaml",
-            "absolute_source_path_persisted": False,
-        },
-    )
+    builds = set()
+    for demo_id in ("climate", "ibl", "nlb"):
+        manifest = _load_demo_manifest(demo_id)
+        provenance = manifest["demo_provenance"]
 
-    _assert_mapping_contains(
-        ibl["presentation"],
-        {
-            "status": "deterministic_replay_from_sealed_scientific_run",
-            "runtime_commit": "f7edb2151e83f5d096a007476b01c7a5f17bfd54",
-            "pair_output_set_sha256": (
-                "350cfa04d71361762b85cfb291b374e620a514c1689e3f525cab43e549cf7c62"
-            ),
-            "output_set_sha256": (
-                "577e3728150e7b07a842b4588af886ed9c014eef2c0afa4bcc3af29891237970"
-            ),
-            "pattern_detailed_sha256": SHARED_PATTERN_DETAILED_SHA256,
-            "question_families_detailed_sha256": (
-                "1024364450596dc709314366def50b7f6316dd0bfd8a36e333aecc69e73c6895"
-            ),
-            "detailed_page_count": 8,
-            "scientific_pair_reexecuted": False,
-            "detailed_present_in_original_invocation": False,
-        },
-    )
-    _assert_mapping_contains(
-        nlb["presentation"],
-        {
-            "status": "deterministic_replay_from_sealed_scientific_run",
-            "runtime_commit": "f7edb2151e83f5d096a007476b01c7a5f17bfd54",
-            "pair_output_set_sha256": (
-                "350cfa04d71361762b85cfb291b374e620a514c1689e3f525cab43e549cf7c62"
-            ),
-            "output_set_sha256": (
-                "85a1be4bbda90976cbda422401ff56302bab9f4f98ca883f07dadddab158013c"
-            ),
-            "pattern_detailed_sha256": SHARED_PATTERN_DETAILED_SHA256,
-            "question_families_detailed_sha256": (
-                "b6db73f98ffb9ec157c3675846acceb3522ffae93bded50f616176ac2a0695ae"
-            ),
-            "detailed_page_count": 8,
-            "scientific_pair_reexecuted": False,
-            "detailed_present_in_original_invocation": False,
-        },
-    )
+        assert manifest["schema_version"] == "maieusis.public_demo/v2"
+        assert manifest["release"] == "0.1.1"
+        assert manifest["release_contract"] == "release_validation_set/v2"
+        assert "release_candidate" not in manifest
+        assert "luna_gate" not in manifest
+        flattened = yaml.safe_dump(manifest)
+        for byte_identity_key in ("wheel_sha256", "sdist_sha256", "artifact_set_sha256"):
+            assert byte_identity_key not in flattened
+
+        assert provenance["qualification_class"] == "candidate_demonstration"
+        assert "not from the byte-qualification run" in provenance["note"]
+        assert re.fullmatch(r"[0-9]{8}T[0-9]{6}Z-[0-9a-f]{8}", provenance["run_id"])
+        assert re.fullmatch(r"[0-9a-f]{64}", provenance["science_build_sha256"])
+        assert re.fullmatch(r"[0-9a-f]{64}", provenance["leg_receipt_sha256"])
+        builds.add(provenance["science_build_sha256"])
+
+    assert len(builds) == 3
+
+    ibl = _load_demo_manifest("ibl")["demo_provenance"]
+    assert re.fullmatch(r"[0-9a-f]{64}", ibl["presentation_build_sha256"])
+    assert ibl["presentation_build_sha256"] != ibl["science_build_sha256"]
+    for demo_id in ("climate", "nlb"):
+        assert _load_demo_manifest(demo_id)["demo_provenance"]["presentation_build_sha256"] is None
 
 
 def test_public_demo_artifact_inventories_exactly_match_the_curated_files() -> None:
-    expected_showcases = {"ibl": ["family-002"], "nlb": ["family-006"]}
+    expected_showcases = {
+        "climate": ["wave-forcing-and-state-dependence"],
+        "ibl": ["covariability-structure"],
+        "nlb": ["manifold-form-functional-meaning"],
+    }
+    expected_counts = {"climate": 50, "ibl": 43, "nlb": 44}
     selected_count = 0
-    for demo_id in ("ibl", "nlb"):
+    for demo_id in ("climate", "ibl", "nlb"):
         manifest = _load_demo_manifest(demo_id)
         artifacts = manifest["artifacts"]
         artifact_root = _demo_root() / demo_id / artifacts["root"]
@@ -484,11 +477,24 @@ def test_public_demo_artifact_inventories_exactly_match_the_curated_files() -> N
 
         assert artifacts["status"] == "curated"
         assert artifacts["root"] == "artifacts"
-        assert artifacts["file_count"] == len(inventory) == 43
+        assert artifacts["file_count"] == len(inventory) == expected_counts[demo_id]
         assert artifacts["showcase_family_ids"] == expected_showcases[demo_id]
         assert artifacts["showcase_selection_status"] == "operator_selected"
+        # A published manifest must not name a file that lives only in the private repo.
+        assert "docs/plans" not in yaml.safe_dump(manifest)
+        assert manifest["demo_provenance"]["leg_receipt"] == "withheld_private_operator_record"
+        assert manifest["publication_gate"] == "operator_approved"
         selected_count += len(artifacts["showcase_family_ids"])
+        # inventory_sha256 was previously shape-checked only, so it was a number nobody could
+        # re-derive. Its derivation is now fixed and asserted: sha256 over "<path>\n<sha256>\n"
+        # per entry, in listed order.
         assert re.fullmatch(r"[0-9a-f]{64}", artifacts["inventory_sha256"])
+        assert (
+            artifacts["inventory_sha256"]
+            == hashlib.sha256(
+                "".join(f"{item['path']}\n{item['sha256']}\n" for item in inventory).encode("utf-8")
+            ).hexdigest()
+        )
         assert paths == sorted(paths)
         assert len(paths) == len(set(paths))
         assert all(set(item) == {"path", "sha256"} for item in inventory)
@@ -514,20 +520,20 @@ def test_public_demo_artifact_inventories_exactly_match_the_curated_files() -> N
                 expected["provenance/paperbank_import.yaml"]
                 == (manifest["paperbank_import"]["public_provenance_sha256"])
             )
-    assert selected_count in {1, 2}
-    assert selected_count == 2
+    # One operator-selected showcase family per demonstration.
+    assert selected_count == 3
 
 
 def test_public_questions_index_covers_all_families_variants_and_resolves_links() -> None:
     questions_path = _demo_root() / "QUESTIONS.md"
     text = questions_path.read_text(encoding="utf-8")
 
-    assert len(re.findall(r"^###\s+\d+\.\s+", text, re.M)) == 12
-    assert len(re.findall(r"^[12]\.\s+\[[^\]]+\]\(", text, re.M)) == 24
+    # Three demonstrations of six families with two variants each.
+    assert len(re.findall(r"^###\s+\d+\.\s+", text, re.M)) == 18
+    assert len(re.findall(r"^[12]\.\s+\[[^\]]+\]\(", text, re.M)) == 36
     family_links = re.findall(r"questions/question_families_detailed\.md#(family-[^)]+)", text)
-    assert len(family_links) == 14  # 12 gallery links plus two featured-entry links.
-    assert len(set(family_links)) == 12
-    assert len(re.findall(r"questions/question_families_detailed\.md#variant-", text)) == 24
+    assert len(family_links) == len(set(family_links)) == 18
+    assert len(re.findall(r"questions/question_families_detailed\.md#variant-", text)) == 36
 
     root = _demo_root().resolve()
     projected_root_readme = (questions_path.parent / ".." / "README.md").resolve()
@@ -536,6 +542,15 @@ def test_public_questions_index_covers_all_families_variants_and_resolves_links(
             assert fragment == "explore-the-demos"
             if destination.is_file():
                 assert destination == (ROOT / "README.md").resolve()
+            continue
+        # `../docs/x.md` from demos/QUESTIONS.md resolves inside the PROJECTION, where
+        # demos/public -> demos and docs/public -> docs. In this source tree it points at a
+        # directory that does not exist, so resolve it the way a reader would and require the
+        # projected source to be real.
+        projected_docs = (questions_path.parent / ".." / "docs").resolve()
+        if destination.is_relative_to(projected_docs):
+            source = _docs_root() / destination.relative_to(projected_docs)
+            assert source.is_file(), source
             continue
         assert destination.is_relative_to(root), destination
         assert destination.is_file(), destination
@@ -546,89 +561,208 @@ def test_public_questions_index_covers_all_families_variants_and_resolves_links(
 def test_demo_reader_guides_carry_primary_citations_and_no_stale_editorial_state() -> None:
     demo_root = _demo_root()
     questions = (demo_root / "QUESTIONS.md").read_text(encoding="utf-8")
+    climate = (demo_root / "climate" / "README.md").read_text(encoding="utf-8")
     ibl = (demo_root / "ibl" / "README.md").read_text(encoding="utf-8")
     nlb = (demo_root / "nlb" / "README.md").read_text(encoding="utf-8")
     nlb_note = (demo_root / "nlb" / "DATASET_NOTES.md").read_text(encoding="utf-8")
+    climate_note = (demo_root / "climate" / "DATASET_NOTES.md").read_text(encoding="utf-8")
     paper_sources = (demo_root / "PAPER_SOURCES.md").read_text(encoding="utf-8")
-    paper_manifest = yaml.safe_load(
-        (demo_root / "shared" / "paper_sources.yaml").read_text(encoding="utf-8")
-    )
 
     assert "10.1038/s41586-025-09235-0" in ibl
+    assert "2025_data_release_brainwidemap.html" in ibl
     neurips_source = (
         "datasets-benchmarks-proceedings.neurips.cc/paper/2021/hash/"
         "979d472a84804b9f647bc185a877a8b5-Abstract-round2.html"
     )
-    questions_prose = " ".join(questions.split())
-    assert "for any scientific discipline and any scientific dataset" in questions_prose
-    assert "International Brain Laboratory (IBL)" in questions_prose
-    assert "Neural Latents Benchmark (NLB)" in questions_prose
-    assert "10.1038/s41586-025-09235-0" in questions
-    assert "2025_data_release_brainwidemap.html" in questions
-    assert "primary motor cortex (M1)" in questions
-    assert "dorsal premotor cortex (PMd)" in questions
-    for text in (questions, nlb, nlb_note):
+    for text in (nlb, nlb_note):
         assert neurips_source in text
         assert "10.48324/dandi.000140/0.220113.0408" in text
-
-    for text in (nlb, nlb_note):
+    for text in (nlb_note,):
         assert "10.1016/j.neuron.2010.09.015" in text
         assert "10.1038/nature11129" in text
 
-    assert "IBL-002" in questions and "NLB-006" in questions
-    assert "provisional/degraded" in questions
-    assert "no accepted-plan authority" in questions
+    # The climate demonstration states its own provenance limit rather than implying parity with
+    # the two citable neuroscience datasets.
+    assert "www.ecmwf.int" in climate_note
+    assert "is not redistributed" in climate_note
+    assert "dracoxu@uchicago.edu" in climate_note
+    assert "Copernicus" in climate_note
+
+    # Every reader page names the run that produced it and refuses the stronger claim.
+    for text in (climate, ibl, nlb):
+        prose = " ".join(text.split())
+        assert "release-candidate source tree" in prose
+        assert "not a statement about the exact bytes" in prose
+        assert "proposal hypothesis versus inspected evidence" in prose.lower()
+
+    assert "does not distribute source PDFs" in paper_sources
+    assert "shared/paper_sources.yaml" in paper_sources
+    assert "climate/paper_sources.yaml" in paper_sources
+    for cohort in ("shared/paper_sources.yaml", "climate/paper_sources.yaml"):
+        manifest = yaml.safe_load((demo_root / cohort).read_text(encoding="utf-8"))
+        for paper in manifest["papers"]:
+            assert paper["title"] in paper_sources
+            assert f"https://doi.org/{paper['doi']}" in paper_sources
+
     for stale_copy in (
         "remain an operator editorial choice",
         "allowlisted public subset",
         "showcase family is intentionally undecided",
+        "the two public demos",
     ):
-        assert stale_copy not in (questions + ibl + nlb).lower()
-
-    assert "does **not** distribute the source PDFs" in paper_sources
-    assert "shared/paper_sources.yaml" in paper_sources
-    paper_sources_prose = " ".join(paper_sources.split())
-    assert "NLB run reused those paper-derived products" in paper_sources_prose
-    assert "field-relevant source papers" in paper_sources_prose
-    for paper in paper_manifest["papers"]:
-        assert paper["title"] in paper_sources
-        assert f"https://doi.org/{paper['doi']}" in paper_sources
+        assert stale_copy not in (questions + climate + ibl + nlb).lower()
 
 
-def test_public_demo_outcome_boundaries_preserve_mixed_and_warning_families() -> None:
-    questions = (_demo_root() / "QUESTIONS.md").read_text(encoding="utf-8").lower()
-    assert "mixed family" in questions
-    assert "rejected_operationalization_failure" in questions
-    assert "accepted_requires_new_skill" in questions
-    assert "validation warning" in questions
-    assert "no accepted-plan authority" in questions
+def test_public_demo_outcome_boundaries_preserve_non_accepted_outcomes() -> None:
+    """The gallery must show what did not work, in the vocabulary the runs actually used.
 
-    ibl_mixed = (
-        (
-            _demo_root()
-            / "ibl"
-            / "artifacts"
-            / "families"
-            / "input-to-choice-dynamics"
-            / "dossier_detailed.md"
-        )
-        .read_text(encoding="utf-8")
-        .lower()
-    )
-    assert "mixed family" in ibl_mixed
-    assert "no refined question earned accepted-plan authority" in ibl_mixed
+    This guards against a gallery that quietly shows only successes. The outcome labels changed
+    with the runs -- `Scientific rejection terminal` and `Mixed family` replace the 0.1.0 strings --
+    so the literals move while the guarantee does not.
+    """
 
-    nlb_warning = (
-        (
-            _demo_root()
-            / "nlb"
-            / "artifacts"
-            / "families"
-            / "preparatory-operating-regimes"
-            / "dossier_detailed.md"
-        )
-        .read_text(encoding="utf-8")
-        .lower()
-    )
-    for required in ("validation warning", "provisional / degraded", "no accepted-plan authority"):
-        assert required in nlb_warning
+    demo_root = _demo_root()
+    text = (demo_root / "QUESTIONS.md").read_text(encoding="utf-8")
+
+    prose = " ".join(text.split())
+    assert "Mixed family" in prose
+    assert "Scientific rejection terminal" in prose
+    assert "not a failure" in prose
+    assert "stays visible with its reason rather than disappearing" in prose
+
+    rejections = []
+    for demo_id in ("climate", "ibl", "nlb"):
+        for family in sorted((demo_root / demo_id / "artifacts" / "families").iterdir()):
+            guide = (family / "dossier_detailed.md").read_text(encoding="utf-8")
+            if "Family status: **Scientific rejection terminal**" in guide:
+                rejections.append(f"{demo_id}/{family.name}")
+                assert "Rejection is a scientific terminal" in guide
+    assert len(rejections) == 3
+    assert any(name.startswith("climate/") for name in rejections)
+    assert any(name.startswith("nlb/") for name in rejections)
+
+
+def test_the_climate_demo_leads_with_its_rejection() -> None:
+    """The climate page features a family that produced no plan, and that is deliberate.
+
+    A plan cannot show a reader whether the planner opened their data; a refusal can. This family
+    asked for Ural-versus-Aleutian precursor pathways from a one-dimensional 60N column that has no
+    longitude, and stopped rather than substituting a height-indexed proxy. If someone later
+    re-points this page at a family that succeeded, the demonstration loses the only artifact that
+    distinguishes a grounded planner from a fluent one.
+    """
+    demo_root = _demo_root()
+    manifest = _load_demo_manifest("climate")
+    featured = manifest["artifacts"]["showcase_family_ids"]
+    assert featured == ["wave-forcing-and-state-dependence"]
+
+    page = (demo_root / "climate" / "README.md").read_text(encoding="utf-8")
+    assert "a question this dataset could not answer" in page
+    assert "Scientific rejection terminal" in page
+    # The page must still say the run produced plans, or a reader concludes the leg failed.
+    assert "Four of the six families in this run did produce plans" in page
+
+    dossier = (
+        demo_root / "climate" / "artifacts" / "families" / featured[0] / "dossier.md"
+    ).read_text(encoding="utf-8")
+    assert "Planned analysis:" not in dossier
+    assert dossier.count("Planning disposition: Rejected") == 2
+
+
+def test_every_gallery_outcome_is_derived_from_its_variants_actual_dispositions() -> None:
+    """A family's outcome sentence must match what happened to its variants.
+
+    This is the assertion whose absence let a real defect ship to review: the gallery said "both
+    variants reached independently reviewed plans" for three families where one variant had been
+    held back at the shortlist stage by the prior-art review -- the very mechanism the project
+    describes as never removing a variant silently. The existing gallery test checked anchor counts
+    and link resolution, and the outcome test checked that certain strings appeared somewhere. Both
+    passed. Neither compared a claim against the artifact it summarizes.
+
+    The truth lives in each variant's `Shortlist disposition` line, which the run wrote.
+    """
+
+    demo_root = _demo_root()
+    gallery = (demo_root / "QUESTIONS.md").read_text(encoding="utf-8")
+    entries = re.split(r"(?m)^### \d+\. ", gallery)[1:]
+    assert len(entries) == 18
+
+    # Read the presentation order from the gallery itself. Hardcoding it made this test fail when
+    # the demonstrations were reordered for the reader, which is a presentation decision and not a
+    # truth change -- a guard that breaks on those trains people to edit the guard.
+    demo_order = [
+        {"IBL": "ibl", "NLB": "nlb", "Climate": "climate"}[match]
+        for match in re.findall(r"(?m)^## (IBL|NLB|Climate) ", gallery)
+    ]
+    assert sorted(demo_order) == ["climate", "ibl", "nlb"], demo_order
+
+    checked = {"both": 0, "prior_art": 0, "rejection": 0, "mixed": 0}
+    index = 0
+    for demo_id in demo_order:
+        detailed = (
+            demo_root / demo_id / "artifacts" / "questions" / "question_families_detailed.md"
+        ).read_text(encoding="utf-8")
+        families = re.split(r"(?m)^## Family \d{3}: ", detailed)[1:]
+        assert len(families) == 6, demo_id
+
+        for family in families:
+            entry = entries[index]
+            index += 1
+            # Split by variant first: the family-level section carries a disposition line of its
+            # own, so searching the whole block returns three for a two-variant family.
+            variants = re.split(r"(?m)^### Variant \d{3}\.\d{3}: ", family)[1:]
+            assert len(variants) == 2, (demo_id, len(variants))
+            dispositions = [
+                re.search(r"Shortlist disposition: \*\*(.{0,40})", variant).group(1)
+                for variant in variants
+            ]
+            deferred = [d for d in dispositions if d.startswith("Not carried into planning")]
+
+            outcome = re.search(r"(?m)^Outcome: (.+)$", entry)
+            assert outcome is not None, entry[:120]
+            claim = outcome.group(1)
+
+            if claim.startswith("**Scientific rejection terminal**"):
+                checked["rejection"] += 1
+                if deferred:
+                    # A family may both close scientifically AND have lost a variant to prior art;
+                    # the entry must not silently drop the second fact.
+                    assert "deferred on prior-art grounds" in claim
+                continue
+
+            if deferred:
+                assert claim.startswith("**Deferred on prior-art grounds**"), (demo_id, claim)
+                # The reader must be able to see WHICH variant was held back.
+                assert "held back before planning" in entry
+                checked["prior_art"] += 1
+            elif claim.startswith("**Mixed family**"):
+                checked["mixed"] += 1
+            else:
+                assert claim.startswith("**Plan developed (provisional)**"), (demo_id, claim)
+                assert "both variants reached" in claim
+                checked["both"] += 1
+
+    # Measured from the runs, not chosen: seven families planned both variants, three lost a variant
+    # to prior art before planning, five are mixed, and three closed scientifically.
+    assert checked == {"both": 7, "prior_art": 3, "mixed": 5, "rejection": 3}
+
+
+def test_demo_landing_page_tallies_match_the_gallery() -> None:
+    """The per-demo counts a reader meets first must agree with the entries they summarize."""
+
+    demo_root = _demo_root()
+    gallery = (demo_root / "QUESTIONS.md").read_text(encoding="utf-8")
+    sections = re.split(r"(?m)^## ", gallery)
+    for demo_id, heading in (
+        ("climate", "Climate —"),
+        ("ibl", "IBL Brain-Wide Map"),
+        ("nlb", "NLB MC_Maze-S"),
+    ):
+        section = next(s for s in sections if s.startswith(heading))
+        both = len(re.findall(r"\*\*Plan developed \(provisional\)\*\*", section))
+        readme = (demo_root / demo_id / "README.md").read_text(encoding="utf-8")
+        tally = re.search(r"(?m)^Six question families, twelve variants: (.+)$", readme)
+        assert tally is not None, demo_id
+        claimed = re.search(r"(\d+) reached plans for both variants", tally.group(1))
+        assert claimed is not None, (demo_id, tally.group(1))
+        assert int(claimed.group(1)) == both, (demo_id, claimed.group(1), both)

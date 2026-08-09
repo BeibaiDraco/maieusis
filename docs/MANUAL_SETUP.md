@@ -2,6 +2,12 @@
 
 [Documentation home](INDEX.md) · [Installation](INSTALLATION.md)
 
+**Want to see the machinery before you commit to any of this?** Set `mode: subscription_only_demo`
+in `maieusis.yaml`. Model providers resolve to mocks, no API key is used, and nothing is billed to
+a model account. You still need the coding host, the Maieusis clone, Poppler, PDFs and a dataset
+root — it drops the model spend, not the setup — and it demonstrates the workflow, not scientific
+quality.
+
 This path is for users who want to prepare the project files and run the CLI
 themselves. Complete [installation](INSTALLATION.md) first.
 
@@ -24,12 +30,22 @@ my-maieusis-project/
 ├── PROJECT_LAYOUT.md
 ├── maieusis.yaml
 ├── .claude/
-│   └── agents/
-│       └── dataset-planner.md
+│   ├── agents/
+│   │   └── dataset-planner.md
+│   └── skills/
+│       └── maieusis-setup/
+│           └── SKILL.md
 └── .codex/
-    └── agents/
-        └── dataset-planner.toml
+    ├── agents/
+    │   └── dataset-planner.toml
+    └── skills/
+        └── maieusis-setup/
+            └── SKILL.md
 ```
+
+The two `SKILL.md` files are byte-identical: one source written to both host paths. You are reading
+the manual route, so you will not use them -- but they are what the
+[agent-guided route](AGENT_GUIDED_SETUP.md) runs on.
 
 Existing files are never overwritten. Read `PROJECT_LAYOUT.md` before editing
 the generated configuration.
@@ -124,7 +140,9 @@ placeholders for:
 - output directory, family/variant counts, concurrency, timeout, and revision
   limit.
 
-Keep `novelty.enabled: false`; v0.1.0 does not perform a novelty search.
+Prior-art review is enabled in the shipped profile and is what `novelty` configures. Setting
+`novelty.enabled: false` turns it off and removes its paid web-search egress; the run then makes
+no statement about prior art at all.
 
 ## 6. Preflight without paid calls
 

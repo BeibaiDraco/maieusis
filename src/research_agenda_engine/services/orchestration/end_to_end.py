@@ -22,7 +22,7 @@ import functools
 import os
 import shutil
 import threading
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from contextlib import suppress
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -30,9 +30,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
 from pydantic import TypeAdapter, ValidationError
+from yaml import YAMLError
 
 from ...io import dump_data, load_data, load_model
-from ...provenance import sha256_file, stable_hash
+from ...provenance import semantic_hash, sha256_file, stable_hash
 from ...providers.coding_agents.planner_host import CodingAgentPlannerHost
 from ...providers.models.base import (
     ModelConfigurationError,
@@ -41,7 +42,11 @@ from ...providers.models.base import (
     StructuredModelProviderError,
 )
 from ...providers.models.factory import build_model_provider
-from ...providers.models.web_search_provider import WebSearchModelProvider
+from ...providers.models.web_search_provider import (
+    WebSearchModelProvider,
+    build_novelty_web_search_provider,
+    require_strict_novelty_web_capability,
+)
 from ...providers.scientific_agents import (
     ScientificAgentFailureKind,
     ScientificAgentInfrastructureError,
@@ -54,8 +59,15 @@ from ...schemas.cited_literature import (
     PaperLocalLiteratureContext,
     literature_context_digest,
 )
+from ...schemas.dataset_context_terminal import (
+    DatasetContextTerminalKind,
+    DatasetContextTerminalRecord,
+)
 from ...schemas.dataset_narrative import DatasetNarrative
 from ...schemas.dataset_seed import DatasetSeed
+from ...schemas.external_evidence import (
+    ExternalEvidenceAttemptStatus,
+)
 from ...schemas.family_failure import (
     MAX_INTERNAL_FAMILY_FAILURE_TEXT,
     BackHalfFailureDiagnostic,
@@ -75,6 +87,9 @@ from ...schemas.multi_family_dossier import (
     DEVELOPMENT_SURROGATE_STATUSES,
     FamilyDossierStatus,
     ReviewAuthority,
+)
+from ...schemas.novelty_admission import (
+    NoveltyVariantDisposition,
 )
 from ...schemas.paper_case import PaperCase
 from ...schemas.planner_run import CodingAgentRunRecord
@@ -118,7 +133,12 @@ from ...schemas.run_outcome import (
     ShortlistAxis,
 )
 from ...schemas.scientific_context import TopicEvidenceBrief, TopicEvidenceClaimStatus
-from ...schemas.shortlist_outcome import FamilyInclusionLabel, FamilyShortlistOutcome
+from ...schemas.shortlist_outcome import (
+    FamilyInclusionLabel,
+    FamilyShortlistOutcome,
+    VariantShortlistDisposition,
+    VariantShortlistOutcome,
+)
 from ...schemas.source_activity import (
     DatasetSourceActivity,
     SourceActivityItem,
@@ -131,6 +151,10 @@ from ...schemas.stage_d import (
     StageDProcessedCandidate,
 )
 from ...schemas.stage_receipt import FailureClass, StageReceipt, StageStatus
+from ...schemas.topic_evidence_inquiry import (
+    TopicEvidenceInquiryDisposition,
+    TopicEvidenceTerminalInquiryRecord,
+)
 from ...schemas.topic_literature import TopicSourceTable
 from ...schemas.variant_novelty import VariantNoveltyResult
 from ..agents.automated_shortlist import run_automated_family_shortlist
@@ -158,6 +182,12 @@ from ..agents.gate_diagnostics import (
 )
 from ..agents.gate_kernel import run_gate_with_revise_loop
 from ..agents.generation_boundaries import generation_boundary
+from ..agents.novelty_admission import (
+    FamilyNoveltyAdmissionResult,
+    invoke_novelty_web_scout,
+    run_family_novelty_admission,
+)
+from ..agents.novelty_web_grounding import NoveltyWebGrounder
 from ..agents.paper_case_reviewer import (
     PAPER_CASE_FIDELITY_CRITERIA,
     PAPER_CASE_FIDELITY_REVIEWER_PROMPT_VERSION,
@@ -172,7 +202,11 @@ from ..agents.pattern_reviewer import (
     promote_pattern_to_ai_reviewed,
     review_question_pattern,
 )
-from ..agents.promotion import assert_product_grade_promotion, build_promotion_receipt
+from ..agents.promotion import (
+    PromotedStatusNotHoldableError,
+    assert_product_grade_promotion,
+    build_promotion_receipt,
+)
 from ..agents.question_scientist_family import (
     NoValidFamilies,
     StageDPromptBudgetError,
@@ -190,9 +224,12 @@ from ..agents.shortlist_reviewer import (
 from ..agents.topic_evidence_reviewer import (
     TOPIC_EVIDENCE_REVIEWER_PROMPT_VERSION,
     build_topic_evidence_gate_diagnostic,
+    build_topic_evidence_reviewer_source_summaries,
+    build_topic_evidence_turn_input,
     load_topic_evidence_reviewer_prompt,
     promote_topic_evidence_to_ai_reviewed,
     review_topic_evidence,
+    split_topic_field_state_for_scientific_review,
 )
 from ..context.evidence_basis_labels import (
     abstract_only_gap_and_strong_claim_counts,
@@ -200,10 +237,12 @@ from ..context.evidence_basis_labels import (
     summary_evidence_basis_line,
     topic_evidence_basis_banner,
 )
-from ..context.question_scientist_export import QuestionScientistContextReadinessError
+from ..context.question_scientist_export import (
+    QuestionScientistContextReadinessError,
+    RightsSafeTopicSourceProjection,
+)
 from ..context.research_scope import resolve_research_scope
 from ..context.topic_evidence import (
-    GENERIC_REQUIRED_LANES,
     TOPIC_EVIDENCE_BRIEF_SYNTHESIZER_PROMPT_VERSION,
     R5TopicEvidenceSourceTable,
     build_r5_topic_source_table,
@@ -211,6 +250,20 @@ from ..context.topic_evidence import (
     claim_supporting_source_ids,
 )
 from ..context.topic_evidence_readiness import evaluate_topic_evidence_readiness
+from ..context.topic_evidence_revision import (
+    TopicEvidenceRevisionError,
+    TopicEvidenceRevisionHistory,
+    TopicEvidenceRevisionRound,
+    revise_topic_evidence_brief,
+)
+from ..context.topic_evidence_terminal_inquiry import (
+    TOPIC_EVIDENCE_TERMINAL_INQUIRY_PROMPT_VERSION,
+    TopicEvidenceTerminalInquiryError,
+    assert_inquiry_revision_coverage,
+    inquire_topic_evidence_terminal,
+    inquiry_revision_outcome,
+    topic_evidence_inquiry_review_guidance,
+)
 from ..dossier.development_review_dossier import DevelopmentReviewNotAccepted
 from ..narrative_sources.fusion import SourceKind
 from ..narrative_sources.narrative_persistence import (
@@ -219,6 +272,8 @@ from ..narrative_sources.narrative_persistence import (
     reviewed_dataset_narrative_path,
 )
 from ..narrative_sources.narrator import NarratorResult, gather_and_fuse_dataset_narrative
+from ..paper_ingest.external_lookup import OpenAlexRequestCoordinator
+from ..paper_ingest.extraction import _formation_trace_span_verifiable
 from ..paper_ingest.paperbank_gate import (
     AcceptedPaperCase,
     PaperBankGateResult,
@@ -228,8 +283,15 @@ from ..paper_ingest.paperbank_gate import (
 )
 from ..paper_patterns.citation_importance import select_key_citations_product
 from ..paper_patterns.formation_trace import FormationTraceRecord, collect_formation_trace_records
-from ..paper_patterns.induction import NoInduciblePatterns, induce_question_patterns
-from ..paper_patterns.literature_context import build_paper_local_literature_trace_context
+from ..paper_patterns.induction import (
+    PATTERN_TRUNCATED_AT_CAP_WARNING,
+    NoInduciblePatterns,
+    induce_question_patterns,
+)
+from ..paper_patterns.literature_context import (
+    PaperLocalLiteratureTraceContext,
+    build_paper_local_literature_trace_context,
+)
 from ..paper_patterns.pattern_revision import (
     PatternRevisionHistory,
     PatternRevisionRound,
@@ -249,6 +311,12 @@ from ..retrieval.fulltext_fetch import (
     NullFulltextFetcher,
     OpenAccessFulltextFetcher,
     enrich_records_with_fulltext,
+)
+from ..retrieval.novelty_sources import (
+    CrossrefNoveltyLeadResolver,
+    CrossrefNoveltySearchProvider,
+    NoveltySearchProvider,
+    OpenAlexNoveltySearchProvider,
 )
 from .front_half_persist import (
     build_shortlist_manifest,
@@ -270,7 +338,9 @@ from .resume import (
     compute_paper_half_input_digests,
     find_payload_path,
     find_shortlist_path,
+    persist_topic_rights_degradation_receipt,
     relative_output_digests,
+    relative_semantic_output_digests,
     stage_config_version,
     stage_model_versions,
     stage_prompt_versions,
@@ -291,6 +361,7 @@ from .run_envelope import (
     promote_text_artifact,
     reconcile_family_inventory,
     record_run_failure,
+    seal_run_summary,
     set_run_state,
     set_stage_state,
     upsert_family_disposition,
@@ -387,6 +458,8 @@ class StageExecutor:
 
     def __init__(self, config: MaieusisProjectConfig) -> None:
         self.config = config
+        self._novelty_web_run_root: Path | None = None
+        self._novelty_web_grounder: NoveltyWebGrounder | None = None
 
     @property
     def is_demo(self) -> bool:
@@ -417,6 +490,8 @@ class StageExecutor:
             pm.provider.strip().lower(),
             model=pm.model or "",
             allow_pro_model=self.config.models.allow_pro_model,
+            thinking=pm.thinking.value,
+            effort=pm.effort.value,
         )
 
     def gate_session(
@@ -449,6 +524,113 @@ class StageExecutor:
     def web_search_provider(self) -> WebSearchModelProvider | None:
         """The narrator Source-C (model web research) provider; None ⇒ Source C is skipped (V1: off)."""
         return None
+
+    def novelty_search_providers(self) -> list[NoveltySearchProvider]:
+        """Independent scholarly-index recall lanes for proposal-stage novelty admission."""
+        if self.is_demo or not self.config.literature.enabled:
+            return []
+        # CARD3-SAFETY: one coordinator per executor so cache/limiter/quota-breaker state spans
+        # every family in the run — the breaker must not reset between families.
+        coordinator = getattr(self, "_novelty_openalex_coordinator", None)
+        if coordinator is None:
+            coordinator = OpenAlexRequestCoordinator()
+            self._novelty_openalex_coordinator = coordinator
+        return [
+            OpenAlexNoveltySearchProvider(
+                email=self.config.literature.openalex_email,
+                request_coordinator=coordinator,
+            ),
+            CrossrefNoveltySearchProvider(email=self.config.literature.openalex_email),
+        ]
+
+    def novelty_reviewer_provider(self) -> StructuredModelProvider:
+        """Fresh structured reviewer; the admission service rejects exact generator identity reuse.
+
+        Falls back to ``models.reviewer`` so an existing config is unchanged; ``models.novelty_reviewer``
+        exists for the case where one vendor's safety classifier makes this one role unusable.
+        """
+        configured = self.config.models.novelty_reviewer or self.config.models.reviewer
+        pm = self.config.effective_provider(configured)
+        return build_model_provider(
+            pm.provider.strip().lower(),
+            model=pm.model or "",
+            allow_pro_model=self.config.models.allow_pro_model,
+            thinking=pm.thinking.value,
+            effort=pm.effort.value,
+        )
+
+    def configure_novelty_web_run(self, run_root: Path) -> None:
+        """Bind the default-off N-2 journal to one run before Stage D may make a web call."""
+
+        self._novelty_web_run_root = Path(run_root)
+        # A resumed/new run must never accidentally reuse a journal object pointing at a previous
+        # root.  This reset constructs no provider and makes no egress.
+        self._novelty_web_grounder = None
+
+    def novelty_web_grounder(self) -> NoveltyWebGrounder | None:
+        """Return the isolated, uncached N-2 scout journal only when explicitly enabled."""
+
+        grounding = self.config.novelty.web_grounding
+        # ``literature.enabled`` is the route-wide external-evidence switch.  This runtime guard
+        # repeats preflight so a programmatic caller cannot create a web reservation or construct
+        # the Crossref reconciliation route after disabling all literature egress.
+        if (
+            self.is_demo
+            or not self.config.literature.enabled
+            or not self.config.novelty.enabled
+            or not grounding.enabled
+        ):
+            return None
+        # Preflight normally catches this before the run begins.  Repeat the static capability
+        # boundary here so a programmatic caller cannot write an irreversible pre-call reservation
+        # for an adapter that lacks a vendor-enforced use cap.
+        require_strict_novelty_web_capability(grounding.scout.provider)
+        questioner = self.config.effective_provider(self.config.models.questioner)
+        scout_identity = (grounding.scout.provider.strip().lower(), grounding.scout.model.strip())
+        questioner_identity = (questioner.provider.strip().lower(), questioner.model.strip())
+        if scout_identity == questioner_identity:
+            raise ValueError("N-2 novelty web scout must differ from the Question Scientist model")
+        cached = self._novelty_web_grounder
+        if cached is not None:
+            return cached
+        run_root = self._novelty_web_run_root
+        if not isinstance(run_root, Path):
+            raise RuntimeError("N-2 novelty web grounding requires a configured Stage-D run root")
+        grounder = NoveltyWebGrounder(
+            run_root=run_root,
+            config=grounding,
+            # Factory stays lazy inside the journal: an existing receipt, a dangling reservation,
+            # or a spend-exhausted run returns before an API client can be constructed.
+            provider_factory=lambda: build_novelty_web_search_provider(
+                grounding.scout.provider,
+                model=grounding.scout.model,
+                allow_pro_model=self.config.models.allow_pro_model,
+                thinking=grounding.scout.thinking.value,
+                effort=grounding.scout.effort.value,
+            ),
+            invoke=functools.partial(
+                invoke_novelty_web_scout,
+                max_web_searches=grounding.max_searches_per_scout,
+                max_output_tokens=grounding.max_output_tokens,
+            ),
+        )
+        self._novelty_web_grounder = grounder
+        return grounder
+
+    def run_novelty_admission(self, family: QuestionFamily) -> FamilyNoveltyAdmissionResult:
+        web_grounder = self.novelty_web_grounder()
+        return run_family_novelty_admission(
+            family,
+            providers=self.novelty_search_providers(),
+            reviewer=self.novelty_reviewer_provider(),
+            revision_provider=self.generation_provider("questioner"),
+            web_grounder=web_grounder,
+            web_lead_resolver=(
+                CrossrefNoveltyLeadResolver(email=self.config.literature.openalex_email)
+                if web_grounder is not None
+                else None
+            ),
+        )
 
     def fulltext_fetcher(self) -> FulltextFetcher:
         """The OA fulltext plus-on fetcher (config-gated): real OA routes on, else a no-op Null fetcher.
@@ -484,8 +666,8 @@ class PaperHalfResult:
     reviewed_patterns: list[QuestionPatternCard]
     pattern_revision_history: list[PatternRevisionHistory]
     receipts: list[PromotionReceipt]
-    # Set only when pattern induction itself exhausted a bounded provider/validation recovery.
-    # Zero patterns caused by honest scientific insufficiency leave this unset.
+    # Set only when trace/pattern machinery exhausted bounded provider/validation recovery and no
+    # reviewed pattern survived. Zero patterns caused by honest scientific insufficiency leave it unset.
     pattern_generation_failure_class: FailureClass | None = None
 
 
@@ -522,9 +704,30 @@ _QUESTION_FAMILY_GENERATION_DIAGNOSTIC = "question_family_generation"
 # Non-review diagnostic labels; constants keep the gate-prompt source sweep scoped to real gates.
 _TOPIC_EVIDENCE_AVAILABILITY_DIAGNOSTIC = "topic_evidence_availability"
 _TOPIC_EVIDENCE_PROVISIONAL_DIAGNOSTIC = "topic_evidence_provisional"
+_TOPIC_EVIDENCE_TERMINAL_INQUIRY_DIAGNOSTIC = "topic_evidence_terminal_inquiry"
 _QUESTION_FAMILY_RETRY_DIAGNOSTIC = "question_family_retry"
 _PROVISIONAL_PLANNING_BOUNDARY_DIAGNOSTIC = "provisional_planning_boundary"
 _STAGE_D_CURRENT_BATCH_ATTRIBUTE = "_maieusis_stage_d_current_batch_path"
+
+
+class DatasetContextTerminalError(RuntimeError):
+    """Finite shared-context stop, distinct from a programmer fault and safe to persist."""
+
+    def __init__(
+        self,
+        kind: DatasetContextTerminalKind,
+        *,
+        failure_class: FailureClass,
+        gate_decision: GateDecision,
+        internal_detail: str,
+        public_reason: str = "",
+    ) -> None:
+        self.kind = kind
+        self.failure_class = failure_class
+        self.gate_decision = gate_decision
+        self.internal_detail = internal_detail
+        self.public_reason = public_reason
+        super().__init__(kind.value)
 
 
 def _diagnostics_dir(run_corpus: Path) -> Path:
@@ -538,14 +741,37 @@ def _record_non_accept_diagnostic(
     *,
     run_corpus: Path,
     artifact_label: str = "",
-) -> Path | None:
-    """Surface-only: on a non-accept front-half gate outcome, persist WHY under the run's
-    diagnostics dir. Never changes the decision; a per-artifact filename keeps concurrent
-    paper-half writes independent."""
-    if outcome.is_accept:
-        return None
+) -> Path:
+    """Surface-only: persist WHY a front-half gate decided as it did, accept or not.
+
+    Always returns the written path. A caller reads ``outcome.is_accept`` for the DECISION and
+    never the return value: the `Path | None` this once returned made "a path came back" readable
+    as "the gate declined", and one caller was reading it that way when the accept path landed.
+
+    Accepts were skipped, and that blind spot is why "were these passes earned?" could not be
+    answered from a run's own artifacts. A promoted trace carried one line -- `review_status:
+    ai_reviewed` -- and nothing about the criteria, so a criterion that passed on no evidence
+    looked exactly like one that passed on good evidence. Every investigation of the formation
+    trace ran into it: the failures were readable and the passes were not.
+
+    `build_gate_diagnostic` was already decision-agnostic; only this early return stood in the way.
+    The accept record lands under a `<gate>_accepted` name so it cannot overwrite a non-accept
+    record for the same artifact, and it is surface-only in both directions: nothing reads it back
+    to change a decision.
+    """
     diagnostic = build_gate_diagnostic(outcome, required_criteria, artifact_label=artifact_label)
-    return write_gate_diagnostic(diagnostic, _diagnostics_dir(run_corpus))
+    # An accept must not overwrite the non-accept record for the same artifact, so the two land in
+    # separate DIRECTORIES -- which is a filesystem problem and was solved by editing the record:
+    # `gate_name` was rewritten to `<gate>_accepted`, naming a gate that does not exist. The leg's
+    # own artifacts carry `gate_name: formation_trace_accepted` against a real gate of
+    # `formation_trace`, and `run_envelope.py` built the reader-facing code from it, so the manifest
+    # said `gate_formation_trace_accepted_accept`. The record now says what it is and the path says
+    # where it goes.
+    return write_gate_diagnostic(
+        diagnostic,
+        _diagnostics_dir(run_corpus),
+        directory_name=f"{outcome.gate_name}_accepted" if outcome.is_accept else "",
+    )
 
 
 def run_paper_half(
@@ -618,13 +844,12 @@ def run_paper_half(
                 artifact_kind="paper_case",
                 expected_gate="paper_case_fidelity",
             )
-        else:
-            _record_non_accept_diagnostic(
-                outcome,
-                PAPER_CASE_FIDELITY_CRITERIA,
-                run_corpus=run_corpus,
-                artifact_label=paper_case.paper_case_id,
-            )
+        _record_non_accept_diagnostic(
+            outcome,
+            PAPER_CASE_FIDELITY_CRITERIA,
+            run_corpus=run_corpus,
+            artifact_label=paper_case.paper_case_id,
+        )
         return outcome
 
     def citation_review(paper_case: PaperCase, literature: PaperLocalLiteratureContext):
@@ -665,13 +890,12 @@ def run_paper_half(
                 artifact_kind="citation_literature",
                 expected_gate="citation_importance",
             )
-        else:
-            _record_non_accept_diagnostic(
-                outcome,
-                CITATION_IMPORTANCE_CRITERIA,
-                run_corpus=run_corpus,
-                artifact_label=paper_case.paper_case_id,
-            )
+        _record_non_accept_diagnostic(
+            outcome,
+            CITATION_IMPORTANCE_CRITERIA,
+            run_corpus=run_corpus,
+            artifact_label=paper_case.paper_case_id,
+        )
         return outcome
 
     accepted_holder: list[AcceptedPaperCase] = []
@@ -714,7 +938,7 @@ def run_paper_half(
             development_surrogate=any_mock_reviewer(receipts),
         )
     else:
-        _persist_pattern_insufficiency(run_corpus)
+        _persist_pattern_insufficiency(run_corpus, failure_class=pattern_failure_class)
     return PaperHalfResult(
         accepted=accepted_holder,
         gate_result=gate_result,
@@ -838,7 +1062,17 @@ def _persist_paper_gate_products(
             continue
 
         excluded = excluded_by_input.get(draft.paper_id)
-        reason = excluded.reason if excluded is not None else "no accepted PaperCase"
+        reason = (
+            f"paper processing stopped with {excluded.failure_class.value}"
+            if excluded is not None and excluded.failure_class is not None
+            else (
+                "source or parse evidence was unavailable"
+                if excluded is not None and excluded.reason == "unparseable"
+                else excluded.reason
+                if excluded is not None
+                else "no accepted PaperCase"
+            )
+        )
         retained_view = ""
         if draft.paper_case is not None:
             slug = slugs[draft.paper_case.paper_case_id]
@@ -970,14 +1204,26 @@ def _persist_pattern_products(
     )
 
 
-def _persist_pattern_insufficiency(run_corpus: Path) -> None:
+def _persist_pattern_insufficiency(run_corpus: Path, *, failure_class: FailureClass | None) -> None:
     context = _run_context_for_corpus(run_corpus)
     if context is None:
         return
+    infrastructure = failure_class is not None
     text = (
-        "# Question-pattern insufficiency\n\n"
-        "No reviewed question-formation pattern was available. Accepted PaperCases and reviewed "
-        "formation traces remain visible, but question-family generation was not reached.\n"
+        (
+            "# Question-pattern interruption\n\n"
+            if infrastructure
+            else "# Question-pattern insufficiency\n\n"
+        )
+        + (
+            "Pattern or trace processing could not produce a reviewed question-formation pattern. "
+            if infrastructure
+            else "No reviewed question-formation pattern was available. "
+        )
+        + (
+            "Accepted PaperCases and reviewed formation traces remain visible, but question-family "
+            "generation was not reached.\n"
+        )
     )
     stable_path = atomic_write_text(context.paths.pattern_insufficiency, text)
     index_existing_artifact(
@@ -997,10 +1243,15 @@ def _persist_pattern_insufficiency(run_corpus: Path) -> None:
     )
     add_diagnostic(
         context,
-        diagnostic_class=DiagnosticClass.SCIENTIFIC,
+        diagnostic_class=(
+            DiagnosticClass.INFRASTRUCTURE if infrastructure else DiagnosticClass.SCIENTIFIC
+        ),
         code="no_reviewed_question_patterns",
         public_message=(
-            "No reviewed question-formation pattern survived; accepted upstream products remain available."
+            "Pattern or trace infrastructure did not yield a reviewed question-formation pattern; "
+            "accepted upstream products remain available."
+            if infrastructure
+            else "No reviewed question-formation pattern survived; accepted upstream products remain available."
         ),
         internal_path=stable_path.relative_to(context.paths.root).as_posix(),
     )
@@ -1065,6 +1316,7 @@ def _project_imported_paper_half(
             paper_id=item.paper_id,
             parseable=item.reason != "unparseable",
             parse_error=item.detail,
+            failure_class=item.failure_class,
         )
         for item in output.gate_result.excluded
         if item.paper_id not in accepted_by_input
@@ -1147,8 +1399,15 @@ def _traces_and_patterns(
     generation_boundary("question_pattern_reviser/v1")
     gen_ids = [generator.provider_id]
     cases_with_traces: list[PaperCase] = []
+    # Kept per paper so the pattern inducer can be handed the SAME resolved literature the trace
+    # drafter saw. Without it `FormationTraceRecord.local_literature` serializes as null and the
+    # inducer meets bare `cc-`/`cw-` hash ids inside evidence_bindings with nothing to resolve them
+    # against -- no cited-work titles, no citing sentences. The 2026-08-04 leg lifted
+    # citation-context coverage from 6.0% to 85.6% of cited works and none of it reached this stage.
+    trace_contexts_by_case: dict[str, PaperLocalLiteratureTraceContext] = {}
     reviewed_traces: list[QuestionFormationTrace] = []
-    trace_infrastructure_failures = 0
+    trace_infrastructure_failure_classes: list[FailureClass] = []
+    pattern_infrastructure_failure_classes: list[FailureClass] = []
     paper_slugs = assign_family_slugs(item.paper_case.paper_case_id for item in accepted)
     context = _run_context_for_corpus(run_corpus)
     for item in accepted:
@@ -1158,22 +1417,54 @@ def _traces_and_patterns(
         # MODEL_FAILED / INSUFFICIENT_EVIDENCE) is dropped from induction with a diagnostic — never a
         # bare ValueError from build_paper_local_literature_trace_context (which was OUTSIDE the try).
         if not _has_reviewable_selection(literature):
+            # The paper is NO LONGER dropped here. It is drafted from a thinner, citation-free
+            # literature context, and the independent trace gate decides whether the result is good
+            # enough -- which is the judgement this host check had been making on the gate's behalf.
+            # The basis is recorded so a reader is told the trace rests on the paper's own spans.
             selection = literature.importance_selection
             status = selection.selection_status.value if selection is not None else "none"
             write_gate_diagnostic(
                 GateDiagnostic(
                     gate_name=_FORMATION_TRACE_DRAFT_DIAGNOSTIC,
                     artifact_label=paper_case.paper_case_id,
+                    # NOT insufficient_evidence. This is a BASIS note about how the trace is being
+                    # drafted, written before the outcome is known -- and diagnostics are keyed by
+                    # (gate_name, artifact_label), so when the paper goes on to yield a promotable
+                    # trace nothing overwrites it. Under #124 that was harmless because the paper
+                    # failed anyway; #127 made these papers succeed, which turned the same line into
+                    # a run-tree record calling 8 contributing papers evidence-insufficient. A
+                    # decision field is a verdict, and this note is not one.
+                    decision=GateDecision.ACCEPT,
+                    rationale=(
+                        "drafted from a citation-free literature context: key-citation selection "
+                        f"status={status}; the trace rests on this paper's own evidence spans and the "
+                        "independent trace gate judges it on that basis"
+                    ),
+                ),
+                _diagnostics_dir(run_corpus),
+            )
+        try:
+            trace_context = build_paper_local_literature_trace_context(
+                paper_case=paper_case, literature_context=literature
+            )
+            trace_contexts_by_case[paper_case.paper_case_id] = trace_context
+        except ValueError as exc:
+            # The literature sidecar does not bind to this case at all, which is what
+            # `cited_literature: false` produces: an empty stub with no matching identity. That is a
+            # genuinely literature-free run, not a selector miss, so the honest outcome is the one this
+            # branch always had -- no trace, no pattern, recorded. Distinguishing the two cases by the
+            # existing identity check rather than by a warning string keeps it a fact, not a phrase.
+            write_gate_diagnostic(
+                GateDiagnostic(
+                    gate_name=_FORMATION_TRACE_DRAFT_DIAGNOSTIC,
+                    artifact_label=paper_case.paper_case_id,
                     decision=GateDecision.INSUFFICIENT_EVIDENCE,
-                    rationale=f"dropped from induction: key-citation selection status={status}",
+                    rationale=f"no bindable paper-local literature context for this paper: {exc}",
                 ),
                 _diagnostics_dir(run_corpus),
             )
             continue
         try:
-            trace_context = build_paper_local_literature_trace_context(
-                paper_case=paper_case, literature_context=literature
-            )
             draft = draft_question_formation_trace(
                 generator, paper_case=paper_case, trace_context=trace_context
             )
@@ -1203,9 +1494,68 @@ def _traces_and_patterns(
                 ),
                 _diagnostics_dir(run_corpus),
             )
-            trace_infrastructure_failures += 1
+            trace_infrastructure_failure_classes.append(_boundary_failure_class(exc))
             continue
         trace = draft.trace
+        if not _formation_trace_span_verifiable(trace):
+            # The draft cannot hold reviewed authority, so paying for a gate review would buy a verdict
+            # the promoter must then refuse. `QuestionFormationTrace` applies the same requirements to
+            # every non-DRAFT status, so this predicate answers "could this ever be promoted" exactly.
+            # Live-found 2026-07-30: `08-thompson-wallace-hegerl` produced a draft with only a
+            # literature-side binding, the gate accepted it, and the promoter refused -- one wasted paid
+            # review and one lost pattern contribution. The drafter prompt already asks for a binding on
+            # both sides (question_formation_trace_drafter/v3), and 181 of 181 promoted traces across the
+            # live corpus comply, so non-compliance is a stochastic slip worth exactly one fresh draft.
+            try:
+                draft = draft_question_formation_trace(
+                    generator, paper_case=paper_case, trace_context=trace_context
+                )
+                trace = draft.trace
+            except (
+                TraceDraftInsufficientEvidence,
+                StructuredModelProviderError,
+                ScientificAgentSessionError,
+                ValidationError,
+            ) as exc:
+                infrastructure = isinstance(
+                    exc,
+                    (
+                        StructuredModelProviderError,
+                        ScientificAgentSessionError,
+                        ValidationError,
+                    ),
+                )
+                write_gate_diagnostic(
+                    GateDiagnostic(
+                        gate_name=_FORMATION_TRACE_DRAFT_DIAGNOSTIC,
+                        artifact_label=paper_case.paper_case_id,
+                        decision=(
+                            GateDecision.INFRASTRUCTURE_FAILURE
+                            if infrastructure
+                            else GateDecision.INSUFFICIENT_EVIDENCE
+                        ),
+                        rationale=f"re-draft after an unpromotable draft also failed: {exc}",
+                    ),
+                    _diagnostics_dir(run_corpus),
+                )
+                if infrastructure:
+                    trace_infrastructure_failure_classes.append(_boundary_failure_class(exc))
+                continue
+            if not _formation_trace_span_verifiable(trace):
+                write_gate_diagnostic(
+                    GateDiagnostic(
+                        gate_name=_FORMATION_TRACE_DRAFT_DIAGNOSTIC,
+                        artifact_label=paper_case.paper_case_id,
+                        decision=GateDecision.INSUFFICIENT_EVIDENCE,
+                        rationale=(
+                            "draft could not hold reviewed authority on either attempt (it needs an "
+                            "evidence binding on both the literature and the dataset/question side); "
+                            "no gate review was paid for"
+                        ),
+                    ),
+                    _diagnostics_dir(run_corpus),
+                )
+                continue
         traced_case = paper_case.model_copy(update={"formation_trace": trace})
         try:
             outcome = review_formation_trace(
@@ -1215,29 +1565,71 @@ def _traces_and_patterns(
                 trace=trace,
                 paper_case=traced_case,
                 literature=literature,
+                allowed_cited_work_ids=trace_context.key_cited_work_ids,
                 generator_provider_ids=gen_ids,
             )
         except (StructuredModelProviderError, ScientificAgentSessionError, ValidationError) as exc:
+            # Exactly one fresh re-review for a stochastic unusable reply, mirroring what pattern
+            # induction below has always done ("exactly one fresh retry for a stochastic malformed
+            # batch"). Live-found 2026-07-30: `17-wills-et-al-2022` lost its trace, and therefore its
+            # pattern contribution, to a single `invalid_response` at this seam — while the sibling
+            # gate one screen down retried the same class of failure. Two standards in one file.
+            # A fresh session, the same inputs; no scientific content is repaired by the host.
+            try:
+                outcome = review_formation_trace(
+                    session=executor.gate_session(
+                        gate_name="formation_trace", generator_provider_ids=gen_ids
+                    ),
+                    trace=trace,
+                    paper_case=traced_case,
+                    literature=literature,
+                    allowed_cited_work_ids=trace_context.key_cited_work_ids,
+                    generator_provider_ids=gen_ids,
+                )
+            except (
+                StructuredModelProviderError,
+                ScientificAgentSessionError,
+                ValidationError,
+            ) as retry_exc:
+                write_gate_diagnostic(
+                    GateDiagnostic(
+                        gate_name="formation_trace",
+                        artifact_label=paper_case.paper_case_id,
+                        decision=GateDecision.INFRASTRUCTURE_FAILURE,
+                        rationale=(
+                            "trace review boundary failed for this paper on both the first attempt "
+                            f"and one retry: {exc}; retry: {retry_exc}"
+                        ),
+                    ),
+                    _diagnostics_dir(run_corpus),
+                )
+                trace_infrastructure_failure_classes.append(_boundary_failure_class(retry_exc))
+                continue
+        _record_non_accept_diagnostic(
+            outcome,
+            FORMATION_TRACE_CRITERIA,
+            run_corpus=run_corpus,
+            artifact_label=paper_case.paper_case_id,
+        )
+        if not outcome.is_accept:
+            continue
+        try:
+            promoted_trace = promote_formation_trace_to_ai_reviewed(trace, outcome)
+        except PromotedStatusNotHoldableError as exc:
+            # The gate accepted a trace that cannot hold reviewed authority. One paper's unusable
+            # trace costs that trace, never the run: before this, the same ValidationError fired
+            # inside `atomic_write_model` several frames later and ended a whole climate leg.
             write_gate_diagnostic(
                 GateDiagnostic(
                     gate_name="formation_trace",
                     artifact_label=paper_case.paper_case_id,
                     decision=GateDecision.INFRASTRUCTURE_FAILURE,
-                    rationale=f"trace review boundary failed for this paper: {exc}",
+                    rationale=f"accepted trace could not hold reviewed authority: {exc}",
                 ),
                 _diagnostics_dir(run_corpus),
             )
-            trace_infrastructure_failures += 1
+            trace_infrastructure_failure_classes.append(FailureClass.SCHEMA_ERROR)
             continue
-        if not outcome.is_accept:
-            _record_non_accept_diagnostic(
-                outcome,
-                FORMATION_TRACE_CRITERIA,
-                run_corpus=run_corpus,
-                artifact_label=paper_case.paper_case_id,
-            )
-            continue
-        promoted_trace = promote_formation_trace_to_ai_reviewed(trace, outcome)
         if context is not None:
             _persist_formation_trace_product(
                 context,
@@ -1258,7 +1650,11 @@ def _traces_and_patterns(
         cases_with_traces.append(paper_case.model_copy(update={"formation_trace": promoted_trace}))
         reviewed_traces.append(promoted_trace)
 
-    all_records = collect_formation_trace_records(cases_with_traces, product_authority=True)
+    all_records = collect_formation_trace_records(
+        cases_with_traces,
+        local_literature_contexts=trace_contexts_by_case,
+        product_authority=True,
+    )
     # D2(ii): partition by graded usability BEFORE induction — a trace with zero evidence of any kind
     # is dropped with a per-paper diagnostic (the whole-batch require_usable_trace_records raise never
     # fires). A literature-only trace (graded-usable) survives.
@@ -1276,12 +1672,12 @@ def _traces_and_patterns(
                 _diagnostics_dir(run_corpus),
             )
     if not records:
-        return (
-            [],
-            reviewed_traces,
-            [],
-            FailureClass.PROVIDER_FAILURE if trace_infrastructure_failures else None,
+        trace_failure_class = (
+            _aggregate_failure_classes(trace_infrastructure_failure_classes)
+            if trace_infrastructure_failure_classes
+            else None
         )
+        return [], reviewed_traces, [], trace_failure_class
     # Pattern INDUCTION rides its independent pattern-role model, not the per-paper extraction or
     # Question Scientist model: it is
     # one batch call over all traces and its QuestionPatternBank shapes all downstream question
@@ -1307,8 +1703,14 @@ def _traces_and_patterns(
             ),
             _diagnostics_dir(run_corpus),
         )
-        return [], reviewed_traces, [], None
+        induction_failure_class = (
+            _aggregate_failure_classes(trace_infrastructure_failure_classes)
+            if trace_infrastructure_failure_classes
+            else None
+        )
+        return [], reviewed_traces, [], induction_failure_class
     except (StructuredModelProviderError, ValidationError) as exc:
+        failure_class = _boundary_failure_class(exc)
         write_gate_diagnostic(
             GateDiagnostic(
                 gate_name=_QUESTION_PATTERN_INDUCTION_DIAGNOSTIC,
@@ -1318,7 +1720,28 @@ def _traces_and_patterns(
             ),
             _diagnostics_dir(run_corpus),
         )
-        return [], reviewed_traces, [], FailureClass.PROVIDER_FAILURE
+        return (
+            [],
+            reviewed_traces,
+            [],
+            _aggregate_failure_classes([*trace_infrastructure_failure_classes, failure_class]),
+        )
+    for warning in batch.warnings:
+        if not warning.startswith(PATTERN_TRUNCATED_AT_CAP_WARNING):
+            continue
+        # A cut abstraction is not a failure — the surviving patterns are untouched and the run
+        # carries on — but it is a fact about what the Question Scientist was NOT shown, and the
+        # per-pattern `review_guidance` filter below selects by pattern_id, so a truncation
+        # warning would otherwise reach nothing. Persist it where a reader already looks.
+        write_gate_diagnostic(
+            GateDiagnostic(
+                gate_name=_QUESTION_PATTERN_INDUCTION_DIAGNOSTIC,
+                artifact_label="induction",
+                decision=GateDecision.ACCEPT,
+                rationale=warning,
+            ),
+            _diagnostics_dir(run_corpus),
+        )
     known_case_ids = {r.paper_case_id for r in records}
     known_trace_ids = {r.formation_trace.trace_id for r in records}
     known_trace_case_edges = {
@@ -1405,23 +1828,32 @@ def _traces_and_patterns(
             QuestionPatternRevisionError,
             StructuredModelProviderError,
             ScientificAgentSessionError,
+            ValidationError,
         ) as exc:
+            infrastructure = isinstance(
+                exc,
+                (
+                    QuestionPatternRevisionError,
+                    StructuredModelProviderError,
+                    ScientificAgentSessionError,
+                    ValidationError,
+                ),
+            )
             write_gate_diagnostic(
                 GateDiagnostic(
                     gate_name="question_pattern",
                     artifact_label=pattern.pattern_id,
                     decision=(
                         GateDecision.INFRASTRUCTURE_FAILURE
-                        if isinstance(
-                            exc,
-                            (StructuredModelProviderError, ScientificAgentSessionError),
-                        )
+                        if infrastructure
                         else GateDecision.REJECT
                     ),
                     rationale=f"bounded pattern revision could not produce a valid draft: {exc}",
                 ),
                 _diagnostics_dir(run_corpus),
             )
+            if infrastructure:
+                pattern_infrastructure_failure_classes.append(_boundary_failure_class(exc))
             continue
         outcome = loop_result.final_outcome
         if rounds:
@@ -1445,7 +1877,28 @@ def _traces_and_patterns(
                 ),
             )
             continue
-        reviewed.append(promote_pattern_to_ai_reviewed(final_pattern, outcome))
+        _record_non_accept_diagnostic(
+            outcome,
+            QUESTION_PATTERN_CRITERIA,
+            run_corpus=run_corpus,
+            artifact_label=pattern.pattern_id,
+        )
+        try:
+            reviewed.append(promote_pattern_to_ai_reviewed(final_pattern, outcome))
+        except PromotedStatusNotHoldableError as exc:
+            # Same containment as the trace promoter above: one card that cannot hold reviewed
+            # authority is dropped with a diagnostic, never allowed to end the run.
+            write_gate_diagnostic(
+                GateDiagnostic(
+                    gate_name="question_pattern",
+                    artifact_label=pattern.pattern_id,
+                    decision=GateDecision.INFRASTRUCTURE_FAILURE,
+                    rationale=f"accepted pattern could not hold reviewed authority: {exc}",
+                ),
+                _diagnostics_dir(run_corpus),
+            )
+            pattern_infrastructure_failure_classes.append(FailureClass.SCHEMA_ERROR)
+            continue
         _capture_receipt(
             receipts,
             candidate=final_pattern,
@@ -1453,7 +1906,46 @@ def _traces_and_patterns(
             artifact_kind="question_pattern",
             expected_gate="question_pattern",
         )
-    return reviewed, reviewed_traces, revision_history, None
+    unresolved_infrastructure = [
+        *trace_infrastructure_failure_classes,
+        *pattern_infrastructure_failure_classes,
+    ]
+    terminal_failure = (
+        _aggregate_failure_classes(unresolved_infrastructure)
+        if not reviewed and unresolved_infrastructure
+        else None
+    )
+    return reviewed, reviewed_traces, revision_history, terminal_failure
+
+
+def _aggregate_failure_classes(classes: Sequence[FailureClass]) -> FailureClass:
+    """Choose one conservative finite class without pooling infrastructure into science."""
+    priority = (
+        FailureClass.EXTERNAL_CALL_UNCERTAIN,
+        FailureClass.PROVIDER_FAILURE,
+        FailureClass.SCHEMA_ERROR,
+        FailureClass.PROMPT_BUDGET,
+        FailureClass.SANDBOX_FAILURE,
+        FailureClass.VALIDATION_FAILURE,
+    )
+    selected = set(classes)
+    return next(item for item in priority if item in selected)
+
+
+def _boundary_failure_class(exc: Exception) -> FailureClass:
+    """Classify reply-shaped model loss separately from provider availability loss."""
+    shape_kinds = {
+        StructuredModelFailureKind.INVALID_RESPONSE.value,
+        StructuredModelFailureKind.STRUCTURED_OUTPUT_INVALID.value,
+        StructuredModelFailureKind.OUTPUT_TRUNCATED.value,
+        ScientificAgentFailureKind.INVALID_RESPONSE.value,
+        ScientificAgentFailureKind.STRUCTURED_OUTPUT_INVALID.value,
+        ScientificAgentFailureKind.OUTPUT_TRUNCATED.value,
+    }
+    kind = getattr(getattr(exc, "kind", None), "value", "")
+    if isinstance(exc, (QuestionPatternRevisionError, ValidationError)) or kind in shape_kinds:
+        return FailureClass.SCHEMA_ERROR
+    return FailureClass.PROVIDER_FAILURE
 
 
 def _records_for_pattern(
@@ -1676,15 +2168,53 @@ def family_outcome_from_dossier_status(
     )
 
 
+def shortlist_reason_by_family(paths: RunPaths) -> dict[str, str]:
+    """The per-family reason the run manifest already persists, or ``{}`` when it cannot be read.
+
+    PR #106 made the shortlist gate's own words reach ``questions/shortlist.md`` instead of a
+    dangling colon, but it wired only that surface and its Stage-D sibling. ``summary.md`` -- the
+    top-level file a reader opens FIRST -- kept rendering a bare identifier, so on both 2026-07-28
+    release-candidate legs the same family reads:
+
+        shortlist.md  - qfamily-006-... - `deferred_material_revision`: No variant passed bounded
+                        novelty admission; no planning branch may be created.
+        summary.md    - `qfamily-006-decision-dynamical-regimes`
+
+    One run, one set of facts, two surfaces, and the one the reader sees first says nothing. This
+    helper is deliberately shared by every call site rather than inlined again, because fixing some
+    surfaces and missing one is the failure mode being repaired here.
+
+    Degrades to an empty mapping: a missing or unreadable run manifest leaves the lines exactly as
+    they are today rather than turning a summary projection into a failure, and no reason is ever
+    invented for a family the manifest does not describe.
+    """
+    try:
+        manifest = load_run_manifest(paths)
+    except (OSError, ValueError, ValidationError, YAMLError):
+        # The same tuple `resume.py` already uses for a manifest read. A corrupt manifest raises
+        # `yaml.YAMLError`, which is neither an OSError nor a ValueError, so omitting it would make
+        # this helper a NEW way to lose summary.md -- the exact failure it exists to repair.
+        return {}
+    return {entry.family_id: entry.reason for entry in manifest.families if entry.reason.strip()}
+
+
 def non_included_family_outcome(
     question_family_id: str,
     *,
     shortlist_axis: ShortlistAxis,
+    reason: str,
     failed_stage_receipt_id: str = "",
     novelty_direct_recap: bool = False,
-    reason: str = "",
 ) -> FamilyRunOutcome:
-    """A family the shortlist did NOT include (rejected/deferred/run_incomplete bucket) — back half NOT_RUN."""
+    """A family the shortlist did NOT include (rejected/deferred/run_incomplete bucket) — back half NOT_RUN.
+
+    ``reason`` is deliberately REQUIRED rather than defaulted to ``""``. It had a default, all three
+    call sites silently omitted it, and every non-included family reached ``summary.md`` as a bare
+    identifier — the same shape of miss PR #106 made on this surface while fixing its two siblings. A
+    caller with nothing to say must now write ``reason=""`` and mean it, so a fourth surface cannot
+    inherit the omission by forgetting a keyword. Pass
+    ``shortlist_reason_by_family(paths).get(family_id, "")``.
+    """
     failure_class = (
         FailureClass.PROVIDER_FAILURE if shortlist_axis == ShortlistAxis.RUN_INCOMPLETE else None
     )
@@ -1721,6 +2251,7 @@ def run_stage_c(
     intent_path: Path,
     dataset_id: str,
     provisional_inspiration: bool = False,
+    rights_safe_topic_source_projection: RightsSafeTopicSourceProjection | None = None,
 ) -> Path:
     """Stage C: build + persist the V2 Question Scientist context from the RUN-LOCAL reviewed corpus.
 
@@ -1738,6 +2269,7 @@ def run_stage_c(
         intent_path=intent_path,
         dataset_id=dataset_id,
         provisional_inspiration=provisional_inspiration,
+        rights_safe_topic_source_projection=rights_safe_topic_source_projection,
     )
     return write_question_scientist_context_payload_v2(payload, corpus_root=run_corpus)
 
@@ -1759,6 +2291,7 @@ class DatasetHalfResult:
     source_count: int
     scope: ResolvedResearchScope
     fulltext_counts: FulltextEnrichmentCounts
+    topic_revision_history: TopicEvidenceRevisionHistory | None = None
     authority_ceiling: FrontHalfAuthorityCeiling = FrontHalfAuthorityCeiling.VERIFIED
     source_activity_path: Path | None = None
 
@@ -1970,12 +2503,13 @@ def run_dataset_half(
     """Dataset half: fuse+review the DatasetNarrative (Sources A/B/C/D) and the TopicEvidenceBrief.
 
     Both land AI/AUTOMATED-authority artifacts at the exact stage-C corpus paths, ZERO human import.
-    The topic source table is INJECTED (generic-lane retrieval + web search happen upstream of this
-    seam); the topic-evidence gate compares its generic ``required_lanes`` against the source table's
-    own generic-lane coverage. ``topic_r5_source_table`` lets the retrieval layer supply an already
-    fulltext-ENRICHED topic table (``build_r5_topic_source_table`` alone yields abstract-only records, which
-    stage C rejects for open-gap support); it must cover the same source ids the brief cites. Returns the
-    topic-evidence F2 receipt so DP-5 can refuse a mock-reviewed brief before the shortlist handoff.
+    The topic source table is INJECTED (scope-term retrieval happens upstream of this seam). The
+    topic-evidence reviewer receives rights-safe source content and judges the generic scientific
+    dimensions; acquisition lineage does not establish them. ``topic_r5_source_table`` lets the
+    retrieval layer supply an already fulltext-ENRICHED table (``build_r5_topic_source_table`` alone
+    yields abstract-only records, which stage C rejects for open-gap support); it must cover the same
+    source ids the brief cites. Returns the topic-evidence F2 receipt so DP-5 can refuse a mock-reviewed
+    brief before the shortlist handoff.
     """
     # Narrator and topic evidence each ride their OWN configured role model.
     narrator_provider = executor.generation_provider("narrator")
@@ -2007,16 +2541,34 @@ def run_dataset_half(
         # Surface-only: the narrative gate stays fail-closed; persist WHY from its review content
         # (its reviewer uses accept/revise/reject — string-identical to GateDecision).
         review = narrator_result.review
+        decision = GateDecision.REJECT
         if review is not None:
+            decision = GateDecision(review.decision.value)
             diagnostic = GateDiagnostic(
                 gate_name="narrative_fidelity",
-                decision=GateDecision(review.decision.value),
+                decision=decision,
                 rationale=review.rationale,
                 failed_criteria=[a.criterion for a in review.criterion_assessments if not a.passed],
                 returned_criteria=[a.criterion for a in review.criterion_assessments],
             )
             write_gate_diagnostic(diagnostic, _diagnostics_dir(run_corpus))
-        raise ValueError(f"{exc} | narrative-fidelity gate diagnostics persisted") from exc
+        scientific_non_accept = decision != GateDecision.ACCEPT
+        raise DatasetContextTerminalError(
+            (
+                DatasetContextTerminalKind.NARRATIVE_REVIEW_NON_ACCEPT
+                if scientific_non_accept
+                else DatasetContextTerminalKind.CONTEXT_VALIDATION_FAILED
+            ),
+            failure_class=(
+                FailureClass.SCIENTIFIC
+                if scientific_non_accept
+                else FailureClass.VALIDATION_FAILURE
+            ),
+            gate_decision=(
+                decision if scientific_non_accept else GateDecision.INFRASTRUCTURE_FAILURE
+            ),
+            internal_detail=f"{exc} | narrative-fidelity gate diagnostics persisted",
+        ) from exc
     persist_reviewed_narrator_result(narrator_result, corpus_root=run_corpus)
     _persist_early_dataset_products(
         run_corpus=run_corpus,
@@ -2094,6 +2646,48 @@ def run_dataset_half(
         r5_table,
         topic_root / "sources" / "research_intent.topic_source_table.yaml",
     )
+    if bundle.field_state_draft is not None:
+        dump_data(
+            bundle.field_state_draft,
+            topic_root / "sources" / "research_intent.topic_field_state.yaml",
+        )
+    # Source activity describes retrieval, not whether the synthesized brief later earns review.
+    # Persist the real table/count/lanes now so a downstream revise/reject cannot rewrite retrieved
+    # records as an inactive zero-source lane. An empty table must remain honestly EMPTY.
+    source_activity_path = _persist_dataset_source_activity(
+        config=config,
+        run_corpus=run_corpus,
+        narrator_result=narrator_result,
+        narrative=narrative,
+        scope=resolved_scope,
+        topic_table=r5_table,
+        topic_status=(
+            SourceActivityStatus.PRODUCED if r5_table.records else SourceActivityStatus.EMPTY
+        ),
+        topic_detail=(
+            "source-bound topic literature retrieved; brief review pending"
+            if r5_table.records
+            else "no source-bound topic literature was available"
+        ),
+    )
+    # Retrieval is already a completed, reader-relevant fact even if synthesis review later rejects
+    # or exhausts repair. Publish it before the gate so a zero-dossier terminal still tells the user
+    # what was actually retrieved instead of collapsing twenty records/eight lanes into silence.
+    retrieval_reader_path = write_retrieval_summary(
+        RunPaths(root=run_corpus.parent),
+        topic_terms=list(resolved_scope.terms),
+        lane_coverage=dict(r5_table.lane_coverage),
+        source_count=len(r5_table.records),
+    )
+    context = _run_context_for_corpus(run_corpus)
+    if context is not None:
+        index_existing_artifact(
+            context,
+            retrieval_reader_path,
+            kind=ArtifactKind.RETRIEVAL_SUMMARY,
+            processing_state=ProductProcessingState.PRODUCED,
+            authority=ArtifactAuthority.PROVISIONAL,
+        )
     # D5(a) + Q1: the gate must see the REAL claim-supporting classification (not a blanket True) AND
     # the SAME scope-driven off-topic view the compiler's blocked-source check uses, so a genuinely
     # weak OR off-scope brief earns an honest gate reject/revise (with diagnostic) at the dataset-half
@@ -2164,24 +2758,12 @@ def run_dataset_half(
         source_record_ids=source_ids,
         claim_supporting_record_ids=claim_supporting_ids,
     )
-    failed_lanes = [
-        lane for lane in GENERIC_REQUIRED_LANES if r5_table.lane_coverage.get(lane, 0) == 0
-    ]
-    if not ready or failed_lanes:
+    if not ready:
         diagnostic_path = write_gate_diagnostic(
             GateDiagnostic(
                 gate_name=_TOPIC_EVIDENCE_PROVISIONAL_DIAGNOSTIC,
                 decision=GateDecision.INSUFFICIENT_EVIDENCE,
-                rationale="; ".join(
-                    [
-                        *readiness_issues,
-                        *(
-                            ["partial generic-lane coverage: " + ", ".join(failed_lanes)]
-                            if failed_lanes
-                            else []
-                        ),
-                    ]
-                ),
+                rationale="; ".join(readiness_issues),
             ),
             _diagnostics_dir(run_corpus),
         )
@@ -2231,48 +2813,309 @@ def run_dataset_half(
             authority_ceiling=FrontHalfAuthorityCeiling.PROVISIONAL_INSPIRATION,
             source_activity_path=source_activity_path,
         )
-    outcome = review_topic_evidence(
-        session=executor.gate_session(
-            gate_name="topic_evidence", generator_provider_ids=topic_gen_ids
-        ),
-        brief=brief,
-        scope=resolved_scope,
-        source_record_ids=source_ids,
-        claim_supporting_record_ids=claim_supporting_ids,
-        lane_coverage=r5_table.lane_coverage,
-        research_intent=intent.model_dump(mode="json"),
-        source_record_summaries=[
-            {
-                "source_record_id": record.source_record_id,
-                "can_support_claims": record.can_support_claims,
-            }
-            for record in r5_table.records
-        ],
-        generator_provider_ids=topic_gen_ids,
-    )
-    try:
-        promoted = promote_topic_evidence_to_ai_reviewed(
-            brief, outcome
-        )  # fail-closed on non-accept
-    except ValueError as exc:
-        # Surface-only: the gate stays fail-closed (assert_promotion_binding raised); persist WHY
-        # (reviewer verdict + deterministic readiness + lane coverage) so a crashed run leaves a
-        # trace, and re-raise with the same content in the message.
-        diagnostic = build_topic_evidence_gate_diagnostic(
-            outcome,
-            brief,
+    generation_boundary("topic_evidence_brief_reviser/v1")
+    generation_boundary(TOPIC_EVIDENCE_TERMINAL_INQUIRY_PROMPT_VERSION)
+    revision_rounds: list[TopicEvidenceRevisionRound] = []
+    inquiry_disposition: TopicEvidenceInquiryDisposition | None = None
+    inquiry_gap_dimensions: list[str] = []
+    inquiry_record: TopicEvidenceTerminalInquiryRecord | None = None
+    inquiry_record_path: Path | None = None
+
+    def _review(current: TopicEvidenceBrief) -> GateOutcome:
+        nonlocal inquiry_disposition, inquiry_gap_dimensions, inquiry_record, inquiry_record_path
+        review_index = len(revision_rounds)
+        source_summaries = build_topic_evidence_reviewer_source_summaries(
+            brief=current,
+            source_table=r5_table,
+            claim_supporting_record_ids=claim_supporting_ids,
+        )
+        turn_input = build_topic_evidence_turn_input(
+            brief=current,
+            scope=resolved_scope,
+            research_intent=intent.model_dump(mode="json"),
+            source_record_summaries=source_summaries,
+            retrieval_lineage=r5_table.lane_coverage,
+            field_state=bundle.field_state_draft,
+            review_guidance=(
+                topic_evidence_inquiry_review_guidance(inquiry_record)
+                if inquiry_record is not None and revision_rounds
+                else ""
+            ),
+        )
+        turn_input_path = (
+            topic_root / "review" / f"round-{review_index:04d}.topic_evidence_review_input.yaml"
+        )
+        current_outcome = review_topic_evidence(
+            session=executor.gate_session(
+                gate_name="topic_evidence", generator_provider_ids=topic_gen_ids
+            ),
+            brief=current,
+            scope=resolved_scope,
             source_record_ids=source_ids,
             claim_supporting_record_ids=claim_supporting_ids,
-            lane_coverage=r5_table.lane_coverage,
+            retrieval_lineage=r5_table.lane_coverage,
+            research_intent=intent.model_dump(mode="json"),
+            source_record_summaries=source_summaries,
+            field_state=bundle.field_state_draft,
+            generator_provider_ids=topic_gen_ids,
+            prepared_turn_input=turn_input,
+            turn_input_path=turn_input_path,
         )
-        # run_corpus is runs/<id>/corpus (RunLayout.corpus) → runs/<id>/diagnostics/.
-        diagnostic_path = run_corpus.parent / "diagnostics" / "topic_evidence_gate.yaml"
-        dump_data(diagnostic, diagnostic_path)
-        raise ValueError(
-            f"{exc} | {diagnostic.summary_line()} | diagnostic persisted: {diagnostic_path}"
+        if (
+            current_outcome.decision == GateDecision.REVISE
+            and not current_outcome.evidence_resolved
+        ):
+            current_outcome = current_outcome.model_copy(
+                update={
+                    "decision": GateDecision.REJECT,
+                    "rationale": current_outcome.rationale
+                    + " Host rejected revision because source/readiness closure is invalid.",
+                }
+            )
+        if current_outcome.decision == GateDecision.REVISE and not current_outcome.required_changes:
+            current_outcome = current_outcome.model_copy(
+                update={
+                    "decision": GateDecision.INSUFFICIENT_EVIDENCE,
+                    "rationale": current_outcome.rationale
+                    + " Reviewer requested revision without actionable required_changes.",
+                }
+            )
+        if (
+            current_outcome.decision == GateDecision.INSUFFICIENT_EVIDENCE
+            and inquiry_disposition is None
+            and not revision_rounds
+            and config.run.max_revise_rounds > 0
+        ):
+            _scientific_field_state, engineering_diagnostics = (
+                split_topic_field_state_for_scientific_review(bundle.field_state_draft)
+            )
+            inquiry_root = topic_root / "terminal_inquiry"
+            _packet, record = inquire_topic_evidence_terminal(
+                topic_provider,
+                brief=current,
+                original_review_input=turn_input,
+                original_review_input_path=turn_input_path,
+                original_review_input_reference=turn_input_path.relative_to(
+                    run_corpus.parent
+                ).as_posix(),
+                inquiry_input_path=inquiry_root / "terminal_inquiry_input.yaml",
+                original_outcome=current_outcome,
+                allowed_source_record_ids=source_ids,
+                eligible_source_record_ids=claim_supporting_ids,
+                engineering_correction_diagnostics=engineering_diagnostics,
+            )
+            # The input is written before the provider call inside the inquiry service. Persist the
+            # complete result immediately after validation so a later revision/re-review failure
+            # cannot erase why the route changed.
+            inquiry_record_path = dump_data(
+                record,
+                inquiry_root / "terminal_inquiry_record.yaml",
+            )
+            inquiry_record = record
+            inquiry_disposition = record.output.disposition
+            inquiry_gap_dimensions = sorted(
+                {
+                    assessment.semantic_dimension.value
+                    for assessment in record.output.gap_assessments
+                    if assessment.essential_to_scope
+                    and assessment.disposition.value != "packet_present_but_omitted"
+                }
+            )
+            if inquiry_disposition == TopicEvidenceInquiryDisposition.SOURCE_LOCKED_REVISE:
+                return inquiry_revision_outcome(record, brief=current)
+        return current_outcome
+
+    def _write_topic_diagnostic(
+        current_outcome: GateOutcome,
+        current: TopicEvidenceBrief,
+        *,
+        artifact_label: str,
+    ) -> Path:
+        diagnostic = build_topic_evidence_gate_diagnostic(
+            current_outcome,
+            current,
+            source_record_ids=source_ids,
+            claim_supporting_record_ids=claim_supporting_ids,
+            retrieval_lineage=r5_table.lane_coverage,
+        ).model_copy(update={"artifact_label": artifact_label})
+        return write_gate_diagnostic(
+            diagnostic,
+            _diagnostics_dir(run_corpus),
+            directory_name=(
+                "topic_evidence_accepted" if current_outcome.is_accept else "topic_evidence"
+            ),
+        )
+
+    def _redraft(current: TopicEvidenceBrief, current_outcome: GateOutcome) -> TopicEvidenceBrief:
+        round_index = len(revision_rounds) + 1
+        _write_topic_diagnostic(
+            current_outcome,
+            current,
+            artifact_label=f"{current.brief_id}.review-{round_index - 1}",
+        )
+        revised, revision_round = revise_topic_evidence_brief(
+            topic_provider,
+            brief=current,
+            r5_source_table=r5_table,
+            scope=resolved_scope,
+            review_outcome=current_outcome,
+            claim_supporting_source_ids=claim_supporting_ids,
+            round_index=round_index,
+            revision_output_path=(
+                topic_root / "revisions" / f"round-{round_index:04d}.topic_evidence_brief.yaml"
+            ),
+            revision_output_reference=(
+                "corpus/context/topic_evidence/revisions/"
+                f"round-{round_index:04d}.topic_evidence_brief.yaml"
+            ),
+        )
+        if current_outcome.gate_name == _TOPIC_EVIDENCE_TERMINAL_INQUIRY_DIAGNOSTIC:
+            if inquiry_record is None:
+                raise TopicEvidenceTerminalInquiryError(
+                    "source-locked topic revision has no persisted inquiry record"
+                )
+            assert_inquiry_revision_coverage(
+                inquiry_record,
+                cited_source_record_ids=set(revision_round.cited_source_record_ids),
+            )
+        # Persist the round record immediately, before the next reviewer call. If that call fails,
+        # the run still retains the prior verdict, exact candidate path/digests, and generator
+        # identity instead of an unbound candidate file plus a transport diagnostic.
+        dump_data(
+            revision_round,
+            topic_root / "revisions" / f"round-{round_index:04d}.revision_round.yaml",
+        )
+        revision_rounds.append(revision_round)
+        return revised
+
+    try:
+        final_brief, loop_result = run_gate_with_revise_loop(
+            artifact=brief,
+            review=_review,
+            redraft=_redraft,
+            max_revise_rounds=config.run.max_revise_rounds,
+        )
+    except (StructuredModelProviderError, ScientificAgentSessionError) as exc:
+        diagnostic_path = write_gate_diagnostic(
+            GateDiagnostic(
+                gate_name="topic_evidence",
+                artifact_label=f"{brief.brief_id}.revision-provider-failure",
+                decision=GateDecision.INFRASTRUCTURE_FAILURE,
+                rationale=f"bounded topic inquiry/revision/review provider failed: {type(exc).__name__}",
+            ),
+            _diagnostics_dir(run_corpus),
+        )
+        raise DatasetContextTerminalError(
+            DatasetContextTerminalKind.TOPIC_EVIDENCE_PROVIDER_FAILURE,
+            failure_class=FailureClass.PROVIDER_FAILURE,
+            gate_decision=GateDecision.INFRASTRUCTURE_FAILURE,
+            internal_detail=f"provider failure; diagnostic persisted: {diagnostic_path}",
+        ) from exc
+    except TopicEvidenceTerminalInquiryError as exc:
+        diagnostic_path = write_gate_diagnostic(
+            GateDiagnostic(
+                gate_name=_TOPIC_EVIDENCE_TERMINAL_INQUIRY_DIAGNOSTIC,
+                artifact_label=f"{brief.brief_id}.inquiry-invalid",
+                decision=GateDecision.INFRASTRUCTURE_FAILURE,
+                rationale=f"bounded topic inquiry failed validation: {type(exc).__name__}",
+            ),
+            _diagnostics_dir(run_corpus),
+        )
+        raise DatasetContextTerminalError(
+            DatasetContextTerminalKind.TOPIC_EVIDENCE_INQUIRY_INVALID,
+            failure_class=FailureClass.SCHEMA_ERROR,
+            gate_decision=GateDecision.INFRASTRUCTURE_FAILURE,
+            internal_detail=f"inquiry validation failed; diagnostic persisted: {diagnostic_path}",
+        ) from exc
+    except (TopicEvidenceRevisionError, ValidationError) as exc:
+        diagnostic_path = write_gate_diagnostic(
+            GateDiagnostic(
+                gate_name="topic_evidence",
+                artifact_label=f"{brief.brief_id}.revision-invalid",
+                decision=GateDecision.INFRASTRUCTURE_FAILURE,
+                rationale=f"bounded topic revision failed validation: {type(exc).__name__}",
+            ),
+            _diagnostics_dir(run_corpus),
+        )
+        raise DatasetContextTerminalError(
+            DatasetContextTerminalKind.TOPIC_EVIDENCE_REVISION_INVALID,
+            failure_class=FailureClass.SCHEMA_ERROR,
+            gate_decision=GateDecision.INFRASTRUCTURE_FAILURE,
+            internal_detail=f"revision validation failed; diagnostic persisted: {diagnostic_path}",
+        ) from exc
+
+    outcome = loop_result.final_outcome
+    revision_history: TopicEvidenceRevisionHistory | None = None
+    if revision_rounds or loop_result.budget_exhausted:
+        revision_history = TopicEvidenceRevisionHistory(
+            brief_id=brief.brief_id,
+            rounds=revision_rounds,
+            final_outcome=outcome,
+            budget_exhausted=loop_result.budget_exhausted,
+        )
+        dump_data(
+            revision_history,
+            topic_root / "revisions" / "research_intent.topic_evidence_revision_history.yaml",
+        )
+    if not outcome.is_accept:
+        diagnostic_path = _write_topic_diagnostic(
+            outcome,
+            final_brief,
+            artifact_label=(
+                f"{brief.brief_id}.revision-budget-exhausted"
+                if loop_result.budget_exhausted
+                else f"{brief.brief_id}.final"
+            ),
+        )
+        public_reason = ""
+        if loop_result.budget_exhausted:
+            kind = DatasetContextTerminalKind.TOPIC_EVIDENCE_REVISION_BUDGET_EXHAUSTED
+        elif inquiry_disposition == TopicEvidenceInquiryDisposition.HUMAN_ESCALATION:
+            kind = DatasetContextTerminalKind.TOPIC_EVIDENCE_HUMAN_ESCALATION
+            public_reason = _topic_inquiry_public_reason(
+                inquiry_disposition, inquiry_gap_dimensions
+            )
+        elif outcome.decision == GateDecision.INSUFFICIENT_EVIDENCE:
+            kind = DatasetContextTerminalKind.TOPIC_EVIDENCE_INSUFFICIENT
+            if inquiry_disposition is not None:
+                public_reason = _topic_inquiry_public_reason(
+                    inquiry_disposition, inquiry_gap_dimensions
+                )
+        else:
+            kind = DatasetContextTerminalKind.TOPIC_EVIDENCE_REVIEW_REJECTED
+        raise DatasetContextTerminalError(
+            kind,
+            failure_class=FailureClass.SCIENTIFIC,
+            gate_decision=outcome.decision,
+            internal_detail=(
+                f"{outcome.rationale} | diagnostic persisted: {diagnostic_path}"
+                + (
+                    f" | inquiry persisted: {inquiry_record_path}"
+                    if inquiry_record_path is not None
+                    else ""
+                )
+            ),
+            public_reason=public_reason,
+        )
+    # A direct ACCEPT remains diagnostic-noise-free. After a repair, retain the independent
+    # acceptance beside the rejected attempt so the revision history is auditable end to end.
+    if revision_rounds:
+        _write_topic_diagnostic(
+            outcome,
+            final_brief,
+            artifact_label=f"{brief.brief_id}.final",
+        )
+    try:
+        promoted = promote_topic_evidence_to_ai_reviewed(final_brief, outcome)
+    except ValueError as exc:
+        raise DatasetContextTerminalError(
+            DatasetContextTerminalKind.CONTEXT_VALIDATION_FAILED,
+            failure_class=FailureClass.SCHEMA_ERROR,
+            gate_decision=GateDecision.INFRASTRUCTURE_FAILURE,
+            internal_detail="accepted topic brief failed promotion binding",
         ) from exc
     receipt = build_promotion_receipt(
-        candidate=brief,
+        candidate=final_brief,
         outcome=outcome,
         artifact_kind="topic_evidence",
         expected_gate="topic_evidence",
@@ -2296,6 +3139,7 @@ def run_dataset_half(
         source_count=len(r5_table.records),
         scope=resolved_scope,
         fulltext_counts=fulltext_counts,
+        topic_revision_history=revision_history,
         source_activity_path=source_activity_path,
     )
 
@@ -2323,6 +3167,233 @@ def novelty_not_assessed(
         )
         for variant_id in active_ids
     ]
+
+
+def _persist_novelty_admission_result(
+    result: FamilyNoveltyAdmissionResult, *, run_corpus: Path
+) -> None:
+    """Persist every receipt-bound novelty surface before shortlist admission."""
+    root = run_corpus / "question_families" / "novelty"
+    family_root = root / family_slug(result.admission.question_family_id)
+    for plan in result.search_plans:
+        dump_data(plan, family_root / "search_plans" / f"{plan.search_plan_id}.yaml")
+    for evidence in result.evidence_packs:
+        dump_data(evidence, family_root / "evidence" / f"{evidence.evidence_pack_id}.yaml")
+    for assessment in result.assessments:
+        dump_data(
+            assessment,
+            family_root / "assessments" / f"{assessment.assessment_id}.yaml",
+        )
+    for revision in result.revisions:
+        dump_data(revision, family_root / "revisions" / f"{revision.revision_id}.yaml")
+    dump_data(
+        result.admission,
+        family_root / f"{result.admission.admission_id}.family_novelty_admission.yaml",
+    )
+
+
+def _persist_novelty_infrastructure_deferral_collapse(
+    deferrals: list[tuple[str, str]], *, run_corpus: Path
+) -> Path | None:
+    """D8: collapse identical-cause novelty infrastructure deferrals into one run-level record.
+
+    Written only when at least one shared cause deferred two or more families; the per-family
+    honest terminals are unchanged. Carries only the exception class, never raw provider text.
+    """
+    from ...schemas.novelty_admission import (
+        NoveltyInfrastructureDeferralCollapse,
+        NoveltyInfrastructureDeferralGroup,
+    )
+
+    by_class: dict[str, list[str]] = {}
+    for family_id, failure_class in deferrals:
+        by_class.setdefault(failure_class, []).append(family_id)
+    shared = {cls: ids for cls, ids in by_class.items() if len(ids) >= 2}
+    if not shared:
+        return None
+    collapse = NoveltyInfrastructureDeferralCollapse(
+        groups=[
+            NoveltyInfrastructureDeferralGroup(failure_class=cls, family_ids=sorted(ids))
+            for cls, ids in sorted(shared.items())
+        ]
+    )
+    path = _diagnostics_dir(run_corpus) / "novelty_infrastructure_deferrals.yaml"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    return dump_data(collapse, path)
+
+
+def _novelty_failure_result(
+    family: QuestionFamily, exc: Exception
+) -> tuple[FamilyShortlistOutcome, None]:
+    """CARD3-SAFETY honest terminal: one family's novelty failure never aborts Stage D siblings.
+
+    The failure is closed as an honest insufficient-evidence deferral carrying only the exception
+    CLASS (raw provider/reviewer text can embed secrets or oversized payloads); it is never an
+    invented scientific rejection, and the family stays visible for a later re-search.
+    """
+    from ...schemas.variant_novelty import VariantNoveltyStatus
+
+    rationale = (
+        "novelty admission infrastructure failure "
+        f"({type(exc).__name__}); the run is incomplete for this family - not a scientific verdict"
+    )
+    # RUN_INCOMPLETE, never a deferral -- the same conclusion the shortlist handler twenty lines
+    # below reached, in the same words: "folding these into `deferred` would have reported an API
+    # failure to the reader as 'not enough usable evidence'". This is the HIGHEST-fan-in catch in
+    # Stage D: an OpenAlex quota RuntimeError, a schema ValidationError and the reviewer/questioner
+    # identity ValueError all land here, and every one of them reached the reader as a finding
+    # about the literature. The rationale already said "not a scientific verdict" while the LABEL
+    # said the opposite, and the reader page reads the label.
+    return (
+        FamilyShortlistOutcome(
+            question_family_id=family.question_family_id,
+            label=FamilyInclusionLabel.RUN_INCOMPLETE,
+            gate_decision=GateDecision.INFRASTRUCTURE_FAILURE.value,
+            variant_outcomes=[
+                VariantShortlistOutcome(
+                    variant_id=variant.variant_id,
+                    disposition=VariantShortlistDisposition.DEFERRED_NOVELTY,
+                    novelty_status=VariantNoveltyStatus.NOT_ASSESSED,
+                    rationale=rationale,
+                )
+                for variant in family.variants
+            ],
+            active_variant_ids=[],
+            rationale=rationale,
+        ),
+        None,
+    )
+
+
+def _shortlist_failure_result(
+    family: QuestionFamily,
+    exc: Exception,
+    novelty_results: Sequence[VariantNoveltyResult] = (),
+) -> tuple[FamilyShortlistOutcome, None]:
+    """One family's shortlist-gate infrastructure failure closes only that family.
+
+    The novelty call twenty lines earlier already contains exactly these exception classes per
+    family; the shortlist gate re-raised them and took the whole stage, so a persistent provider
+    fault on the FIRST family destroyed every sibling's dossier -- including families whose gate
+    outcomes had already been earned and paid for. `FamilyInclusionLabel.RUN_INCOMPLETE`,
+    `ShortlistAxis.RUN_INCOMPLETE` and `derive_family_shortlist_outcome`'s INFRASTRUCTURE_FAILURE
+    mapping all existed for exactly this and were unreachable: `grep infrastructure_error` returned
+    three hits, all definitions, none passing True.
+
+    RUN_INCOMPLETE, never a deferral. `run_outcome.py` hard-rejects a `run_incomplete` outcome that
+    carries no infrastructure failure class, so this cannot launder a fault into a scientific
+    verdict, and `build_shortlist_manifest` demands a reviewed family only on the INCLUDED path, so
+    it cannot forge a promotion. The manifest gained its own `run_incomplete` bucket in the same
+    change: folding these into `deferred` would have reported an API failure to the reader as "not
+    enough usable evidence". Only the exception CLASS is carried -- raw provider text can embed
+    secrets or oversized payloads.
+    """
+    rationale = (
+        "shortlist review infrastructure failure "
+        f"({type(exc).__name__}); the run is incomplete for this family - not a scientific verdict"
+    )
+    # Novelty ran BEFORE the shortlist gate, so each variant's novelty verdict is real and already
+    # paid for. Carrying it through is what lets a resumed or re-run leg see that this family failed
+    # at the gate and not at novelty; flattening it to NOT_ASSESSED would erase earned work.
+    from ...schemas.variant_novelty import VariantNoveltyStatus
+
+    novelty_by_variant = {result.variant_id: result.status for result in novelty_results}
+    return (
+        FamilyShortlistOutcome(
+            question_family_id=family.question_family_id,
+            label=FamilyInclusionLabel.RUN_INCOMPLETE,
+            gate_decision=GateDecision.INFRASTRUCTURE_FAILURE.value,
+            variant_outcomes=[
+                VariantShortlistOutcome(
+                    variant_id=variant.variant_id,
+                    disposition=VariantShortlistDisposition.DEFERRED_MATERIAL_REVISION,
+                    novelty_status=novelty_by_variant.get(
+                        variant.variant_id, VariantNoveltyStatus.NOT_ASSESSED
+                    ),
+                    rationale=rationale,
+                )
+                for variant in family.variants
+            ],
+            active_variant_ids=[],
+            rationale=rationale,
+        ),
+        None,
+    )
+
+
+def _novelty_nonincluded_result(
+    family: QuestionFamily, result: FamilyNoveltyAdmissionResult
+) -> tuple[FamilyShortlistOutcome, None]:
+    """Close a family before shortlist when no variant earned novelty admission."""
+    admission_by_variant = {item.variant_id: item for item in result.admission.variant_admissions}
+    legacy_by_variant = {item.variant_id: item for item in result.legacy_results}
+    dispositions = [item.disposition for item in result.admission.variant_admissions]
+    if dispositions and all(
+        disposition == NoveltyVariantDisposition.REJECTED_DIRECT_RECAP
+        for disposition in dispositions
+    ):
+        label = FamilyInclusionLabel.REJECTED_SCIENTIFIC
+        gate_decision = GateDecision.REJECT.value
+    elif any(
+        disposition == NoveltyVariantDisposition.DEFERRED_CLOSE_PRIOR
+        for disposition in dispositions
+    ):
+        label = FamilyInclusionLabel.DEFERRED_MATERIAL_REVISION
+        gate_decision = GateDecision.REVISE.value
+    elif (
+        dispositions
+        and all(
+            disposition
+            in {
+                NoveltyVariantDisposition.NOT_ASSESSED_INFRASTRUCTURE,
+                NoveltyVariantDisposition.DEFERRED_INSUFFICIENT_EVIDENCE,
+            }
+            for disposition in dispositions
+        )
+        and any(
+            disposition == NoveltyVariantDisposition.NOT_ASSESSED_INFRASTRUCTURE
+            for disposition in dispositions
+        )
+    ):
+        # No variant was ever reviewed, so the run learned nothing about this family's literature.
+        # Filing it as `deferred_insufficient_evidence` is the 97%-mislabelling defect at its
+        # source: on the 2026-07-31 leg five families reached the reader as thin literature when
+        # the reviewer had simply been cut off, and one of them had in fact returned
+        # `no_direct_recap_found_in_scope` twice.
+        label = FamilyInclusionLabel.RUN_INCOMPLETE
+        gate_decision = GateDecision.INFRASTRUCTURE_FAILURE.value
+    else:
+        label = FamilyInclusionLabel.DEFERRED_INSUFFICIENT_EVIDENCE
+        gate_decision = GateDecision.INSUFFICIENT_EVIDENCE.value
+    variant_outcomes: list[VariantShortlistOutcome] = []
+    for variant in family.variants:
+        admission = admission_by_variant[variant.variant_id]
+        legacy = legacy_by_variant[variant.variant_id]
+        variant_outcomes.append(
+            VariantShortlistOutcome(
+                variant_id=variant.variant_id,
+                disposition=(
+                    VariantShortlistDisposition.REJECTED
+                    if admission.disposition == NoveltyVariantDisposition.REJECTED_DIRECT_RECAP
+                    else VariantShortlistDisposition.DEFERRED_NOVELTY
+                ),
+                novelty_status=legacy.status,
+                novelty_assessment_id=admission.assessment_id,
+                rationale=legacy.rationale,
+            )
+        )
+    return (
+        FamilyShortlistOutcome(
+            question_family_id=family.question_family_id,
+            label=label,
+            gate_decision=gate_decision,
+            variant_outcomes=variant_outcomes,
+            active_variant_ids=[],
+            novelty_admission_id=result.admission.admission_id,
+            rationale=result.admission.rationale,
+        ),
+        None,
+    )
 
 
 def _initialize_family_products(context: RunContext, batch: QuestionFamilyBatch) -> None:
@@ -2396,6 +3467,8 @@ def _family_shortlist_disposition(outcome: FamilyShortlistOutcome) -> FamilyShor
         FamilyInclusionLabel.REVISION_BUDGET_EXHAUSTED,
     }:
         return FamilyShortlistDisposition.NEEDS_REVISION
+    if outcome.label == FamilyInclusionLabel.RUN_INCOMPLETE:
+        return FamilyShortlistDisposition.RUN_INCOMPLETE
     return FamilyShortlistDisposition.DEFERRED
 
 
@@ -2432,7 +3505,17 @@ def _project_shortlist_products(
             if item.family_id == family.question_family_id
         )
         disposition.shortlist = _family_shortlist_disposition(outcome)
-        disposition.reason = f"Automated shortlist disposition: {outcome.label.value}."
+        # Prefer the outcome's own rationale over the label tautology. The back half already does
+        # exactly this (see `_family_disposition` below), so the two halves disagreeing was an
+        # internal inconsistency rather than a decision. Measured before the fix: across 20
+        # shortlist.md files, 13 of 13 non-included families rendered a dangling colon with
+        # nothing after it, and 7 of those 13 were infrastructure failures that the code had
+        # already taken the trouble to describe honestly -- the string containing "not a
+        # scientific verdict" appeared in zero rendered files. A reader was told to go find more
+        # literature when the correct action was to re-run.
+        disposition.reason = sanitize_family_failure_text(
+            outcome.rationale or f"Automated shortlist disposition: {outcome.label.value}."
+        )
         current_dossier = next(
             (
                 item
@@ -2472,6 +3555,7 @@ def run_stage_d(
     novelty_fn: Callable[[QuestionFamily, Sequence[str]], list[VariantNoveltyResult]] = (
         novelty_not_assessed
     ),
+    novelty_required: bool = False,
     family_count: int = 6,
     variants_per_family: int = 3,
 ) -> Path:
@@ -2571,7 +3655,16 @@ def run_stage_d(
             run_corpus=run_corpus,
             artifact_label=family_id,
         )
-        if context is not None and diagnostic_path is not None:
+        # `not outcome.is_accept` is the condition this reader-facing message has always MEANT, and
+        # for a while `diagnostic_path is not None` said it by accident: the writer returned None on
+        # accept, so a path existed only for a non-accept. Recording earned accepts removed that
+        # early return and the guard silently stopped meaning what it meant -- the 2026-08-04 leg
+        # shipped six copies of "The automated shortlist review did not include this family", five
+        # of them pointing at `shortlist_worthiness_accepted/*.yaml` files recording `decision:
+        # accept`, eight lines below the same README's `shortlist `shortlisted`` for those same
+        # five. A reader is told the run rejected the very families it presents as its suggested
+        # reading. The decision is now read from the decision.
+        if context is not None and not outcome.is_accept:
             add_diagnostic(
                 context,
                 diagnostic_class=DiagnosticClass.SCIENTIFIC,
@@ -2581,8 +3674,39 @@ def run_stage_d(
                 family_id=family_id,
             )
 
+    novelty_infra_deferrals: list[tuple[str, str]] = []
+    shortlist_infra_failures: list[str] = []
+    shortlist_infra_exception: Exception | None = None
     for family in batch.families:
+        review_family = family
         active_ids = [variant.variant_id for variant in family.variants]
+        novelty_results = novelty_fn(family, active_ids)
+        novelty_admission: FamilyNoveltyAdmissionResult | None = None
+        if novelty_required:
+            try:
+                novelty_admission = executor.run_novelty_admission(family)
+                _persist_novelty_admission_result(novelty_admission, run_corpus=run_corpus)
+            except (OSError, RuntimeError, TypeError, ValueError, ValidationError) as exc:
+                # CARD3-SAFETY honest-terminal wrapper: a reviewer/validation/provider failure in
+                # a single family's novelty admission closes only that family; siblings continue.
+                results.append(_novelty_failure_result(family, exc))
+                novelty_infra_deferrals.append((family.question_family_id, type(exc).__name__))
+                continue
+            if novelty_admission.admitted_family is None:
+                nonincluded = _novelty_nonincluded_result(family, novelty_admission)
+                # The run-level record was populated ONLY from the `except` branch above, so a
+                # correctly-CONTAINED variant loss produced no run-level trace at all: the
+                # 2026-07-31 leg lost six variants across five families and wrote nothing. A
+                # containment that leaves no record is indistinguishable from nothing happening.
+                if nonincluded[0].label is FamilyInclusionLabel.RUN_INCOMPLETE:
+                    novelty_infra_deferrals.append(
+                        (family.question_family_id, "novelty_reviewer_unavailable")
+                    )
+                results.append(nonincluded)
+                continue
+            review_family = novelty_admission.admitted_family
+            active_ids = list(novelty_admission.admission.active_variant_ids)
+            novelty_results = list(novelty_admission.legacy_results)
         family_warnings = [
             warning.message
             for warning in quality_report.warnings
@@ -2591,12 +3715,12 @@ def run_stage_d(
         ]
         try:
             result = run_automated_family_shortlist(
-                family,
+                review_family,
                 session=executor.gate_session(
                     gate_name="shortlist_worthiness", generator_provider_ids=gen_ids
                 ),
                 active_variant_ids=active_ids,
-                novelty_results=novelty_fn(family, active_ids),
+                novelty_results=novelty_results,
                 generator_provider_ids=gen_ids,
                 review_guidance=(
                     "Mechanical quality findings are advisory review inputs: "
@@ -2618,8 +3742,46 @@ def run_stage_d(
                 _STAGE_D_CURRENT_BATCH_ATTRIBUTE,
                 batch_path.relative_to(run_corpus.parent).as_posix(),
             )
-            raise
+            # Contain it to this family, exactly as the novelty call above already does. Only a
+            # fault that takes EVERY family is a stage failure; anything less must not cost the
+            # siblings whose gate outcomes are already earned and paid for.
+            results.append(_shortlist_failure_result(review_family, exc, novelty_results))
+            shortlist_infra_failures.append(family.question_family_id)
+            shortlist_infra_exception = exc
+            continue
+        if novelty_admission is not None:
+            assessment_by_variant = {
+                assessment.variant_id: assessment.assessment_id
+                for assessment in novelty_admission.assessments
+            }
+            outcome, reviewed = result
+            outcome = outcome.model_copy(
+                update={
+                    "novelty_admission_id": novelty_admission.admission.admission_id,
+                    "variant_outcomes": [
+                        variant_outcome.model_copy(
+                            update={
+                                "novelty_assessment_id": assessment_by_variant.get(
+                                    variant_outcome.variant_id, ""
+                                )
+                            }
+                        )
+                        for variant_outcome in outcome.variant_outcomes
+                    ],
+                }
+            )
+            result = (outcome, reviewed)
         results.append(result)
+    if shortlist_infra_exception is not None and len(shortlist_infra_failures) == len(
+        batch.families
+    ):
+        # Every family hit it, so nothing was reviewed and there is no partial product to preserve.
+        # A SHARED failure is a stage failure (AGENTS.md rule 12); raising keeps the run resumable
+        # from a recorded stage boundary rather than sealing a stage that reviewed nothing.
+        raise shortlist_infra_exception
+    _persist_novelty_infrastructure_deferral_collapse(
+        novelty_infra_deferrals, run_corpus=run_corpus
+    )
     manifest = build_shortlist_manifest(
         results,
         batch_id=batch.batch_id,
@@ -2685,6 +3847,7 @@ def _emit_stage_receipt(
     never listed here — they are regenerated projections.
     """
     output_digests = relative_output_digests(paths.root, output_paths)
+    semantic_output_digests = relative_semantic_output_digests(paths.root, output_paths)
     receipt = StageReceipt(
         stage_name=stage,
         status=status,
@@ -2692,10 +3855,11 @@ def _emit_stage_receipt(
         config_version=stage_config_version(
             config, stage, family_count=family_count, variants_per_family=variants_per_family
         ),
-        prompt_versions=stage_prompt_versions(stage),
+        prompt_versions=stage_prompt_versions(stage, config=config),
         model_versions=stage_model_versions(config, stage),
         output_paths=sorted(output_digests),
         output_digests=output_digests,
+        semantic_output_digests=semantic_output_digests,
         failure_class=failure_class,
         detail=detail,
         ended_at=datetime.now(UTC),
@@ -2749,16 +3913,9 @@ def exec_stage_paper_half(
         ),
         paths.stage_output(STAGE_PAPER_HALF),
     )
-    # Honest terminal: zero accepted papers ⇒ no patterns ⇒ nothing downstream can develop. Record a
-    # SCIENTIFIC_TERMINAL receipt (not COMPLETE) so the run stops honestly instead of crashing stage C
-    # on the missing pattern manifest.
+    # Honest terminal: persist the aggregate cause before any reader or resume projection is built.
     if _paper_half_is_terminal(result):
-        if result.pattern_generation_failure_class is not None:
-            status = StageStatus.INFRASTRUCTURE_FAILED
-            failure_class = result.pattern_generation_failure_class
-        else:
-            status = StageStatus.SCIENTIFIC_TERMINAL
-            failure_class = FailureClass.SCIENTIFIC
+        status, failure_class = _paper_half_terminal_cause(result)
         detail = _paper_half_terminal_detail(result)
     else:
         status, failure_class, detail = StageStatus.COMPLETE, None, ""
@@ -2784,10 +3941,22 @@ def exec_stage_paper_half(
 
 
 def _paper_half_is_terminal(result: PaperHalfResult) -> bool:
-    """The paper half is a scientific terminal when it accepted ZERO papers OR it accepted papers but
-    induced ZERO usable patterns (D4). Either way there is nothing for the downstream stages to build
-    on — an honest terminal, not a stage-C crash on the missing pattern manifest."""
+    """True when there is nothing for downstream stages, independent of WHY it happened."""
     return not result.gate_result.should_continue or not result.reviewed_patterns
+
+
+def _paper_half_terminal_cause(
+    result: PaperHalfResult,
+) -> tuple[StageStatus, FailureClass]:
+    """Aggregate zero-survivor truth; any unjudged infrastructure loss blocks scientific closure."""
+    classes = [
+        item.failure_class for item in result.gate_result.excluded if item.failure_class is not None
+    ]
+    if result.pattern_generation_failure_class is not None:
+        classes.append(result.pattern_generation_failure_class)
+    if classes:
+        return StageStatus.INFRASTRUCTURE_FAILED, _aggregate_failure_classes(classes)
+    return StageStatus.SCIENTIFIC_TERMINAL, FailureClass.SCIENTIFIC
 
 
 def _paper_half_terminal_detail(result: PaperHalfResult) -> str:
@@ -2809,6 +3978,17 @@ def _paper_half_terminal_detail(result: PaperHalfResult) -> str:
     return detail
 
 
+def _persist_topic_rights_degradation_receipt(paths: RunPaths) -> Path | None:
+    """Write a sidecar authority downgrade without modifying the source-table artifact.
+
+    This is the compatibility boundary for v0.1 and injected source tables that already label
+    unverified bytes as full text.  The receipt binds the original raw-file SHA-256 and affected
+    source IDs; loading/assessing it performs no provider call and never rewrites the source bytes.
+    """
+
+    return persist_topic_rights_degradation_receipt(paths)
+
+
 def exec_stage_dataset_half(
     config: MaieusisProjectConfig,
     executor: StageExecutor,
@@ -2828,8 +4008,29 @@ def exec_stage_dataset_half(
         topic_source_table=topic_source_table,
         topic_r5_source_table=topic_r5_source_table,
     )
-    # DP-5 (PR #25): the honest OA fulltext-enrichment tally (informational; not a DAG stage).
+    # Card 1: persist the full attempt ledger before the compact compatibility tally.  Every target
+    # receives a typed outcome, including no-assertion/refusal/error paths; the old four counters stay
+    # readable for v0.1 consumers but no longer carry the audit burden by themselves.
     counts = result.fulltext_counts.as_dict()
+    batch_receipt = result.fulltext_counts.build_batch_receipt()
+    batch_receipt_path = dump_data(
+        batch_receipt,
+        paths.receipts / "external-evidence" / "fulltext-enrichment-batch.yaml",
+    )
+    batch_receipt_relative = batch_receipt_path.relative_to(paths.root).as_posix()
+    batch_receipt_digest = sha256_file(batch_receipt_path)
+    degradation_receipt_path = _persist_topic_rights_degradation_receipt(paths)
+    degradation_receipt_relative = (
+        degradation_receipt_path.relative_to(paths.root).as_posix()
+        if degradation_receipt_path is not None
+        else ""
+    )
+    degradation_receipt_digest = (
+        sha256_file(degradation_receipt_path) if degradation_receipt_path is not None else ""
+    )
+
+    # DP-5 (PR #25): retain the informational stage-shaped tally for old tooling.  Its output binding
+    # points to the complete typed batch, and external_call_ids are sanitized local attempt IDs.
     write_stage_receipt(
         paths,
         StageReceipt(
@@ -2837,15 +4038,36 @@ def exec_stage_dataset_half(
             status=StageStatus.COMPLETE,
             detail="OA fulltext plus-on: "
             + "; ".join(f"{key}={value}" for key, value in counts.items()),
+            output_paths=[batch_receipt_relative],
+            output_digests={batch_receipt_relative: batch_receipt_digest},
+            external_call_ids=[
+                attempt.attempt_id
+                for attempt in result.fulltext_counts.attempt_receipts
+                if attempt.status
+                in {
+                    ExternalEvidenceAttemptStatus.SUCCEEDED,
+                    ExternalEvidenceAttemptStatus.HTTP_ERROR,
+                    ExternalEvidenceAttemptStatus.STATUS_REJECTED,
+                    ExternalEvidenceAttemptStatus.FINAL_URL_REJECTED,
+                    ExternalEvidenceAttemptStatus.MEDIA_TYPE_REJECTED,
+                    ExternalEvidenceAttemptStatus.BODY_REJECTED,
+                    ExternalEvidenceAttemptStatus.FETCH_ERROR,
+                }
+            ],
         ),
     )
     stage_output_path = dump_data(
         DatasetHalfStageOutput(
             receipts=result.receipts,
+            topic_revision_history=result.topic_revision_history,
             lane_coverage=dict(result.lane_coverage),
             source_count=result.source_count,
             scope=result.scope,
             fulltext_counts={key: int(value) for key, value in counts.items()},
+            external_evidence_batch_receipt_path=batch_receipt_relative,
+            external_evidence_batch_receipt_digest=batch_receipt_digest,
+            rights_degradation_receipt_path=degradation_receipt_relative,
+            rights_degradation_receipt_digest=degradation_receipt_digest,
             authority_ceiling=result.authority_ceiling,
             source_activity_path=(
                 result.source_activity_path.relative_to(paths.root).as_posix()
@@ -2915,13 +4137,20 @@ def exec_stage_dataset_half(
         output_paths=[
             paths.corpus / "context" / "dataset_narratives",
             paths.corpus / "context" / "topic_evidence",
+            batch_receipt_path,
+            *([degradation_receipt_path] if degradation_receipt_path is not None else []),
             stage_output_path,
         ],
     )
     return result
 
 
-def exec_stage_c(config: MaieusisProjectConfig, paths: RunPaths) -> Path:
+def exec_stage_c(
+    config: MaieusisProjectConfig,
+    paths: RunPaths,
+    *,
+    rights_safe_topic_source_projection: RightsSafeTopicSourceProjection | None = None,
+) -> Path:
     """Stage C boundary: write the intent, build+persist the V2 context, emit the receipt."""
     intent_path = dump_data(config.research_intent, paths.corpus / "research_intent.yaml")
     dataset_output = load_model(paths.stage_output(STAGE_DATASET_HALF), DatasetHalfStageOutput)
@@ -2932,6 +4161,7 @@ def exec_stage_c(config: MaieusisProjectConfig, paths: RunPaths) -> Path:
         provisional_inspiration=(
             dataset_output.authority_ceiling == FrontHalfAuthorityCeiling.PROVISIONAL_INSPIRATION
         ),
+        rights_safe_topic_source_projection=rights_safe_topic_source_projection,
     )
     if paths.run_manifest.is_file():
         index_existing_artifact(
@@ -2942,6 +4172,7 @@ def exec_stage_c(config: MaieusisProjectConfig, paths: RunPaths) -> Path:
             authority=(
                 ArtifactAuthority.PROVISIONAL
                 if config.is_demo
+                or rights_safe_topic_source_projection is not None
                 or dataset_output.authority_ceiling
                 == FrontHalfAuthorityCeiling.PROVISIONAL_INSPIRATION
                 else ArtifactAuthority.AGENT_REVIEWED
@@ -2966,10 +4197,14 @@ def exec_stage_d(
     variants_per_family: int = 3,
 ) -> Path:
     """Stage D boundary: families → novelty → shortlist gate → manifest, then the receipt."""
+    # N-2's durable pre-call reservations live outside Stage D's normal rerun-cleaned corpus
+    # subtree.  Bind the executor to this exact run before it can create the optional web scout.
+    executor.configure_novelty_web_run(paths.root)
     shortlist_path = run_stage_d(
         find_payload_path(paths),
         executor=executor,
         run_corpus=paths.corpus,
+        novelty_required=config.novelty.enabled and not config.is_demo,
         family_count=family_count,
         variants_per_family=variants_per_family,
     )
@@ -2978,11 +4213,28 @@ def exec_stage_d(
         config,
         STAGE_D,
         input_digests=upstream_input_digests(paths, STAGE_D),
-        output_paths=[paths.corpus / "question_families", paths.stage_output(STAGE_D)],
+        output_paths=[
+            paths.corpus / "question_families",
+            paths.stage_output(STAGE_D),
+            *(_novelty_web_journal_output_paths(paths)),
+        ],
         family_count=family_count,
         variants_per_family=variants_per_family,
     )
     return shortlist_path
+
+
+def _novelty_web_journal_output_paths(paths: RunPaths) -> list[Path]:
+    """Include N-2's out-of-tree immutable journal in the Stage-D receipt when present.
+
+    Stage-D reruns deliberately clean normal corpus output but retain ``receipts/novelty-web`` so
+    a completed web call can replay and an ambiguous pre-call reservation can refuse reissue.  The
+    outer receipt must therefore sign those retained bytes as well; otherwise a tampered nested
+    receipt could evade the usual Stage-D output digest gate.
+    """
+
+    root = paths.root / "receipts" / "novelty-web"
+    return [root] if root.exists() else []
 
 
 def exec_front_layout(config: MaieusisProjectConfig, paths: RunPaths) -> None:
@@ -3129,7 +4381,12 @@ def exec_front_layout(config: MaieusisProjectConfig, paths: RunPaths) -> None:
     _index(
         write_shortlist(
             projection_paths,
-            outcomes=_shortlist_outcomes_from_manifest(manifest),
+            # One definition of "the reason this family is not included", shared with summary.md so
+            # the two surfaces cannot drift again.
+            outcomes=_shortlist_outcomes_from_manifest(
+                manifest,
+                reason_by_family=shortlist_reason_by_family(paths),
+            ),
             basis_by_family=basis_by_family,
             authority_ceiling=manifest.authority_ceiling,
             planning_eligible=manifest.planning_eligible,
@@ -3269,10 +4526,21 @@ def exec_back_half(
         )
 
 
+class _UnsupportedCheckedArtifactType(ValueError):
+    """This release cannot project a listed artifact type. A gap in us, not a fault in the family.
+
+    Typed so it stops sharing a handler -- and therefore an error message -- with the genuine
+    identity failures. The projection loop kills for identity while never re-verifying the bound
+    `presentation_repair_ledger_digest`, so an unparsable private audit file was producing the
+    system's hardest terminal under a message about identity validation.
+    """
+
+
 _SHORTLIST_BUCKET_AXIS = {
     "rejected": ShortlistAxis.REJECTED_SCIENTIFIC,
     "needs_revision": ShortlistAxis.DEFERRED_MATERIAL_REVISION,
     "deferred": ShortlistAxis.DEFERRED_INSUFFICIENT_EVIDENCE,
+    "run_incomplete": ShortlistAxis.RUN_INCOMPLETE,
 }
 
 
@@ -3395,6 +4663,9 @@ def _back_half_terminal_outcomes(
     failure_class: FailureClass,
     reason: str,
     completed: Sequence[FamilyCompletionRecord],
+    # Required for the same reason `non_included_family_outcome.reason` is: a default here would let
+    # this surface quietly go back to rendering bare identifiers.
+    non_included_reasons: Mapping[str, str],
 ) -> list[FamilyRunOutcome]:
     completed_by_id = {record.question_family_id: record for record in completed}
     outcomes: list[FamilyRunOutcome] = []
@@ -3424,7 +4695,9 @@ def _back_half_terminal_outcomes(
             )
     for bucket, axis in _SHORTLIST_BUCKET_AXIS.items():
         outcomes.extend(
-            non_included_family_outcome(family_id, shortlist_axis=axis)
+            non_included_family_outcome(
+                family_id, shortlist_axis=axis, reason=non_included_reasons.get(family_id, "")
+            )
             for family_id in getattr(manifest, f"{bucket}_family_ids")
         )
     return outcomes
@@ -3490,6 +4763,7 @@ def _back_half_run_terminal(
             failure_class=failure_class,
             reason=reason,
             completed=completed,
+            non_included_reasons=shortlist_reason_by_family(paths),
         )
         if paths.run_manifest.is_file() and paths.question_family_batch_artifact.is_file():
             context = RunContext(run_id=run_id, paths=paths)
@@ -3668,10 +4942,18 @@ def run_back_half(
                 )
             )
 
-    # Non-shortlisted families keep their honest shortlist bucket (back half NOT_RUN).
+    # Non-shortlisted families keep their honest shortlist bucket (back half NOT_RUN) AND the
+    # shortlist gate's own reason, which the sibling questions/ surface has rendered since #106.
+    non_included_reasons = shortlist_reason_by_family(RunPaths(root=run_root))
     for bucket, axis in _SHORTLIST_BUCKET_AXIS.items():
         for family_id in getattr(manifest, f"{bucket}_family_ids"):
-            outcomes.append(non_included_family_outcome(family_id, shortlist_axis=axis))
+            outcomes.append(
+                non_included_family_outcome(
+                    family_id,
+                    shortlist_axis=axis,
+                    reason=non_included_reasons.get(family_id, ""),
+                )
+            )
 
     run_result = RunResult(
         run_id=run_id,
@@ -3690,7 +4972,7 @@ def run_back_half(
         authority_ceiling=manifest.authority_ceiling,
         basis_by_family=basis_by_family or {},
         run_id=run_id,
-        shortlist_digest=stable_hash(manifest),
+        shortlist_digest=semantic_hash(manifest),
         reused_included_ids=frozenset(completed_by_id),
         resume_note=resume_note,
     )
@@ -4253,7 +5535,9 @@ def _validated_fixed_family_artifacts(
                         imported_kind = ArtifactKind.DIALOGUE
                         imported_authority = ArtifactAuthority.PROVISIONAL
                 if imported_model is None or imported_kind is None:
-                    raise ValueError("unsupported checked planner artifact type")
+                    raise _UnsupportedCheckedArtifactType(
+                        "unsupported checked planner artifact type"
+                    )
                 _validate_identity(imported_model)
                 if isinstance(imported_model, QuestionFamilyInspectionEvidence) and (
                     imported_model.evidence_id not in import_manifest.evidence_ids
@@ -4280,6 +5564,23 @@ def _validated_fixed_family_artifacts(
                     family_id=family_id,
                 ):
                     raise ValueError("checked planner artifact promotion failed")
+            except _UnsupportedCheckedArtifactType:
+                # A type this host cannot parse is a projection gap, not an identity failure. It
+                # used to share the handler below and therefore wore its message -- "failed strict
+                # identity validation" -- while the bound digest went unchecked. The family keeps
+                # its reviews and takes an ordinary degraded terminal instead of the hardest one.
+                add_diagnostic(
+                    context,
+                    diagnostic_class=DiagnosticClass.INFRASTRUCTURE,
+                    code="checked_planner_artifact_type_unsupported",
+                    public_message=(
+                        "A planner artifact listed by the strict import manifest is of a type this "
+                        "release cannot project. Retained planning material is shown with a "
+                        "provider warning."
+                    ),
+                    family_id=family_id,
+                )
+                continue
             except (OSError, ValueError, ValidationError) as exc:
                 add_diagnostic(
                     context,
@@ -4861,24 +6162,21 @@ def _write_back_half_layout(
                     paths,
                     question_family_id=family_id,
                 )
-    # DP-2 surface 7: aggregate basis line over INCLUDED families (freshly orchestrated + reused).
-    included_ids = {fr.question_family_id for fr in family_results} | set(reused_included_ids)
-    included_ids.discard("")
+    # DP-2 surface 7: this denominator is every family that reached planning, not the smaller set
+    # whose owner + independent review produced an accepted dossier.
+    planning_family_ids = {fr.question_family_id for fr in family_results} | set(
+        reused_included_ids
+    )
+    planning_family_ids.discard("")
     abstract_only_families = sum(
         1
-        for family_id in included_ids
+        for family_id in planning_family_ids
         if basis_by_family.get(family_id) == EvidenceBasis.ABSTRACT_ONLY
     )
-    basis_line = summary_evidence_basis_line(abstract_only_families, len(included_ids))
-    # summary.md is written ATOMICALLY + LAST (after every family reached a terminal + dossiers landed).
-    summary_path = write_run_summary(
-        paths,
-        effective_outcomes,
-        development_surrogate=development_surrogate,
-        authority_ceiling=authority_ceiling,
-        evidence_basis_line=basis_line,
-        resume_note=resume_note,
-    )
+    basis_line = summary_evidence_basis_line(abstract_only_families, len(planning_family_ids))
+    # CLIM-13 ordered closeout: summary bytes are finalized (every banner/basis/resume line is a
+    # render input) and promoted as a single sealed step; the promotion is the last write. No
+    # product code writes summary.md after this point.
     if context is not None:
         degraded = any(
             (outcome.failure_class is not None and outcome.failure_class != FailureClass.SCIENTIFIC)
@@ -4887,10 +6185,13 @@ def _write_back_half_layout(
             or outcome.dossier_axis == DossierAxis.RENDER_FAILURE
             for outcome in effective_outcomes
         )
-        index_existing_artifact(
+        seal_run_summary(
             context,
-            summary_path,
-            kind=ArtifactKind.SUMMARY,
+            effective_outcomes,
+            development_surrogate=development_surrogate,
+            authority_ceiling=authority_ceiling,
+            evidence_basis_line=basis_line,
+            resume_note=resume_note,
             processing_state=(
                 ProductProcessingState.DEGRADED if degraded else ProductProcessingState.PRODUCED
             ),
@@ -4901,24 +6202,46 @@ def _write_back_half_layout(
                 else ArtifactAuthority.AGENT_REVIEWED
             ),
         )
+    else:
+        write_run_summary(
+            paths,
+            effective_outcomes,
+            development_surrogate=development_surrogate,
+            authority_ceiling=authority_ceiling,
+            evidence_basis_line=basis_line,
+            resume_note=resume_note,
+        )
     return effective_outcomes
 
 
 # --- the composed A→G run -------------------------------------------------------------------------
 def _shortlist_outcomes_from_manifest(
     manifest: QuestionFamilyShortlistManifest,
+    *,
+    reason_by_family: Mapping[str, str] | None = None,
 ) -> list[FamilyShortlistOutcome]:
     """Reconstruct the per-family shortlist outcomes for the questions/ human view from the manifest.
 
     The authoritative outcome record is ``summary.md`` (DP-3) + the persisted branch state; this is the
     honest questions-layout projection (bucket → label), not a second source of truth.
+
+    The three non-included buckets are bare id lists, so this projection had no rationale to render
+    and every excluded family arrived at the reader as a dangling colon — 13 of 13 across the
+    workspace, 7 of them infrastructure failures wearing an evidence label. ``reason_by_family``
+    supplies the per-family reason the run manifest already persists, which keeps this function
+    reading only from persisted artifacts (fresh and resumed still render identically).
     """
+    reasons = reason_by_family or {}
     outcomes = [
         FamilyShortlistOutcome(
             question_family_id=sf.family.question_family_id,
             label=FamilyInclusionLabel.INCLUDED_BY_AUTOMATED_REVIEW,
             gate_decision="accept",
             active_variant_ids=list(sf.active_variant_ids),
+            # Without this the questions/ view renders "prior-art admission was not run" even when a
+            # bounded admission DID run and admitted every variant — an honesty label that
+            # under-reports the work actually performed (live-found, climate leg 2026-07-24).
+            novelty_admission_id=sf.novelty_admission_id,
         )
         for sf in manifest.shortlisted
     ]
@@ -4928,6 +6251,7 @@ def _shortlist_outcomes_from_manifest(
                 question_family_id=fid,
                 label=FamilyInclusionLabel.REJECTED_SCIENTIFIC,
                 gate_decision="reject",
+                rationale=reasons.get(fid, ""),
             )
         )
     for fid in manifest.needs_revision_family_ids:
@@ -4936,6 +6260,16 @@ def _shortlist_outcomes_from_manifest(
                 question_family_id=fid,
                 label=FamilyInclusionLabel.DEFERRED_MATERIAL_REVISION,
                 gate_decision="revise",
+                rationale=reasons.get(fid, ""),
+            )
+        )
+    for fid in manifest.run_incomplete_family_ids:
+        outcomes.append(
+            FamilyShortlistOutcome(
+                question_family_id=fid,
+                label=FamilyInclusionLabel.RUN_INCOMPLETE,
+                gate_decision=GateDecision.INFRASTRUCTURE_FAILURE.value,
+                rationale=reasons.get(fid, ""),
             )
         )
     for fid in manifest.deferred_family_ids:
@@ -4944,6 +6278,7 @@ def _shortlist_outcomes_from_manifest(
                 question_family_id=fid,
                 label=FamilyInclusionLabel.DEFERRED_INSUFFICIENT_EVIDENCE,
                 gate_decision="defer",
+                rationale=reasons.get(fid, ""),
             )
         )
     return outcomes
@@ -5014,12 +6349,39 @@ def run_end_to_end(
             paper_input_digests=paper_input_digests,
             run_context=context,
         )
-    except Exception:
+    except Exception as exc:
         if load_run_manifest(context.paths).run_state not in {
             RunProcessingState.FAILED,
             RunProcessingState.INCOMPLETE,
         }:
-            record_run_failure(context, code="run_exception")
+            if isinstance(exc, ScientificAgentSessionError):
+                code = f"provider_{exc.kind.value}"
+                record_run_failure(
+                    context,
+                    code=code,
+                    diagnostic_class=DiagnosticClass.INFRASTRUCTURE,
+                    public_message=(
+                        "A required model provider could not complete a scientific-agent call; "
+                        "completed products remain available for resume."
+                    ),
+                    failed=False,
+                )
+            elif isinstance(
+                exc,
+                (ScientificAgentInfrastructureError, StructuredModelProviderError),
+            ):
+                record_run_failure(
+                    context,
+                    code="provider_infrastructure_failure",
+                    diagnostic_class=DiagnosticClass.INFRASTRUCTURE,
+                    public_message=(
+                        "A required model provider could not complete the current stage; completed "
+                        "products remain available for resume."
+                    ),
+                    failed=False,
+                )
+            else:
+                record_run_failure(context, code="run_exception")
         raise
     _finalize_run_envelope(context, result)
     # Presentation is a redrawable default add-on. Scientific state and all six receipts are fixed
@@ -5068,15 +6430,16 @@ def _run_end_to_end_initialized(
                 run_context, import_paperbank_from_run(config, run_context)
             )
         # Honest run terminal: zero accepted papers OR zero usable patterns ⇒ nothing to develop.
-        # Stop with a scientific run terminal + summary.md, never crash stage C on the missing manifest.
+        # The persisted receipt is the sole terminal class/wording authority.
         if _paper_half_is_terminal(paper_result):
-            return _paper_half_run_terminal(paths, run_id, paper_result)
-        # Q2: the dataset half + stage C are the only front-half stages without an honest terminal.
-        # A narrative/topic/compile fail-closed verdict (narrator or topic reject/revise, readiness
-        # failed, blocked source, empty/thin table, unreadable user doc, or an unparseable gate review)
-        # is a ValueError/ValidationError — convert it to a persisted SCIENTIFIC_TERMINAL + summary.md
-        # instead of an uncaught traceback. The gate DECISION stays fail-closed; only the shape changes.
-        # A genuine code/infrastructure bug (other exception types) still surfaces as a real traceback.
+            terminal = maybe_terminalize_stage_receipt(paths, run_id=run_id, stage=STAGE_PAPER_HALF)
+            if terminal is None:
+                raise ValueError("terminal paper half did not persist a terminal StageReceipt")
+            return terminal
+        # Dataset-half expected stops are typed before reaching this boundary. Scientific non-accepts
+        # become SCIENTIFIC_TERMINAL; provider/schema/config failures become INFRASTRUCTURE_FAILED.
+        # Legacy ValueError/ValidationError shapes remain contained but are classified as validation
+        # infrastructure, never silently converted into a scientific verdict.
         try:
             exec_stage_dataset_half(
                 config,
@@ -5085,7 +6448,15 @@ def _run_end_to_end_initialized(
                 topic_source_table=topic_source_table,
                 topic_r5_source_table=topic_r5_source_table,
             )
-        except (ValueError, ValidationError) as exc:
+        except (
+            DatasetContextTerminalError,
+            ModelConfigurationError,
+            ScientificAgentInfrastructureError,
+            ScientificAgentSessionError,
+            StructuredModelProviderError,
+            ValueError,
+            ValidationError,
+        ) as exc:
             return _dataset_context_run_terminal(
                 config, paths, run_id, exc, stage=STAGE_DATASET_HALF
             )
@@ -5111,6 +6482,7 @@ def _run_end_to_end_initialized(
             StructuredModelProviderError,
             ModelConfigurationError,
             ScientificAgentInfrastructureError,
+            ScientificAgentSessionError,
         ) as exc:
             return _stage_d_run_terminal(config, paths, run_id, exc)
         # Front-half human-view layout (persisted artifacts only — identical fresh and resumed).
@@ -5177,8 +6549,11 @@ def _finalize_run_envelope(context: RunContext, result: RunResult) -> None:
             context,
             RunProcessingState.COMPLETE,
             next_action=(
-                "Review every family dossier and hidden audit artifact; warning and scientific "
-                "terminal dossiers remain useful without accepted-plan authority."
+                "Read the run-terminal summary and linked diagnostics; no downstream dossier "
+                "stage was applicable."
+                if result.run_terminal is not None
+                else "Review every family dossier and hidden audit artifact; warning and "
+                "scientific terminal dossiers remain useful without accepted-plan authority."
                 if projection_degraded
                 else (
                     "Review the family dossiers and hidden audit artifacts."
@@ -5199,35 +6574,47 @@ def _dataset_context_run_terminal(
     stage: str,
     resume_note: str = "",
 ) -> RunResult:
-    """Honest run-level SCIENTIFIC terminal for a dataset-half / stage-C fail-closed verdict (Q2).
+    """Persist one finite shared-context terminal without confusing science and infrastructure."""
 
-    The narrator/topic gates and the stage-C compiler stay fail-closed — a rejected narrative or brief
-    must NOT proceed to families. This only turns the resulting ValueError/ValidationError into a
-    persisted SCIENTIFIC_TERMINAL receipt + a run-terminal summary.md (never a bare traceback), so the
-    run reports an honest scientific stop. Mirrors ``_stage_d_run_terminal`` / ``_paper_half_run_terminal``.
-
-    The raw exception can carry model/gate content (a topic brief or compile error may mention firewalled
-    terms like ``execution`` / ``p-value``), so it goes to an INTERNAL diagnostic only. The receipt
-    detail + run-terminal summary use a cause-neutral, public-text-guard-safe reason — the receipt
-    detail is re-surfaced as the public reason on resume, so it too must be clean.
-    """
+    kind, failure_class, gate_decision, internal_detail = _dataset_context_terminal_cause(
+        exc, stage=stage
+    )
     diagnostic_path = write_gate_diagnostic(
         GateDiagnostic(
             gate_name=f"{stage}_terminal",
-            decision=GateDecision.REJECT,
-            rationale=str(exc)[:2000],
+            decision=gate_decision,
+            rationale=internal_detail[:2000],
         ),
         _diagnostics_dir(paths.corpus),
+    )
+    reason = (
+        exc.public_reason
+        if isinstance(exc, DatasetContextTerminalError) and exc.public_reason
+        else _dataset_context_public_reason(kind)
     )
     if paths.run_manifest.is_file():
         add_diagnostic(
             RunContext(run_id=run_id, paths=paths),
-            diagnostic_class=DiagnosticClass.SCIENTIFIC,
+            diagnostic_class=(
+                DiagnosticClass.SCIENTIFIC
+                if failure_class == FailureClass.SCIENTIFIC
+                else DiagnosticClass.INFRASTRUCTURE
+            ),
             code=f"{stage}_terminal",
-            public_message="A shared scientific context stage ended without usable downstream input.",
+            public_message=reason.capitalize() + ".",
             internal_path=diagnostic_path.relative_to(paths.root).as_posix(),
         )
-    reason = _public_scientific_terminal_reason(stage)
+    terminal_record_path = dump_data(
+        DatasetContextTerminalRecord(
+            stage=stage,  # type: ignore[arg-type]
+            kind=kind,
+            failure_class=failure_class,
+            gate_decision=gate_decision,
+            public_reason=reason,
+            diagnostic_path=diagnostic_path.relative_to(paths.root).as_posix(),
+        ),
+        paths.stage_output(f"{stage}-terminal"),
+    )
     retained_candidates = [
         paths.corpus / "context" / "dataset_narratives",
         paths.corpus / "context" / "topic_evidence",
@@ -5236,6 +6623,7 @@ def _dataset_context_run_terminal(
         paths.retrieval_summary,
         _diagnostics_dir(paths.corpus),
         paths.stage_output(STAGE_DATASET_HALF),
+        terminal_record_path,
         paths.corpus / "research_intent.yaml",
     ]
     retained_paths = [path for path in retained_candidates if path.exists() or path.is_symlink()]
@@ -5251,32 +6639,190 @@ def _dataset_context_run_terminal(
         stage,
         input_digests=input_digests,
         output_paths=retained_paths,
-        status=StageStatus.SCIENTIFIC_TERMINAL,
-        failure_class=FailureClass.SCIENTIFIC,
+        status=(
+            StageStatus.SCIENTIFIC_TERMINAL
+            if failure_class == FailureClass.SCIENTIFIC
+            else StageStatus.INFRASTRUCTURE_FAILED
+        ),
+        failure_class=failure_class,
         detail=reason,
     )
     terminal = RunTerminal(
         failed_stage=stage,
         failed_stage_receipt_id=stage,
-        failure_class=FailureClass.SCIENTIFIC,
+        failure_class=failure_class,
         reason=reason,
     )
     write_run_terminal_summary(paths, terminal, resume_note=resume_note)
     return RunResult(run_id=run_id, run_terminal=terminal)
 
 
-def _public_scientific_terminal_reason(stage: str) -> str:
-    """A cause-neutral, public-text-guard-safe run-terminal reason for a front-half scientific stop.
-    Never embeds raw model/gate text (which can contain firewalled terms); the technical cause lives in
-    the run diagnostics."""
-    what = {
-        STAGE_DATASET_HALF: "the dataset narrative and topic literature evidence",
-        STAGE_C: "the research question context",
-    }.get(stage, "the run inputs")
+def _dataset_context_terminal_cause(
+    exc: Exception, *, stage: str
+) -> tuple[DatasetContextTerminalKind, FailureClass, GateDecision, str]:
+    """Classify from typed cause first; raw exception text remains internal only."""
+
+    if isinstance(exc, DatasetContextTerminalError):
+        return exc.kind, exc.failure_class, exc.gate_decision, exc.internal_detail
+    if isinstance(exc, QuestionScientistContextReadinessError):
+        return (
+            DatasetContextTerminalKind.CONTEXT_READINESS_REJECTED,
+            FailureClass.SCIENTIFIC,
+            GateDecision.INSUFFICIENT_EVIDENCE,
+            str(exc),
+        )
+    if isinstance(
+        exc,
+        (
+            ScientificAgentInfrastructureError,
+            ScientificAgentSessionError,
+            StructuredModelProviderError,
+        ),
+    ):
+        return (
+            DatasetContextTerminalKind.TOPIC_EVIDENCE_PROVIDER_FAILURE,
+            FailureClass.PROVIDER_FAILURE,
+            GateDecision.INFRASTRUCTURE_FAILURE,
+            f"{type(exc).__name__}: shared-context provider did not complete",
+        )
+    if isinstance(exc, ModelConfigurationError):
+        return (
+            DatasetContextTerminalKind.CONFIGURATION_UNAVAILABLE,
+            FailureClass.VALIDATION_FAILURE,
+            GateDecision.INFRASTRUCTURE_FAILURE,
+            "shared-context model configuration was unavailable",
+        )
     return (
-        f"this run did not have enough usable evidence in {what} to develop any question, so no "
-        "question families were produced; see the run diagnostics for details"
+        DatasetContextTerminalKind.CONTEXT_VALIDATION_FAILED,
+        FailureClass.SCHEMA_ERROR
+        if isinstance(exc, ValidationError)
+        else FailureClass.VALIDATION_FAILURE,
+        GateDecision.INFRASTRUCTURE_FAILURE,
+        str(exc),
     )
+
+
+def _dataset_context_public_reason(kind: DatasetContextTerminalKind) -> str:
+    """Finite public wording; reviewer/provider raw text stays in private diagnostics."""
+
+    reasons = {
+        DatasetContextTerminalKind.NARRATIVE_REVIEW_NON_ACCEPT: (
+            "the dataset narrative did not pass independent fidelity review, so downstream "
+            "question development did not start"
+        ),
+        DatasetContextTerminalKind.TOPIC_EVIDENCE_REVIEW_REJECTED: (
+            "the topic-evidence brief did not pass independent scientific review, so downstream "
+            "question development did not start"
+        ),
+        DatasetContextTerminalKind.TOPIC_EVIDENCE_INSUFFICIENT: (
+            "the retrieved topic evidence did not support a reviewable literature brief"
+        ),
+        DatasetContextTerminalKind.TOPIC_EVIDENCE_REVISION_BUDGET_EXHAUSTED: (
+            "the topic-evidence brief remained scientifically incomplete after the configured "
+            "revision budget was exhausted"
+        ),
+        DatasetContextTerminalKind.TOPIC_EVIDENCE_REVISION_INVALID: (
+            "a topic-evidence revision crossed a strict source, scope, or structure boundary; "
+            "shared-context processing is incomplete"
+        ),
+        DatasetContextTerminalKind.TOPIC_EVIDENCE_INQUIRY_INVALID: (
+            "the topic-evidence cause inquiry crossed a strict source or structure boundary; "
+            "shared-context processing is incomplete"
+        ),
+        DatasetContextTerminalKind.TOPIC_EVIDENCE_HUMAN_ESCALATION: (
+            "the topic-evidence packet needs scientific adjudication before question development"
+        ),
+        DatasetContextTerminalKind.TOPIC_EVIDENCE_PROVIDER_FAILURE: (
+            "a required model provider did not complete shared-context generation or review; "
+            "shared-context processing is incomplete"
+        ),
+        DatasetContextTerminalKind.CONFIGURATION_UNAVAILABLE: (
+            "the configured shared-context model was unavailable; shared-context processing is "
+            "incomplete"
+        ),
+        DatasetContextTerminalKind.CONTEXT_READINESS_REJECTED: (
+            "the source-bound research context did not meet proposal-readiness requirements"
+        ),
+        DatasetContextTerminalKind.CONTEXT_VALIDATION_FAILED: (
+            "a shared-context artifact failed strict validation; shared-context processing is "
+            "incomplete"
+        ),
+    }
+    return reasons[kind]
+
+
+_TOPIC_DIMENSION_PUBLIC_LABELS = {
+    "background_core_constructs": "background and core constructs",
+    "unresolved_tensions": "unresolved tensions",
+    "methods_measurement_limits": "methods and measurement limits",
+    "competing_explanations_confounds": "competing explanations and confounds",
+    "boundary_conditions_generalization": "boundary conditions and generalization",
+    "dataset_resource_reuse": "dataset or resource reuse",
+    "close_prior_already_answered": "close prior work",
+    "open_gaps": "open research gaps",
+}
+
+
+def _topic_inquiry_public_reason(
+    disposition: TopicEvidenceInquiryDisposition,
+    gap_dimensions: Sequence[str],
+) -> str:
+    """Render only controlled semantic labels from the typed inquiry, never raw model prose."""
+
+    labels = [_TOPIC_DIMENSION_PUBLIC_LABELS[item] for item in gap_dimensions]
+    gap_text = ", ".join(labels) if labels else "one or more essential literature dimensions"
+    if disposition == TopicEvidenceInquiryDisposition.HUMAN_ESCALATION:
+        return (
+            "the topic-evidence cause inquiry could not safely distinguish missing evidence from "
+            f"a drafting omission for {gap_text}; scientific adjudication is needed before "
+            "question development"
+        )
+    if disposition == TopicEvidenceInquiryDisposition.SOURCE_LOCKED_REVISE:
+        return (
+            "after one source-locked repair, independent review still found insufficient "
+            f"source-backed coverage for {gap_text}"
+        )
+    return (
+        "the topic-evidence cause inquiry confirmed insufficient source-backed coverage for "
+        f"{gap_text}"
+    )
+
+
+def _stage_d_public_failure_reason(failure_kind: StageDFailureKind) -> str:
+    """Say what actually stopped the stage, in public-safe words.
+
+    Every non-scientific Stage-D failure used to read "its configured model service was
+    unavailable". For a rejected response or an exhausted prompt budget that is simply untrue, and
+    it sends the reader to check provider status instead of their configuration or inputs.
+    """
+
+    if failure_kind == StageDFailureKind.STRUCTURED_OUTPUT_INVALID:
+        return (
+            "question-family generation could not complete because the model's reply did not "
+            "match the required structure"
+        )
+    if failure_kind == StageDFailureKind.PROMPT_BUDGET:
+        return (
+            "question-family generation could not complete because the assembled prompt exceeded "
+            "its configured budget"
+        )
+    if failure_kind == StageDFailureKind.PROVIDER_RATE_LIMIT:
+        return "question-family generation could not complete because the model provider rate-limited the run"
+    if failure_kind == StageDFailureKind.PROVIDER_ACCOUNT_EXHAUSTED:
+        return "question-family generation could not complete because the model provider account had no remaining credit"
+    if failure_kind == StageDFailureKind.PROVIDER_AUTHENTICATION:
+        return "question-family generation could not complete because the model provider rejected the credentials"
+    if failure_kind == StageDFailureKind.CONFIGURATION_UNAVAILABLE:
+        return "question-family generation could not complete because a required provider is not configured"
+    return "question-family generation could not complete because its configured model service was unavailable"
+
+
+def _stage_d_public_failure_message(failure_kind: StageDFailureKind) -> str:
+    """The one-sentence diagnostic headline matching the reason above."""
+
+    reason = _stage_d_public_failure_reason(failure_kind)
+    headline = reason.replace("question-family generation could not complete because ", "", 1)
+    return f"Question-family generation stopped because {headline}."
 
 
 def _stage_d_run_terminal(
@@ -5290,11 +6836,18 @@ def _stage_d_run_terminal(
     """Persist one finite Stage-D scientific or infrastructure terminal."""
     failure_kind, failure_class, status = _classify_stage_d_failure(exc)
     scientific = failure_kind == StageDFailureKind.ALL_QUALITY_DROPPED
+    # A structured-output rejection says only "structured_output_invalid" in str(exc); the field
+    # detail lives on the error and is the only thing that distinguishes a truncated response from
+    # a malformed field. It stays internal, like every other raw-exception rationale here.
+    provider_detail = getattr(exc, "detail", "")
+    rationale = str(exc)[:2000]
+    if provider_detail:
+        rationale = f"{rationale} | rejected fields: {provider_detail}"[:2000]
     diagnostic_path = write_gate_diagnostic(
         GateDiagnostic(
             gate_name=_next_stage_d_terminal_gate_name(_diagnostics_dir(paths.corpus)),
             decision=(GateDecision.REJECT if scientific else GateDecision.INFRASTRUCTURE_FAILURE),
-            rationale=str(exc)[:2000],
+            rationale=rationale,
         ),
         _diagnostics_dir(paths.corpus),
     )
@@ -5354,7 +6907,7 @@ def _stage_d_run_terminal(
             public_message=(
                 "No generated question family passed strict quality validation."
                 if scientific
-                else "Question-family generation stopped because its configured model service was unavailable."
+                else _stage_d_public_failure_message(failure_kind)
             ),
             internal_path=diagnostic_path.relative_to(paths.root).as_posix(),
         )
@@ -5365,8 +6918,8 @@ def _stage_d_run_terminal(
         )
         if scientific
         else (
-            "question-family generation could not complete because its configured model service "
-            "was unavailable; earlier products remain available and the run can be resumed"
+            f"{_stage_d_public_failure_reason(failure_kind)}; earlier products remain available "
+            "and the run can be resumed"
         )
     )
     retained_outputs = [
@@ -5426,10 +6979,20 @@ def _classify_stage_d_failure(
             StructuredModelFailureKind.STRUCTURED_OUTPUT_INVALID: (
                 StageDFailureKind.STRUCTURED_OUTPUT_INVALID
             ),
+            # #138 added OUTPUT_TRUNCATED and nothing mapped it, so `structured_mapping[exc.kind]`
+            # below -- a direct subscript -- raised KeyError on the one failure shape that carries
+            # recoverable science. A truncated reply is reply-shaped, not provider exhaustion.
+            StructuredModelFailureKind.OUTPUT_TRUNCATED: (
+                StageDFailureKind.STRUCTURED_OUTPUT_INVALID
+            ),
         }
         failure_class = (
             FailureClass.SCHEMA_ERROR
-            if exc.kind == StructuredModelFailureKind.STRUCTURED_OUTPUT_INVALID
+            if exc.kind
+            in {
+                StructuredModelFailureKind.STRUCTURED_OUTPUT_INVALID,
+                StructuredModelFailureKind.OUTPUT_TRUNCATED,
+            }
             else FailureClass.PROVIDER_FAILURE
         )
         status = (
@@ -5440,6 +7003,9 @@ def _classify_stage_d_failure(
         return structured_mapping[exc.kind], failure_class, status
     if isinstance(exc, ScientificAgentSessionError):
         scientific_mapping = {
+            ScientificAgentFailureKind.ACCOUNT_EXHAUSTED: (
+                StageDFailureKind.PROVIDER_ACCOUNT_EXHAUSTED
+            ),
             ScientificAgentFailureKind.AUTHENTICATION: StageDFailureKind.PROVIDER_AUTHENTICATION,
             ScientificAgentFailureKind.RATE_LIMIT: StageDFailureKind.PROVIDER_RATE_LIMIT,
             ScientificAgentFailureKind.TIMEOUT: StageDFailureKind.PROVIDER_TIMEOUT,
@@ -5449,10 +7015,20 @@ def _classify_stage_d_failure(
             ScientificAgentFailureKind.STRUCTURED_OUTPUT_INVALID: (
                 StageDFailureKind.STRUCTURED_OUTPUT_INVALID
             ),
+            # `scientific_mapping[exc.kind]` below is a DIRECT subscript, so a kind with no entry
+            # turns a contained failure into a KeyError crash. That is exactly what #138 did to the
+            # structured-model mapping one screen up; this entry lands with the member itself.
+            ScientificAgentFailureKind.OUTPUT_TRUNCATED: (
+                StageDFailureKind.STRUCTURED_OUTPUT_INVALID
+            ),
         }
         failure_class = (
             FailureClass.SCHEMA_ERROR
-            if exc.kind == ScientificAgentFailureKind.STRUCTURED_OUTPUT_INVALID
+            if exc.kind
+            in {
+                ScientificAgentFailureKind.STRUCTURED_OUTPUT_INVALID,
+                ScientificAgentFailureKind.OUTPUT_TRUNCATED,
+            }
             else FailureClass.PROVIDER_FAILURE
         )
         status = (
@@ -5548,44 +7124,48 @@ def _planning_ineligible_run_terminal(
     return RunResult(run_id=run_id, run_terminal=terminal)
 
 
-def _paper_half_run_terminal(
-    paths: RunPaths, run_id: str, paper_result: PaperHalfResult
-) -> RunResult:
-    """Build + persist the honest run-level SCIENTIFIC terminal for a zero-accepted paper half."""
-    if paths.run_manifest.is_file():
-        add_diagnostic(
-            RunContext(run_id=run_id, paths=paths),
-            diagnostic_class=DiagnosticClass.SCIENTIFIC,
-            code="paper_half_terminal",
-            public_message="The paper stage produced no usable reviewed question pattern.",
-        )
-    terminal = RunTerminal(
-        failed_stage=STAGE_PAPER_HALF,
-        failed_stage_receipt_id=STAGE_PAPER_HALF,
-        failure_class=FailureClass.SCIENTIFIC,
-        reason=_paper_half_terminal_detail(paper_result),
-    )
-    write_run_terminal_summary(paths, terminal)
-    return RunResult(run_id=run_id, run_terminal=terminal)
-
-
-def maybe_write_paper_half_terminal_summary(
-    paths: RunPaths, *, resume_note: str = ""
-) -> Path | None:
-    """If the persisted paper-half receipt is a SCIENTIFIC_TERMINAL (zero accepted papers), write the
-    run-terminal summary from the receipt's recorded reason and return it — else None. Lets the resume
-    path report the same honest terminal (instead of crashing stage C) whether the receipt was reused
-    or freshly re-run."""
-    receipt = read_stage_receipt(paths, STAGE_PAPER_HALF)
-    if receipt is None or receipt.status != StageStatus.SCIENTIFIC_TERMINAL:
+def maybe_terminalize_stage_receipt(
+    paths: RunPaths,
+    *,
+    run_id: str,
+    stage: str,
+    resume_note: str = "",
+) -> RunResult | None:
+    """Project one persisted shared-stage terminal identically on fresh and resume paths."""
+    receipt = read_stage_receipt(paths, stage)
+    if receipt is None or receipt.status not in {
+        StageStatus.SCIENTIFIC_TERMINAL,
+        StageStatus.INFRASTRUCTURE_FAILED,
+        StageStatus.EXTERNAL_CALL_UNCERTAIN,
+    }:
         return None
+    failure_class = receipt.failure_class or FailureClass.SCIENTIFIC
+    if paths.run_manifest.is_file():
+        manifest = load_run_manifest(paths)
+        code = f"{stage}_terminal"
+        if not any(diagnostic.code == code for diagnostic in manifest.diagnostics):
+            add_diagnostic(
+                RunContext(run_id=run_id, paths=paths),
+                diagnostic_class=(
+                    DiagnosticClass.SCIENTIFIC
+                    if failure_class == FailureClass.SCIENTIFIC
+                    else DiagnosticClass.INFRASTRUCTURE
+                ),
+                code=code,
+                public_message=(
+                    "The paper stage produced no usable reviewed question pattern."
+                    if failure_class == FailureClass.SCIENTIFIC
+                    else "Paper or pattern infrastructure stopped before a usable reviewed question pattern was available."
+                ),
+            )
     terminal = RunTerminal(
-        failed_stage=STAGE_PAPER_HALF,
-        failed_stage_receipt_id=STAGE_PAPER_HALF,
-        failure_class=FailureClass.SCIENTIFIC,
+        failed_stage=stage,
+        failed_stage_receipt_id=stage,
+        failure_class=failure_class,
         reason=receipt.detail,
     )
-    return write_run_terminal_summary(paths, terminal, resume_note=resume_note)
+    write_run_terminal_summary(paths, terminal, resume_note=resume_note)
+    return RunResult(run_id=run_id, run_terminal=terminal)
 
 
 # --- CLI orchestration entrypoint -----------------------------------------------------------------
@@ -5594,14 +7174,30 @@ def retrieve_topic_source_table(
 ) -> TopicSourceTable:
     """LIVE generic topic retrieval for the research intent (external HTTP — the user's gated step).
 
-    Domain-neutral: the query lanes come from ``generic_topic_lanes`` and the scope's OWN terms.
+    Domain-neutral: each public source family receives one acquisition for each unique scope term.
 
     The opt-in paid Elicit source is threaded here (the ONLY driver seam; both ``maieusis run`` and
     ``maieusis resume`` call this): ``config.literature.source_profile`` selects the source families and
     ``ELICIT_API_KEY`` (env-only, NEVER persisted) unlocks Elicit for the ``auto`` profile. Default
-    ``public`` ⇒ no Elicit lane and no spend. The harvester itself already reads ``ELICIT_API_KEY`` from
-    the env, so the key is not passed to it (and never lands in a config, receipt, or artifact).
+    ``public`` ⇒ no Elicit source and no spend. The configured OpenAlex contact email reaches only
+    the request wire and is omitted from persisted traces. The Elicit key is never persisted.
     """
+    # ``literature.enabled`` is the route-wide network switch.  It must be checked before query-plan
+    # construction, environment inspection, or adapter construction so disabled runs make zero
+    # current-topic calls as well as zero paper-local/full-text calls.  Keep an explicit empty table
+    # rather than returning ``None``: downstream scientific gates can then close honestly on absent
+    # literature without mistaking a disabled route for an implementation failure.
+    if not config.literature.enabled:
+        terms = list(scope.terms)
+        return TopicSourceTable(
+            table_id=f"topic-source-table-disabled-{stable_hash(terms)[:12]}",
+            query_plan_id="literature-disabled",
+            topic_terms=terms,
+            records=[],
+            search_traces=[],
+            max_records=20,
+        )
+
     from ..retrieval.generic_topic_lanes import build_generic_topic_evidence_query_plan
     from ..retrieval.topic_sources import TopicSourceHarvester
 
@@ -5610,7 +7206,10 @@ def retrieve_topic_source_table(
         source_profile=config.literature.source_profile,
         elicit_api_key=os.getenv("ELICIT_API_KEY", ""),
     )
-    return TopicSourceHarvester(max_records=20).harvest(plan)
+    return TopicSourceHarvester(
+        max_records=20,
+        openalex_email=config.literature.openalex_email,
+    ).harvest(plan)
 
 
 def ingest_paper_drafts(
@@ -5618,6 +7217,7 @@ def ingest_paper_drafts(
     executor: StageExecutor,
     *,
     run_context: RunContext | None = None,
+    resume: bool = False,
 ) -> list[PaperCaseDraft]:
     """LIVE paper ingestion: extract each inbox PDF → a pre-gate ``PaperCaseDraft`` (paid extraction).
 
@@ -5625,6 +7225,7 @@ def ingest_paper_drafts(
     local-literature sidecar into a draft (``run_paper_half`` re-gates them). Paid/parser work — the
     user's gated step; the CLI wiring itself is exercised by tests that inject drafts directly.
     """
+    from ...schemas.paper_ingest import PaperIngestStatus
     from ..paper_ingest.pipeline import PaperIngestPipeline, PaperIngestPipelineConfig
 
     provider = executor.generation_provider("extraction")
@@ -5653,6 +7254,10 @@ def ingest_paper_drafts(
             max_workers=config.paperbank.max_workers,
             provider_name=provider.provider_id,
             model_name=getattr(provider, "model_name", ""),
+            # A stage receipt is intentionally coarser than the paid per-paper ingest leaf. When a
+            # failed run has no paper-half receipt, resume still re-runs the scientific gates but
+            # may reuse signature-matched PaperCases already written to the shared ingest corpus.
+            resume=resume,
             external_lookup=config.literature.enabled,
             # Honor the operator's cited-literature + key-citation-selection config. These were
             # OMITTED before, so the pipeline used its dataclass defaults (select_key_citations=False)
@@ -5661,6 +7266,12 @@ def ingest_paper_drafts(
             cited_literature=config.paperbank.cited_literature,
             select_key_citations=config.paperbank.select_key_citations,
             citation_prompt_char_budget=config.paperbank.citation_prompt_char_budget,
+            # Same lesson as the two comments above, applied before it could bite: the agent
+            # citation-context reader shipped in #156 with its seam in place and NO caller, so a
+            # run still took the regex fallback -- 5.7% coverage against the agent's 91%. Omitting
+            # these two would have made that permanent.
+            citation_contexts_by_agent=config.paperbank.citation_contexts_by_agent,
+            citation_context_agent_parallel=config.paperbank.citation_context_agent_parallel,
             min_local_reference_count=config.paperbank.min_local_reference_count,
             # source_span is REQUIRED downstream (the traces reference parser-owned source_span_ids);
             # it is deliberately hardcoded, not read from config.paperbank.evidence_mode.
@@ -5680,6 +7291,15 @@ def ingest_paper_drafts(
             authority=ArtifactAuthority.UNKNOWN,
         )
         for item in manifest.items:
+            unavailable_reason = (
+                "source text was unavailable for scientific extraction"
+                if item.status == PaperIngestStatus.TEXT_UNAVAILABLE
+                else (
+                    f"paper ingestion stopped with {item.failure_class.value}"
+                    if item.failure_class is not None
+                    else "paper ingestion produced no PaperCase"
+                )
+            )
             upsert_paper_disposition(
                 run_context,
                 PaperDisposition(
@@ -5691,14 +7311,32 @@ def ingest_paper_drafts(
                         if item.paper_case_artifact
                         else PaperDispositionKind.UNAVAILABLE
                     ),
-                    reason="" if item.paper_case_artifact else "no extracted PaperCase",
+                    reason="" if item.paper_case_artifact else unavailable_reason,
                 ),
             )
     drafts: list[PaperCaseDraft] = []
     for item in manifest.items:
         if not item.paper_case_artifact:
+            failure_class = item.failure_class
+            if item.status == PaperIngestStatus.FAILED and failure_class is None:
+                # Legacy/injected manifests may predate the typed field. FAILED is machinery,
+                # never scientific evidence about the paper.
+                failure_class = FailureClass.VALIDATION_FAILURE
             drafts.append(
-                PaperCaseDraft(paper_id=item.paper_id, parseable=False, parse_error="not_extracted")
+                PaperCaseDraft(
+                    paper_id=item.paper_id,
+                    parseable=False,
+                    parse_error=(
+                        "source_text_unavailable"
+                        if item.status == PaperIngestStatus.TEXT_UNAVAILABLE
+                        else (
+                            f"ingest_{failure_class.value}"
+                            if failure_class is not None
+                            else "not_extracted"
+                        )
+                    ),
+                    failure_class=failure_class,
+                )
             )
             continue
         case = load_model(Path(item.paper_case_artifact), PaperCase)
@@ -5707,19 +7345,34 @@ def ingest_paper_drafts(
                 Path(item.local_literature_artifact), PaperLocalLiteratureContext
             )
         else:
-            # Honest degrade, not a crash: with paperbank.cited_literature AND select_key_citations
-            # both disabled the pipeline never writes the literature sidecar, and the manifest
-            # records exactly which artifacts exist (symmetric with the paper_case_artifact check
-            # above — the old unconditional path load raised FileNotFoundError here). Synthesize an
-            # EMPTY literature context so the paper still enters the gate and stands on fidelity
-            # alone (the selection-less path); the warning surfaces the config-gated degrade.
+            # Honest degrade, not a crash: without a literature sidecar the paper still enters the
+            # gate and stands on fidelity alone (symmetric with the paper_case_artifact check above
+            # — the old unconditional path load raised FileNotFoundError here).
+            #
+            # The warning must say WHICH of the two reasons applies. This branch used to assert
+            # "disabled by config" unconditionally while never reading the config: on the
+            # 2026-07-24 climate run three accepted papers carried that sentence with
+            # `cited_literature: true` and `select_key_citations: true` set. The reader was told
+            # they had switched off something they had switched on, and the real cause -- the
+            # collection ran and produced nothing -- went unrecorded.
+            collection_configured = (
+                config.paperbank.cited_literature or config.paperbank.select_key_citations
+            )
             literature = PaperLocalLiteratureContext(
                 context_id=f"pll-{case.paper_case_id}-disabled",
                 paper_case_id=case.paper_case_id,
                 source_paper_id=item.paper_id,
                 source_sha256=case.source_sha256,
                 warnings=[
-                    "cited-literature collection disabled by config; paper gated on fidelity alone"
+                    (
+                        "cited-literature collection did not produce a sidecar for this paper; "
+                        "paper gated on fidelity alone"
+                    )
+                    if collection_configured
+                    else (
+                        "cited-literature collection disabled by config; "
+                        "paper gated on fidelity alone"
+                    )
                 ],
             )
         drafts.append(

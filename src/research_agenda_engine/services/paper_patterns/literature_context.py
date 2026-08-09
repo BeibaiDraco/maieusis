@@ -84,7 +84,41 @@ def build_paper_local_literature_trace_context(
     _validate_case_literature_links(paper_case=paper_case, literature_context=literature_context)
     selection = literature_context.importance_selection
     if selection is None or selection.selection_status != CitationSelectionStatus.SELECTED:
-        raise ValueError("Paper-local literature context requires selected key citations")
+        # No SELECTED key citations is a THINNER context, not an impossible one. This used to raise,
+        # and the caller answered the raise by skipping the paper entirely -- so a citation-importance
+        # selector's miss silently cost the paper its formation trace and therefore its contribution
+        # to every induced question pattern.
+        #
+        # Measured on the 2026-07-30 climate leg: 8 of 18 accepted papers were barred this way, and
+        # they were not thin. `12-charlton-polvani-2007` carried 102 evidence spans and 65 cited works;
+        # the paper that DID survive with the fewest carried 93 spans and 5 cited works. The only
+        # difference was the selector's status. Papers with LONGER reference lists were more often
+        # barred, which makes the selector's miss look stochastic rather than evidentiary.
+        #
+        # A zero-citation trace is a legal, promotable artifact: `QuestionFormationTrace` guards
+        # `literature_evidence` conditionally, an evidence binding's `cited_work_ids` may be empty, and
+        # the literature side of the argument ("prior work left X unresolved") lives in the paper's own
+        # spans. Verified offline against all 8 barred papers' real PaperCases: 8 of 8 can support a
+        # zero-citation trace that holds AI_REVIEWED.
+        #
+        # So the honest context is an empty one, and the trace gate -- an independent reviewer that
+        # reads the drafted trace -- decides whether what the drafter managed is good enough. That is
+        # the judgement this host convenience had been making on the reviewer's behalf.
+        # The id and digest stay EMPTY, and that is the whole point rather than an omission.
+        # `local_literature_context_id` is the schema's own switch: `QuestionFormationTrace` requires
+        # literature-side bindings to carry cited-work or citation-context evidence ONLY when a trace
+        # claims a paper-local literature context (question_pattern.py:265), and requires the id
+        # itself only when the trace actually carries literature evidence or cited-work bindings
+        # (:199, :250). A selection that chose nothing backs nothing, so naming its context would
+        # assert a literature backing this trace does not have -- and would re-impose the very
+        # citation requirement this branch exists to lift. The first cut of this fix named the
+        # context here, which is why it reached the drafter and then died one step later with
+        # "no literature_evidence backed by an evidence_binding": the bar was moved, not removed.
+        return PaperLocalLiteratureTraceContext(
+            paper_case_id=paper_case.paper_case_id,
+            local_literature_context_id="",
+            local_literature_context_digest="",
+        )
     if (
         selection.prompt_version not in _SUPPORTED_CITATION_SELECTOR_PROMPT_VERSIONS
         and literature_context.review_status.value != "expert_reviewed"
