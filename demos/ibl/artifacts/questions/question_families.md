@@ -1,17 +1,15 @@
-> **PROVISIONAL.** This source-bound inspiration has not earned verified authority. Planning continues through the ordinary route, but every downstream plan and dossier remains provisional until the inputs are independently reviewed.
+# Question family — Invariant and reorganized population geometry during decision-making
 
-# Question family — Stable decisions under changing population organization
-
-- Shared scientific tension: Behavior may remain stable because task-relevant geometric relations are preserved, or because neural dynamics reconfigure while maintaining an effective readout; descriptive geometry alone cannot distinguish these accounts.
-- Summary: Tests whether stable decision-related behavior is associated with preserved relational geometry or with context-sensitive reconfiguration of neural trajectories.
+- Shared scientific tension: Population representations may preserve decision-relevant organization across contexts, reorganize while preserving equivalent meaning, or change because sensory, movement, and sampling conditions differ.
+- Summary: Tests whether population geometry preserves task-relevant meaning across naturally varying recording and behavioral contexts, or whether apparent stability and reorganization reflect different functional organizations.
 - Evidence basis: **abstract-only** — this family's supporting literature is not fulltext-verified (full text was not available to this system).
 
 ## Variants
 
-- **Cross-context invariance branch** — Across subjects, sessions, and laboratories, is stable decision behavior predicted more strongly by preservation of relational population geometry than by preservation of particular activity patterns?
-  - distinct from siblings: This variant concerns conservation across subjects, sessions, or laboratories and uses cross-context behavioral generalization as the discriminator; it does not ask whether geometry reconfigures within a decision episode.
-- **Within-episode reconfiguration branch** — Within decision episodes, do population trajectories reconfigure with task and behavioral state while preserving a stable decision-relevant subspace?
-  - distinct from siblings: This variant tests within-episode coexistence of changing trajectories and a stable readout-relevant subspace; its target is dynamical reconfiguration, not cross-session or cross-laboratory invariance.
+- **Cross-context conservation and predictive transfer** — Does decision-relevant population geometry remain sufficiently conserved across subjects, sessions, and laboratories to support predictive generalization of stimulus and choice relationships?
+  - distinct from siblings: This variant asks whether a common geometry supports prediction across recording contexts; it does not treat structural reorganization with preserved meaning as its primary outcome.
+- **Semantic preservation despite geometric reorganization** — Can population geometry reorganize across behavioral contexts while preserving equivalent stimulus or decision meaning?
+  - distinct from siblings: This variant permits geometry to change and asks whether meaning is preserved; the sibling instead requires cross-context conservation as the candidate basis of generalization.
 
 ## If this looks wrong
 
@@ -20,18 +18,18 @@ This is a diagnostic summary, not an approval, and it does not claim any questio
 
 ---
 
-# Question family — Which shared-variability dimensions matter for decisions?
+# Question family — Task relevance of structured neural co-variability
 
-- Shared scientific tension: Shared variability may be consequential because it aligns with task-relevant readout directions, or it may primarily reflect movement and global state; aggregate magnitude cannot resolve these alternatives.
-- Summary: Replaces aggregate co-variability magnitude with tests of whether shared-variability structure aligns with independently defined decision or embodied-state dimensions.
+- Shared scientific tension: Co-variability may be a global nuisance, a task-aligned computational resource, or structured modulation associated primarily with embodied state rather than decision processing.
+- Summary: Separates the magnitude of population co-variability from its alignment and organization relative to decision and movement dimensions.
 - Evidence basis: **abstract-only** — this family's supporting literature is not fulltext-verified (full text was not available to this system).
 
 ## Variants
 
-- **Decision-alignment branch** — Does alignment of shared neural variability with independently defined decision-relevant geometry predict choice and response-time variation better than the overall magnitude of shared variability?
-  - distinct from siblings: This variant defines consequential structure by alignment with a decision-relevant direction and evaluates choice or response timing, rather than treating embodied state as the focal explanatory representation.
-- **Embodied-state specificity branch** — Are shared-variability dimensions that appear decision-related better explained by alignment with multidimensional pose and ongoing behavioral state?
-  - distinct from siblings: This variant asks whether pose-state geometry explains the focal dimensions and treats behavior as a competing representation; the sibling asks whether decision alignment outperforms variability magnitude.
+- **Task-aligned structure versus aggregate magnitude** — Is the relationship between neural co-variability and decision performance better explained by alignment with stimulus- or choice-relevant population dimensions than by overall co-variability magnitude?
+  - distinct from siblings: This variant defines relevance through alignment with stimulus and choice dimensions; its sibling asks whether structured co-variability is better associated with movement than decision variables.
+- **Decision organization versus embodied co-variation** — Is structured population co-variability associated more strongly with decision variables or with video-derived movement and pose states?
+  - distinct from siblings: This variant contrasts cognitive and embodied meanings of co-variability, whereas the sibling contrasts structural alignment with aggregate magnitude within a decision-focused account.
 
 ## If this looks wrong
 
@@ -40,18 +38,18 @@ This is a diagnostic summary, not an approval, and it does not claim any questio
 
 ---
 
-# Question family — Latent decision state versus observable embodied state
+# Question family — Population-dynamical transitions from sensation to action
 
-- Shared scientific tension: History-dependent neural variation may represent an internal decision state, observable ongoing behavior, immediate task variables, or unexplained intrinsic dynamics.
-- Summary: Asks whether neural population organization contains a predictive latent decision-state representation distinguishable from immediate stimuli, choices, response timing, and measured pose.
+- Shared scientific tension: Similar choices can emerge from sequential decision regimes, continuous single-regime dynamics, or trajectories dominated by impending movement.
+- Summary: Examines whether decision-related population activity exhibits a meaningful transition in input sensitivity or instead reflects continuous evolution confounded with movement preparation.
 - Evidence basis: **abstract-only** — this family's supporting literature is not fulltext-verified (full text was not available to this system).
 
 ## Variants
 
-- **Inferred internal-state branch** — Is a history-dependent latent decision state represented across multiple brain regions beyond immediate sensory input, current choice, response time, and measured pose?
-  - distinct from siblings: This variant operationalizes an unobserved history-dependent construct and asks whether it is distributed; the sibling treats measured pose as the explanatory construct rather than as a competing covariate.
-- **Observed embodied-state branch** — Does multidimensional pose explain a distributed component of neural activity that would otherwise be attributed to latent decision state or intrinsic noise?
-  - distinct from siblings: This variant makes observed pose the focal explanatory signal and asks how much formerly unexplained activity it organizes; it does not infer a history-dependent internal construct.
+- **Sequential-regime versus continuous-dynamics test** — Do population dynamics exhibit a transition from stimulus-sensitive to choice-stabilizing organization whose timing predicts response-time variation?
+  - distinct from siblings: This variant tests whether stimulus influence changes around a candidate transition; the sibling focuses on whether apparent choice dynamics are distinguishable from movement preparation.
+- **Choice dynamics versus movement preparation** — Are late decision-related population trajectories specifically associated with choice formation, or are they better explained as distributed preparation of measured movements?
+  - distinct from siblings: This variant classifies the meaning of late trajectories through a choice-versus-movement contrast; it does not require a discrete transition or changing stimulus sensitivity.
 
 ## If this looks wrong
 
@@ -60,18 +58,18 @@ This is a diagnostic summary, not an approval, and it does not claim any questio
 
 ---
 
-# Question family — How input influence changes during a decision
+# Question family — Broad versus selective brain-wide organization of decision signals
 
-- Shared scientific tension: Changing neural trajectories may mark a genuine transition in how inputs influence decisions, or may reflect continuous input-driven evolution and distributed transformation without a discrete regime change.
-- Summary: Develops two distinct dynamical accounts of decision formation: a within-episode change in input sensitivity and a distributed transformation of task information across processing levels.
+- Shared scientific tension: Brain-wide detectability may reflect genuinely distributed computation, repeated local representations, common task covariates, or selective organization obscured by coarse summaries.
+- Summary: Tests whether stimulus and choice signals are broadly expressed across recorded populations or selectively organized by anatomical population and population dimension.
 - Evidence basis: **abstract-only** — this family's supporting literature is not fulltext-verified (full text was not available to this system).
 
 ## Variants
 
-- **Within-episode sensitivity-transition branch** — Do decision-related population trajectories exhibit a reproducible change in input sensitivity whose timing predicts subsequent choice stability and response time?
-  - distinct from siblings: This variant specifically tests a within-episode change in sensitivity and requires a later-input or behavioral consequence; the sibling asks about distributed transformation across regions without positing a discrete transition.
-- **Cross-region transformation branch** — Does decision information undergo a distributed geometric transformation across brain regions, from stimulus-aligned organization toward choice- and response-aligned organization?
-  - distinct from siblings: This variant targets spatially distributed changes in representational alignment and makes no discrete within-trial transition claim; its consequence is transformation across processing levels.
+- **Anatomical breadth versus differentiation** — Are stimulus- and choice-related population representations broadly conserved across anatomical populations, or selectively differentiated across the recorded brain?
+  - distinct from siblings: This variant concerns where representational formats are expressed across anatomical populations; the sibling concerns which dimensions participate in predictive cross-population relationships.
+- **Selective predictive dimensions versus generic shared activity** — Are predictive relationships between anatomical populations carried by selective task-relevant dimensions rather than by broadly shared population activity?
+  - distinct from siblings: This variant targets dimensional specificity of cross-population prediction, whereas the sibling classifies anatomical representational breadth without requiring predictive inter-population relationships.
 
 ## If this looks wrong
 
@@ -80,18 +78,18 @@ This is a diagnostic summary, not an approval, and it does not claim any questio
 
 ---
 
-# Question family — Expansion and compression of decision geometry
+# Question family — Replicable and idiosyncratic components of decision geometry
 
-- Shared scientific tension: Dimensional changes may implement task-relevant expansion or compression, or may instead reflect population size, reliability, heterogeneous pooling, and other measurement properties.
-- Summary: Tests whether population dimensionality changes serve distinct computational roles: separating confusable task states or compressing variable activity into behaviorally stable decision structure.
+- Shared scientific tension: A common task may induce reproducible population organization, but apparent replication can arise from shared observables, while genuine computational solutions may remain individual-specific.
+- Summary: Uses standardized multi-context recordings to ask whether population geometry contains a shared organizational component alongside subject- or laboratory-specific variation.
 - Evidence basis: **abstract-only** — this family's supporting literature is not fulltext-verified (full text was not available to this system).
 
 ## Variants
 
-- **Expansion-for-separation branch** — Is transient expansion of population geometry associated with improved separation of sensory-decision states that would otherwise be confusable?
-  - distinct from siblings: This variant asks whether increased dimensionality separates confusable states; the sibling asks whether compression preserves a stable decision variable across heterogeneous contexts.
-- **Compression-for-generalization branch** — Is compression into a lower-dimensional decision geometry associated with stable readout across subjects, sessions, or laboratories despite heterogeneous neural activity?
-  - distinct from siblings: This variant concerns reduced dimensional organization and cross-context readout stability, not transient expansion or within-context state separation.
+- **Laboratory-level reproducibility** — Which aspects of decision-related population geometry are reproducible across laboratories rather than specific to laboratory context?
+  - distinct from siblings: This variant makes laboratory context the primary replication unit; the sibling asks whether subject-specific geometries can nonetheless share predictive meaning.
+- **Subject-specific geometry with shared function** — Can subject-specific population geometries implement a shared predictive relationship between sensory evidence, decisions, and response times?
+  - distinct from siblings: This variant allows structural idiosyncrasy and tests shared functional meaning across subjects; the sibling asks which geometric features reproduce across laboratories.
 
 ## If this looks wrong
 
@@ -100,18 +98,18 @@ This is a diagnostic summary, not an approval, and it does not claim any questio
 
 ---
 
-# Question family — Reliability and boundary conditions of population-dynamical claims
+# Question family — Behavioral meaning of population geometry
 
-- Shared scientific tension: A population-level relation may be a robust organizing principle, a context-bound regularity, or an artifact of unreliable estimation and heterogeneous pooling.
-- Summary: Tests whether geometric and dynamical signatures reproduce across acquisition contexts and whether their failures identify scientific boundaries rather than merely technical instability.
+- Shared scientific tension: Population geometry may contribute to decision computation, merely correlate with task conditions, or reflect movement and state variables that independently shape behavior.
+- Summary: Requires neural geometry to make distinct predictions about choice errors or response-time variation, rather than interpreting structure or decodability alone as functional evidence.
 - Evidence basis: **abstract-only** — this family's supporting literature is not fulltext-verified (full text was not available to this system).
 
 ## Variants
 
-- **Geometric reproducibility branch** — Which decision-related geometric relations reproduce across subjects, sessions, and laboratories, and do their failures track behavioral or task boundaries rather than measurement instability?
-  - distinct from siblings: This variant evaluates empirical geometric relations and whether their cross-context failures mark behavioral boundaries; the sibling evaluates reliability of fitted dynamical signatures and predictions.
-- **Dynamical-model reliability branch** — Are fitted dynamical signatures of decision formation reproducible enough across comparable recordings to predict behavior beyond simpler geometric descriptions?
-  - distinct from siblings: This variant asks whether inferred temporal-dynamical signatures are reproducible and add behavioral prediction beyond static geometry; it is not a map of where an empirical geometry generalizes or fails.
+- **Geometry-specific prediction of choice errors** — Do trial-to-trial deviations in decision-related population geometry predict choice errors in a manner that distinguishes distributed coding from simpler signal-strength accounts?
+  - distinct from siblings: This variant treats categorical decision failures as the functional criterion; the sibling targets response-time variation and dynamical efficiency rather than error occurrence.
+- **Trajectory organization and graded decision timing** — Does the organization of neural population trajectories predict response-time variation beyond sensory conditions and measured movement?
+  - distinct from siblings: This variant uses graded response-time variation to assess trajectory organization; the sibling uses choice errors to test geometry-specific failure predictions.
 
 ## If this looks wrong
 

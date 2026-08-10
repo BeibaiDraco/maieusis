@@ -115,6 +115,8 @@ class FamilyShortlistDisposition(StrEnum):
     REJECTED = "rejected"
     NEEDS_REVISION = "needs_revision"
     DEFERRED = "deferred"
+    # An infrastructure fault stopped this family's review — never a scientific outcome.
+    RUN_INCOMPLETE = "run_incomplete"
 
 
 class StageRecord(BaseModel):

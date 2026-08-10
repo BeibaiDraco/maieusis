@@ -102,3 +102,49 @@ def stable_hash(value: Any) -> str:
         value = value.model_dump(mode="json")
     payload = json.dumps(value, sort_keys=True, ensure_ascii=False, default=str).encode("utf-8")
     return sha256_bytes(payload)
+
+
+# Provenance-timestamp keys stripped when computing a stage's TIMESTAMP-FREE semantic reuse
+# digest (CLIM-10). These record when an artifact was made/reviewed/retrieved — real provenance
+# that stays in the raw bytes and the exact-byte replay digest, but must never gate scientific
+# reuse: a re-run that changes only these keys is the same science and should REUSE downstream.
+SEMANTIC_TIMESTAMP_KEYS: frozenset[str] = frozenset(
+    {
+        "created_at",
+        "reviewed_at",
+        "retrieved_at",
+        "asserted_at",
+        "searched_at",
+        "stored_at",
+        "started_at",
+        "ended_at",
+        "generated_at",
+        "completed_at",
+    }
+)
+
+
+def strip_semantic_timestamps(value: Any) -> Any:
+    """Recursively drop provenance-timestamp keys so only semantic content remains.
+
+    Removing a fixed key set can only make two values compare EQUAL when they differ solely by
+    those keys; any other content delta survives. Timestamp/runtime variation can therefore only
+    make a reuse gate more conservative-toward-reuse of identical science, never manufacture a
+    stale hit on changed evidence (the CLIM-10 containment direction).
+    """
+    if isinstance(value, dict):
+        return {
+            key: strip_semantic_timestamps(item)
+            for key, item in value.items()
+            if key not in SEMANTIC_TIMESTAMP_KEYS
+        }
+    if isinstance(value, list):
+        return [strip_semantic_timestamps(item) for item in value]
+    return value
+
+
+def semantic_hash(value: Any) -> str:
+    """``stable_hash`` over a value with provenance-timestamp keys stripped."""
+    if isinstance(value, BaseModel):
+        value = value.model_dump(mode="json")
+    return stable_hash(strip_semantic_timestamps(value))

@@ -11,6 +11,7 @@ from .stage_receipt import FailureClass, StageStatus
 class StageDFailureKind(StrEnum):
     ALL_QUALITY_DROPPED = "all_quality_dropped"
     PROMPT_BUDGET = "prompt_budget"
+    PROVIDER_ACCOUNT_EXHAUSTED = "provider_account_exhausted"
     PROVIDER_AUTHENTICATION = "provider_authentication"
     PROVIDER_RATE_LIMIT = "provider_rate_limit"
     PROVIDER_TIMEOUT = "provider_timeout"

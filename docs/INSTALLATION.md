@@ -2,6 +2,28 @@
 
 [Documentation home](INDEX.md)
 
+## Before you install: three things you cannot fix by reading further
+
+Decide these first. Each one on its own ends the attempt, and none of them is
+something the documentation can supply.
+
+- **A paid Codex or Claude Code subscription.** The Dataset Planner runs on it,
+  and that is a *separate bill* from your model API budget. A coding-host login
+  is not an API key, and an API key will not drive the planner.
+- **Two funded API providers.** Preflight requires the Question Owner and the
+  independent reviewer to sit on different providers, so a single account is not
+  enough. In practice that means one OpenAI and one Anthropic account with
+  credit on both.
+- **Roughly twelve to twenty source papers** you may lawfully use. The published
+  demonstrations used twenty for climate and twelve for the neuroscience
+  cohort. Fewer than about a dozen gives the pattern stage too little to
+  generalise from.
+
+**Your dataset does not need to be public.** An unpublished lab dataset is fully
+supported: leave `dataset.seed.link` empty and point `dataset.seed.docs` at your
+own local documentation files. A resolvable public link is one way to describe a
+dataset, not a requirement, and the shipped example's `link:` comment says so.
+
 ## What you need
 
 - Python 3.11, 3.12, or 3.13;
@@ -52,11 +74,33 @@ PYTHON=python3.11  # change to python3.12 or python3.13 when appropriate
 "$PYTHON" -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
-python -m pip install "maieusis[openai,anthropic,mcp,pdf]==0.1.0"
+python -m pip install "maieusis[openai,anthropic,mcp,pdf]==0.1.1"
 
 maieusis --help
 maieusis init
 ```
+
+### One more clone, and it is not optional
+
+Maieusis records the identity of its own source tree in every run, so it needs a clean checkout to
+read that identity from. Installing from the package index does not give you one. Clone it once,
+anywhere outside your project, and point `dataset.inspection_runtime.source_tree_root` at it:
+
+```bash
+git clone https://github.com/BeibaiDraco/maieusis.git ~/maieusis-source
+```
+
+Then in `maieusis.yaml`:
+
+```yaml
+dataset:
+  inspection_runtime:
+    source_tree_root: /absolute/path/to/maieusis-source
+```
+
+This is the single most common first-run failure. `maieusis check` will stop on it, and running
+`git init` inside your own project does **not** satisfy it -- the checkout has to be Maieusis.
+Leave the clone alone after cloning; a dirty checkout changes the recorded identity.
 
 Installing both provider extras matches the standard cross-provider review
 path. If you deliberately configure different supported providers, install the
@@ -106,7 +150,13 @@ CLAUDE.md
 PROJECT_LAYOUT.md
 .codex/agents/dataset-planner.toml
 .claude/agents/dataset-planner.md
+.codex/skills/maieusis-setup/SKILL.md
+.claude/skills/maieusis-setup/SKILL.md
 ```
+
+The two `SKILL.md` files are one file written twice, so both coding hosts get the identical setup
+interview. Opening either host in this directory and saying "help me set up this Maieusis project"
+starts it.
 
 It does not create credentials, download papers or data, call a model, or run
 an analysis.

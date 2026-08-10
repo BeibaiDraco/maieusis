@@ -61,12 +61,19 @@ Start with these files in order:
    meaning, and variants of every proposed family;
 4. `families/<family-slug>/dossier_detailed.md` — a reading guide to one
    family's question, dataset grounding, plan, review, and limits; and
-5. `families/<family-slug>/dossier.md` — the complete scientific planning
-   record.
+5. `families/<family-slug>/dossier.md` — the full plan, controls, estimands,
+   and limits.
 
-The filenames are slightly asymmetric: `dossier_detailed.md` is the easier
-scientific reading guide, while `dossier.md` is the full record. Neither is an
-executed analysis.
+Both carry labels stating how much weight the work can bear;
+[reading the labels](LABELS.md) lists every one with its permitted values.
+
+**Read both; neither contains the other.** `dossier_detailed.md` is the reading
+guide, and it alone carries two things you will want: what the planner actually
+inspected in the data, and the Question Owner and independent reviewer in their
+own words. `dossier.md` carries the complete plan itself — every variant's
+design, controls, estimands, diagnostics, and interpretation limits — but not
+the inspection evidence and not the review. The names suggest one is a subset of
+the other. They are not. Neither is an executed analysis.
 
 ## Human-readable products
 
@@ -139,7 +146,7 @@ scientific model work when all scientific stages remain reusable.
 
 ## What Maieusis does not output
 
-Maieusis v0.1.0 does not produce:
+Maieusis v0.1.1 does not produce:
 
 - a scientific finding or confirmatory result;
 - a guarantee that a question is novel, important, true, or publishable;

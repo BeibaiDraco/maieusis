@@ -4,26 +4,26 @@
 
 ## Starting background
 
-- Prefrontal cortex is associated with flexible, context-dependent behaviour, but the computations producing that flexibility remain unresolved; heterogeneous single-neuron responses make the underlying circuit contribution difficult to interpret.
-- Prior work provides two relevant strands of precedent: recurrent-circuit models explain slow sensory integration and categorical choice, while population analyses show that mixed or complex single-neuron responses can preserve task-relevant information in distributed neural activity.
-- Population-level neural dynamics can therefore provide a level of description at which competing mechanistic accounts of selection and integration make distinguishable predictions.
+- The provided local literature frames recurrent cortical dynamics as a candidate mechanism for integrating sensory evidence and forming categorical choices.
+- Prior work on mixed selectivity and higher-cortical population activity indicates that complex, heterogeneous single-neuron responses can reflect distributed representations of multiple task variables rather than unrelated computations in individual neurons.
+- Population-dynamics and demixing approaches provide ways to relate time-varying neural activity to task variables while preserving the distributed structure of the recorded population.
 
 ## Unresolved gap
 
-It remained unclear whether context-dependent behaviour is produced by filtering irrelevant sensory information before it reaches PFC, by changing the relationship between sensory and choice representations within PFC, or by recurrent PFC dynamics that allow the same sensory inputs to be integrated differently across contexts. The observed complexity of individual responses did not by itself resolve these alternatives.
+It remained unclear how prefrontal circuitry selects the contextually relevant sensory dimension while integrating evidence toward a choice. Early-filtering accounts predict that irrelevant inputs should be excluded before reaching prefrontal cortex, whereas within-PFC accounts predict that both inputs can influence population activity but are differentially incorporated through context-dependent dynamics.
 
 ## Dataset opportunity
 
-The task presents the same broad visual stimulus structure under different contextual instructions: motion is relevant in one context and colour in the other. Behavioural choices, sensory-evidence variation, and PFC recordings can be examined jointly as population responses and trajectories.
+The purpose-built task varied motion evidence, colour evidence, and contextual instruction within a common decision paradigm, while recordings from prefrontal units could be pooled and analysed as population activity across time and task conditions.
 
-Because the contextual cue changes the behavioural relevance of otherwise available sensory inputs, the data provide within-task contrasts between relevant and irrelevant evidence. Population trajectories can then be compared with the distinct geometric and temporal predictions of early-filtering, selective-integration, and recurrent-dynamics accounts, while a task-matched recurrent model can be used to identify a mechanism consistent with the observed trajectories.
+Because context determines which of two concurrently available sensory dimensions is relevant, the same stimulus inputs can be compared under different computational demands. Population trajectories and their task-related axes therefore provide observations that distinguish absent, statically transformed, and dynamically integrated irrelevant inputs more directly than isolated single-neuron responses.
 
 ## Resulting question
 
-What neural mechanism in prefrontal cortex enables context-dependent selection and integration of noisy sensory inputs toward a choice, and do population-level dynamics support early filtering or a recurrent within-PFC process in which selection and integration are coupled aspects of the same computation?
+What population-level dynamical mechanism implements context-dependent selection and integration of sensory evidence in prefrontal cortex, and can a recurrent model reproduce the observed behavioural and physiological patterns?
 
 ## Scientific consequence
 
-Evidence for early filtering would imply that irrelevant inputs are excluded before entering the PFC decision process, whereas persistent representations of irrelevant inputs together with context-dependent trajectory deflections would favour selection within a recurrent population process. Different relationships among sensory, context, and choice dimensions would also discriminate alternative selective-integration mechanisms. A mechanism that reproduces the data in a trained recurrent network would provide a computational account of how the same input can guide choice in one context and be ignored in another, although it would remain a model-based mechanistic interpretation rather than a direct demonstration of every circuit implementation detail.
+Evidence for early filtering would place selection upstream of prefrontal integration, whereas context-dependent effects of both relevant and irrelevant inputs would support selection within prefrontal population dynamics. A recurrent model that reproduces these patterns would provide a mechanistic account linking context, selective integration, and choice; failure to reproduce them would weaken that proposed account and leave the competing geometrical or filtering explanations unresolved.
 
-The question links flexible behaviour to an interpretable population-level mechanism rather than treating mixed single-neuron responses as isolated signals. Resolving it can clarify how PFC maintains separable representations while flexibly linking them to behaviour, and whether selection and evidence integration should be understood as separate operations or as aspects of one dynamical process. This makes the case valuable as a pattern for turning apparently confounded neural measurements into tests of competing mechanistic theories.
+The question connects flexible behaviour to a circuit-level mechanism rather than treating mixed single-neuron responses as individually interpretable codes. It is scientifically valuable because it tests whether selection and evidence integration can be unified as properties of population dynamics, offering an explanatory bridge between task demands, neural trajectories, and decision-related activity.

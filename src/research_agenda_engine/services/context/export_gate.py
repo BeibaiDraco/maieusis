@@ -17,6 +17,8 @@ from .topic_evidence import (
     R5TopicSourceRecordEvidence,
     SourceEvidenceCard,
     TopicSourceSnippetKind,
+    fulltext_rights_are_verified,
+    rights_safe_source_text_and_kind,
 )
 
 
@@ -63,6 +65,12 @@ def classify_topic_source_for_export(
         block_reasons.append(SourceExportBlockReason.NON_SCHOLARLY_SOURCE)
     if content_availability == ContentAvailabilityClass.ABSTRACT_ONLY:
         warnings.append("abstract_only_weak_context")
+    if (
+        r5_record is not None
+        and r5_record.snippet_kind == TopicSourceSnippetKind.FULLTEXT_EXCERPT
+        and not fulltext_rights_are_verified(r5_record)
+    ):
+        warnings.append("fulltext_rights_unverified")
     if quality_class in {
         SourceQualityClass.SCHOLARLY_PREPRINT,
         SourceQualityClass.EDITORIAL_COMMENTARY_OR_PERSPECTIVE,
@@ -158,7 +166,15 @@ def _content_availability_class(
     if card.exclusion_reason == "off_topic":
         return ContentAvailabilityClass.OUT_OF_SCOPE_RECORD
     snippet_kind = r5_record.snippet_kind if r5_record is not None else None
-    if snippet_kind == TopicSourceSnippetKind.FULLTEXT_EXCERPT:
+    if r5_record is not None and snippet_kind == TopicSourceSnippetKind.FULLTEXT_EXCERPT:
+        if not fulltext_rights_are_verified(r5_record):
+            _, fallback_kind = rights_safe_source_text_and_kind(r5_record)
+            if fallback_kind in {
+                TopicSourceSnippetKind.ABSTRACT,
+                TopicSourceSnippetKind.PROVIDER_SNIPPET,
+            }:
+                return ContentAvailabilityClass.ABSTRACT_ONLY
+            return ContentAvailabilityClass.METADATA_ONLY
         return ContentAvailabilityClass.FULL_TEXT_OR_SUFFICIENT_EXCERPT_AVAILABLE
     if snippet_kind in {TopicSourceSnippetKind.ABSTRACT, TopicSourceSnippetKind.PROVIDER_SNIPPET}:
         return ContentAvailabilityClass.ABSTRACT_ONLY
@@ -184,9 +200,21 @@ def _source_quality_class(
         return SourceQualityClass.DATASET_REGISTRY_OR_PROTOCOL
     if any(token in text for token in ["review", "perspective", "commentary"]):
         return SourceQualityClass.EDITORIAL_COMMENTARY_OR_PERSPECTIVE
-    if r5_record is not None and (r5_record.doi or r5_record.pmid):
-        return SourceQualityClass.PEER_REVIEWED_PRIMARY_STUDY
-    if card.doi or card.pmid:
+    # A DOI is an identifier, not peer review. Preprint servers and conference-abstract systems mint
+    # them freely: every one of the four climate sources on the 2026-07-30 leg carries
+    # `publication_types: ['posted-content']` and a `10.5194/egusphere-*` DOI -- two EGU preprints and
+    # two EGU General Assembly ABSTRACTS -- and all four were exported to the Question Scientist as
+    # `peer_reviewed_primary_study`. The correct signal was already on the same record and never
+    # read. Crossref's own type is what decides; the DOI-only branch survives ONLY as an
+    # unclassified fallback for a record that carries no type at all.
+    pub_types = {
+        value.strip().lower()
+        for value in (r5_record.publication_types if r5_record is not None else [])
+        if value.strip()
+    }
+    if pub_types & {"posted-content", "preprint"}:
+        return SourceQualityClass.SCHOLARLY_PREPRINT
+    if pub_types & {"journal-article", "article", "proceedings-article", "book-chapter"}:
         return SourceQualityClass.PEER_REVIEWED_PRIMARY_STUDY
     return SourceQualityClass.UNCLASSIFIED_SOURCE
 
@@ -218,6 +246,13 @@ def _source_excerpt_text(
     *,
     max_chars: int,
 ) -> str:
+    if (
+        r5_record is not None
+        and r5_record.snippet_kind == TopicSourceSnippetKind.FULLTEXT_EXCERPT
+        and not fulltext_rights_are_verified(r5_record)
+    ):
+        fallback_text, _ = rights_safe_source_text_and_kind(r5_record)
+        return fallback_text[:max_chars].strip()
     text = card.abstract_or_excerpt.strip()
     if not text and r5_record is not None:
         text = r5_record.abstract_or_snippet.strip()

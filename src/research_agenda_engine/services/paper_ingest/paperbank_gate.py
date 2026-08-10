@@ -26,8 +26,13 @@ from collections.abc import Callable, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from enum import StrEnum
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
+from ...providers.models.base import StructuredModelFailureKind, StructuredModelProviderError
+from ...providers.scientific_agents.base import (
+    ScientificAgentFailureKind,
+    ScientificAgentSessionError,
+)
 from ...schemas.cited_literature import (
     CitationSelectionStatus,
     PaperLocalLiteratureContext,
@@ -35,12 +40,15 @@ from ...schemas.cited_literature import (
 )
 from ...schemas.gate_outcome import GateDecision, GateOutcome
 from ...schemas.paper_case import PaperCase
+from ...schemas.stage_receipt import FailureClass
 from ..agents.citation_importance_reviewer import promote_literature_to_ai_reviewed
+from ..agents.gate_kernel import run_gate_with_revise_loop
 from ..agents.paper_case_reviewer import (
     PaperBankBatchContext,
     cited_abstract_basis_note,
     promote_paper_case_to_ai_reviewed,
 )
+from ..agents.promotion import PromotedStatusNotHoldableError
 
 # NOTE: with max_workers > 1 the gate invokes these callables CONCURRENTLY (one worker per draft);
 # injected implementations must be thread-safe.
@@ -66,6 +74,7 @@ class PaperCaseDraft(BaseModel):
     paper_case: PaperCase | None = None
     literature: PaperLocalLiteratureContext | None = None
     parse_error: str = ""
+    failure_class: FailureClass | None = None
 
 
 class AcceptedPaperCase(BaseModel):
@@ -83,6 +92,7 @@ class ExcludedPaper(BaseModel):
     reason: str
     detail: str = ""
     canonical_paper_id: str = ""
+    failure_class: FailureClass | None = None
 
 
 class PaperBankGateResult(BaseModel):
@@ -122,6 +132,160 @@ def _citation_can_degrade_without_excluding_paper(outcome: GateOutcome) -> bool:
     )
 
 
+#: Suffix on every ExcludedPaper.reason produced by a CONTAINED gate failure, so a caller can tell
+#: a batch emptied by unusable replies from a batch a reviewer actually judged.
+GATE_INFRASTRUCTURE_REASON_SUFFIX = "_infrastructure_failure"
+
+#: The fidelity criterion that judges the case's inline formation-trace draft.
+_FORMATION_TRACE_CRITERION = "supports_formation_trace"
+
+#: Exactly one revise round for the fidelity gate, deliberately NOT `config.run.max_revise_rounds`
+#: (the climate profile sets 2, the example profile 3). Operator direction 2026-07-29: a revise must
+#: cause a real revision, and at most one round.
+FIDELITY_MAX_REVISE_ROUNDS = 1
+
+#: Reason recorded when the one round ran and the reviewer still asked for changes. Distinct from a
+#: bare `fidelity_revise` so a reader can tell "nobody tried" from "we tried once and it still asked".
+FIDELITY_REVISE_BUDGET_EXHAUSTED_REASON = "fidelity_revise_budget_exhausted"
+
+
+def _failed_criteria(outcome: GateOutcome) -> set[str]:
+    return {item.criterion for item in outcome.criterion_assessments if not item.passed}
+
+
+def _redraft_for_fidelity_revise(case: PaperCase, outcome: GateOutcome) -> tuple[PaperCase, str]:
+    """The one honest, deterministic repair available at this gate: drop the inline trace draft.
+
+    Measured on the 2026-07-29 climate leg: 6 of 8 `revise` verdicts failed exactly
+    ``supports_formation_trace``, on a field that ``promote_paper_case_to_ai_reviewed`` sets to None
+    moments later and that the dedicated trace stage then regenerates. So the reviewer was refusing
+    papers over a draft the pipeline discards. Removing that draft and asking again lets the reviewer
+    judge the artifact that actually survives.
+
+    This is host-side and deterministic: no model call, no prompt, no new construction seam. It does
+    not overrule the reviewer — the re-review is a real, independent second verdict, and an accept
+    earned there is promoted through the unchanged fail-closed path. A `revise` naming anything other
+    than the trace has no deterministic repair here and is left alone, which keeps the round honest
+    rather than performative.
+    """
+    if case.formation_trace is None:
+        return case, ""
+    if _FORMATION_TRACE_CRITERION not in _failed_criteria(outcome):
+        return case, ""
+    revised = case.model_copy(deep=True)
+    revised.formation_trace = None
+    return revised, (
+        "Bounded fidelity revision round 1: dropped the inline formation_trace draft the review "
+        f"faulted under {_FORMATION_TRACE_CRITERION}; the accepted path nulls that field and the "
+        "trace stage drafts a fresh one, so the re-review judges the surviving case."
+    )
+
+
+def _fidelity_with_one_bounded_revision(
+    draft: PaperCaseDraft,
+    *,
+    fidelity_review: FidelityReview,
+    batch_context: PaperBankBatchContext,
+    revision_notes: dict[str, list[str]],
+) -> GateOutcome:
+    """Review the case; on `revise`, repair once deterministically and re-review.
+
+    Before this, `revise` was operationally identical to `reject` — the gate excluded on ANY
+    non-ACCEPT decision and no revise loop existed, so a verdict that asks for a change was heard as
+    "discard". That cost 8 of 20 papers on the 2026-07-29 climate leg. Same shape as #107/#108, one
+    gate earlier.
+
+    Replaces ``draft.paper_case`` when a repair is applied, so the promotion phase promotes the
+    artifact that was actually re-reviewed and never a stale draft. The repair note is handed back
+    through ``revision_notes`` rather than written onto the case here: ``assert_promotion_binding``
+    compares ``outcome.candidate_digest`` against ``stable_hash(case)``, so touching the case after
+    its verdict was computed would break its own promotion. The note is appended after promotion,
+    exactly where the citation-degrade limitation already is.
+    """
+    assert draft.paper_case is not None and draft.literature is not None
+    literature = draft.literature
+    notes: list[str] = []
+
+    def _review(case: PaperCase) -> GateOutcome:
+        return fidelity_review(case, literature, batch_context)
+
+    def _redraft(case: PaperCase, outcome: GateOutcome) -> PaperCase:
+        revised, note = _redraft_for_fidelity_revise(case, outcome)
+        if note:
+            notes.append(note)
+        return revised
+
+    case, loop = run_gate_with_revise_loop(
+        artifact=draft.paper_case,
+        review=_review,
+        redraft=_redraft,
+        max_revise_rounds=FIDELITY_MAX_REVISE_ROUNDS,
+    )
+    if notes:
+        revision_notes.setdefault(draft.paper_id, []).extend(notes)
+    draft.paper_case = case
+    return loop.final_outcome
+
+
+_LOCAL_AGENT_KINDS = frozenset(
+    {
+        ScientificAgentFailureKind.INVALID_RESPONSE,
+        ScientificAgentFailureKind.STRUCTURED_OUTPUT_INVALID,
+        # Same reasoning that added OUTPUT_TRUNCATED to `_LOCAL_MODEL_KINDS` below: the reviewer
+        # ANSWERED and the answer was cut at the ceiling. Omitting it here would make one truncated
+        # gate reply read as shared provider exhaustion and abort every sibling paper -- the #114
+        # defect, re-entered through the door #144 closed on the other adapter.
+        ScientificAgentFailureKind.OUTPUT_TRUNCATED,
+    }
+)
+_LOCAL_MODEL_KINDS = frozenset(
+    {
+        StructuredModelFailureKind.INVALID_RESPONSE,
+        StructuredModelFailureKind.STRUCTURED_OUTPUT_INVALID,
+        # Reply-shaped like the two above: the reviewer ANSWERED and the answer was cut at the
+        # ceiling. Omitting it made one truncated paper reply read as shared provider exhaustion and
+        # abort every sibling -- the #114 defect shape, on a kind that did not exist when this set
+        # was written.
+        StructuredModelFailureKind.OUTPUT_TRUNCATED,
+    }
+)
+
+
+def _is_containable_gate_failure(exc: BaseException) -> bool:
+    """Reply-shaped (the reviewer ANSWERED unusably) is contained; provider exhaustion is not.
+
+    Containing a retry-exhausted rate limit, timeout, connection or auth failure would record an
+    outage as a per-paper scientific exclusion -- infrastructure masquerading as a judged
+    PaperBank, which is the defect this project keeps removing. Those are shared: the next sibling
+    fails identically, so they stay whole-run and fail closed (AGENTS.md rule 12). Every hard
+    boundary -- promotion binding, reviewer independence, branch identity -- raises a bare
+    ValueError or AssertionError and is deliberately absent from this predicate.
+    """
+
+    if isinstance(exc, ValidationError):
+        return True
+    if isinstance(exc, ScientificAgentSessionError):
+        return exc.kind in _LOCAL_AGENT_KINDS
+    if isinstance(exc, StructuredModelProviderError):
+        return exc.kind in _LOCAL_MODEL_KINDS
+    return False
+
+
+def _contained_failure_detail(exc: BaseException) -> str:
+    """Secret-free, bounded detail for a persisted, user-visible exclusion record.
+
+    The two provider error types keep provider output off ``__str__`` by construction. A pydantic
+    ValidationError does not -- it quotes the offending input -- so it is reduced to a field count.
+    """
+
+    if isinstance(exc, ValidationError):
+        return (
+            "the reviewer reply failed strict validation "
+            f"({exc.error_count()} field error(s)); the paper was not judged"
+        )
+    return f"{type(exc).__name__}: {exc}"
+
+
 def gate_paperbank(
     drafts: Sequence[PaperCaseDraft],
     *,
@@ -145,7 +309,10 @@ def gate_paperbank(
         if not draft.parseable or draft.paper_case is None or draft.literature is None:
             excluded.append(
                 ExcludedPaper(
-                    paper_id=draft.paper_id, reason="unparseable", detail=draft.parse_error
+                    paper_id=draft.paper_id,
+                    reason="unparseable",
+                    detail=draft.parse_error,
+                    failure_class=draft.failure_class,
                 )
             )
             continue
@@ -175,9 +342,44 @@ def gate_paperbank(
     )
 
     # --- Stage 1: per-paper fidelity → citation gates (independent) ------------------------------
-    def _review_one(draft: PaperCaseDraft) -> tuple[GateOutcome, GateOutcome | None]:
+    contained: dict[str, str] = {}
+    revision_notes: dict[str, list[str]] = {}
+
+    def _review_one(draft: PaperCaseDraft) -> tuple[GateOutcome | None, GateOutcome | None]:
+        """One paper's gates, contained.
+
+        Containment lives INSIDE this function on purpose: `list(pool.map(...))` re-raises at
+        iteration and discards every sibling's already-paid verdict, so wrapping the pool would
+        not save them. Before this, one unusable reply aborted the whole batch and
+        `exec_stage_paper_half` -- which has no try/except -- wrote not even a StageReceipt: a bare
+        traceback, zero artifacts, zero dossiers. That is the worst outcome available to a user
+        building their first PaperBank.
+        """
         assert draft.paper_case is not None and draft.literature is not None
-        fidelity = fidelity_review(draft.paper_case, draft.literature, batch_context)
+        try:
+            return _review_one_or_raise(draft)
+        except (
+            ValidationError,
+            ScientificAgentSessionError,
+            StructuredModelProviderError,
+        ) as exc:
+            # Concrete types, never a broad except: a hard boundary -- promotion binding, reviewer
+            # independence, branch identity -- raises a bare ValueError or AssertionError and must
+            # keep escaping. The kind filter then separates a reply we cannot use from a provider
+            # we exhausted.
+            if not _is_containable_gate_failure(exc):
+                raise
+            contained[draft.paper_id] = _contained_failure_detail(exc)
+            return None, None
+
+    def _review_one_or_raise(draft: PaperCaseDraft) -> tuple[GateOutcome, GateOutcome | None]:
+        assert draft.paper_case is not None and draft.literature is not None
+        fidelity = _fidelity_with_one_bounded_revision(
+            draft,
+            fidelity_review=fidelity_review,
+            batch_context=batch_context,
+            revision_notes=revision_notes,
+        )
         if fidelity.decision != GateDecision.ACCEPT:
             return fidelity, None
         # A paper with no key-citation selection (select_key_citations off, or zero cited works) has
@@ -197,14 +399,34 @@ def gate_paperbank(
     accepted: list[AcceptedPaperCase] = []
     for draft, (fidelity, citation) in zip(canonical, reviews, strict=True):
         assert draft.paper_case is not None and draft.literature is not None
-        if fidelity.decision != GateDecision.ACCEPT:
+        if fidelity is None:
+            # Contained: this paper was never judged. Recorded as an infrastructure exclusion so it
+            # can never be read as a scientific verdict on the paper.
             excluded.append(
                 ExcludedPaper(
                     paper_id=draft.paper_id,
-                    reason=f"fidelity_{fidelity.decision.value}",
-                    detail=fidelity.rationale,
+                    reason=f"gate{GATE_INFRASTRUCTURE_REASON_SUFFIX}",
+                    detail=contained.get(draft.paper_id, "the reviewer returned no usable verdict"),
+                    failure_class=FailureClass.SCHEMA_ERROR,
                 )
             )
+            continue
+        if fidelity.decision != GateDecision.ACCEPT:
+            # A `revise` that survived its one repaired re-review is reported as budget exhaustion,
+            # carrying what the reviewer still asked for. A bare `fidelity_revise` read as "nobody
+            # tried"; this says "we tried once and the reviewer still asked for these changes".
+            if fidelity.decision == GateDecision.REVISE:
+                reason = FIDELITY_REVISE_BUDGET_EXHAUSTED_REASON
+                detail = "; ".join(
+                    [
+                        fidelity.rationale,
+                        *(f"still required: {ask}" for ask in fidelity.required_changes),
+                    ]
+                )
+            else:
+                reason = f"fidelity_{fidelity.decision.value}"
+                detail = fidelity.rationale
+            excluded.append(ExcludedPaper(paper_id=draft.paper_id, reason=reason, detail=detail))
             continue
         citation_unpromoted = citation is None or (
             citation is not None and _citation_can_degrade_without_excluding_paper(citation)
@@ -222,11 +444,28 @@ def gate_paperbank(
                 )
             )
             continue
-        promoted_case = promote_paper_case_to_ai_reviewed(
-            draft.paper_case,
-            fidelity,
-            cited_abstract_basis=cited_abstract_basis_note(draft.literature),
-        )
+        try:
+            promoted_case = promote_paper_case_to_ai_reviewed(
+                draft.paper_case,
+                fidelity,
+                cited_abstract_basis=cited_abstract_basis_note(draft.literature),
+            )
+        except PromotedStatusNotHoldableError as exc:
+            # The highest-traffic promoter, and it had the same gap: `PaperCase.validate_reviewed_fields`
+            # gates on `review.status`, and constructing the inner `PaperCaseReview` does not re-run the
+            # outer rule. One paper that cannot hold reviewed authority is excluded honestly; its
+            # siblings keep their already-paid verdicts.
+            excluded.append(
+                ExcludedPaper(
+                    paper_id=draft.paper_id,
+                    reason="fidelity_unholdable_reviewed_status",
+                    detail=str(exc),
+                )
+            )
+            continue
+        # After promotion validated the digest binding, never before: a bounded revision round is
+        # part of this paper's honest history and the reader is entitled to see it.
+        promoted_case.review.corrections.extend(revision_notes.get(draft.paper_id, []))
         if citation_unpromoted:
             # Stands on fidelity alone: keep the literature at its extractor review status (no citation
             # promotion), record the honest limitation on the case review, and keep the pre-review link.

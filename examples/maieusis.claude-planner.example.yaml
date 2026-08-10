@@ -1,0 +1,138 @@
+# THE RECOMMENDED PROFILE, CLAUDE CODE VARIANT. Use it if your planner host is Claude Code rather
+# than Codex; the NLB demonstration ran this variant.
+#
+# Every SETTING is identical to `maieusis.yaml` except the three `coding_*` lines below. Some
+# comments are worded for this host, so the files are not byte-identical -- compare the values, not
+# the bytes.
+#
+# The profiles under `examples/release/` are NOT a starting point. They are deliberately reduced
+# byte-qualification inputs used to prove the published package ran untouched.
+#
+# Secrets are NEVER stored here; this file holds only non-secret settings.
+#
+# Credentials are read from, in order: exported environment variables, then `.env.local`,
+# `runtime.env`, and `.env` in the directory you run `maieusis` from, then
+# `~/.config/maieusis/runtime.env`. The FIRST place a variable is found wins, so a project-local
+# file silently overrides the user-level one. Keep credentials in `~/.config/maieusis/runtime.env`
+# unless you deliberately want per-project keys, and never commit a project-local one.
+version: maieusis_project_config/v1
+
+# standard = token API present (full automated generation + independent review).
+# subscription_only_demo = NO token API (API-agent providers resolve to mock; novelty + literature
+#   disabled; a loud "workflow demo only" banner; no scientific-quality guarantee).
+mode: standard
+
+paperbank:
+  inbox_dir: papers/inbox          # directory of source PDFs to extract (required)
+  extraction:
+    provider: openai
+    model: "gpt-5.6-luna"          # or set OPENAI_MODEL in runtime.env
+  parser: poppler_text             # auto | docling | poppler_text; poppler_text needs pdftotext
+  evidence_mode: source_span
+  max_workers: 4
+  cited_literature: true
+  select_key_citations: true
+  external_reference_fallback: true
+  min_local_reference_count: 10
+  citation_prompt_char_budget: 180000
+  crossref_mailto: you@example.org
+  openalex_email: you@example.org
+
+dataset:
+  seed:
+    dataset_id: my_dataset
+    # A resolvable dataset link (DOI / URL / DANDI id) OR readable local documentation under
+    # `docs:` below -- either one, or both. An unpublished lab dataset is fully supported: leave
+    # `link` empty and list your own local documentation files in `docs:`.
+    link: https://example.org/my-dataset
+    docs: []
+  inspection_runtime:
+    dataset_root: /path/to/local/sample     # required for external_readonly access
+    dataset_access_mode: external_readonly
+    inspection_command: "uvx --with pynwb python"   # XOR inspection_python
+    inspection_pythonpath: ""
+    inspection_extra_env: {}
+    # REQUIRED when you installed from the package index. Maieusis records the identity of its own
+    # source tree in every run and needs a clean checkout to read it from; you do not have one yet.
+    # This is the most common first-run failure. Clone it once, anywhere outside this project:
+    #     git clone https://github.com/BeibaiDraco/maieusis.git ~/maieusis-source
+    # then put that absolute path here. `git init` in this project does NOT work -- it has to be
+    # the Maieusis checkout. `maieusis check` verifies its Git state before any paid call.
+    source_tree_root: null
+    max_turns: 60
+    timeout_seconds: 2400
+  allowed_inspection_resources:             # at least one non-blank entry required
+    - local dataset documentation
+    - dataset repository code
+    - dataset metadata and small samples
+  official_online_resources: []
+
+research_intent:
+  mode: open           # open | topic_conditioned | seed_question
+  topic_terms: []      # required for topic_conditioned; ignored entirely in open mode
+  topic_description: ""
+  seed_question: ""    # required for seed_question mode
+
+# Model pins (pinned-full-ID policy). These are the exact role identities that produced the
+# published demonstrations. Full IDs are pinned deliberately; serious-run receipts additionally
+# record the actually resolved CLI/model identity.
+models:
+  pattern: {provider: openai, model: "gpt-5.6-sol"}      # PRO tier; see allow_pro_model below
+  questioner: {provider: openai, model: "gpt-5.6-sol"}   # PRO tier; see allow_pro_model below
+  narrator: {provider: openai, model: "gpt-5.6-luna"}
+  topic: {provider: openai, model: "gpt-5.6-terra"}
+  owner: {provider: openai, model: "gpt-5.6-terra"}
+  reviewer: {provider: anthropic, model: "claude-sonnet-5"}   # MUST be a DISTINCT provider from owner
+  # The prior-art reviewer alone. Preflight does not require this field, but a measured live leg
+  # lost half its prior-art reviews when this role shared the reviewer's model: a biosecurity
+  # classifier fired on the model's thinking block. The pinned model here lost none of sixty with
+  # the same pass/hold split.
+  novelty_reviewer: {provider: openai, model: "gpt-5.6-terra"}
+  coding_host: claude_code                      # codex | claude_code (required; never a fake host)
+  coding_model: claude-opus-4-8                 # pinned full ID; never inherited from user config
+  coding_reasoning_effort: high                 # optional for Claude Code; never `minimal`
+  # `gpt-5.6-sol` above is PRO tier, so `maieusis check` FAILS the pattern and questioner roles
+  # with this false unless you export MAIEUSIS_ALLOW_PRO_MODEL=1.
+  # NOTE: this field is folded into EVERY stage configuration digest, so changing it in an existing
+  # project invalidates resume reuse and the cross-run PaperBank import for that project.
+  allow_pro_model: true
+
+literature:
+  enabled: true                  # REQUIRED by preflight whenever novelty.enabled is true
+  openalex_email: you@example.org
+  fulltext_enrichment: true
+  source_profile: public         # public | auto | elicit | hybrid (ELICIT_API_KEY is env-only)
+
+# Prior-art review. Enabled here because a run that skips it cannot say anything about whether the
+# literature already answers the question. The SCHEMA default remains false, so an existing project
+# file that omits this block loads unchanged and constructs no web provider.
+novelty:
+  enabled: true
+  direct_recap_threshold: 0.9    # compatibility/recall ranking only; LLM evidence review decides
+  close_prior_threshold: 0.7     # compatibility/recall ranking only; never a scientific verdict
+  max_candidates: 5              # compatibility ranking limit for legacy artifacts
+  web_grounding:
+    enabled: true
+    # Only `anthropic` can run strict grounding today: it is the sole adapter exposing a
+    # vendor-enforced per-request use bound. The scout must also differ from the Question Scientist.
+    scout: {provider: anthropic, model: "claude-sonnet-5"}
+    max_searches_per_scout: 3
+    max_leads_per_scout: 5
+    # 2048 (the schema default) truncates a three-search scout mid-answer and loses the whole paid
+    # call. 21000 is the transport limit and is what every live profile sets.
+    max_output_tokens: 21000
+    rate_card: anthropic_direct_web_search_20250305
+    # Web-TOOL fee reservation only, not a total token-cost cap. Preflight requires
+    #   max_families * variants_per_family * 2 * max_searches_per_scout * 10000 <= this value.
+    # At the run shape below: 6 * 2 * 2 * 3 * 10000 = 720000 <= 1000000.
+    # If you raise max_families or variants_per_family, raise this too or preflight FAILS.
+    hard_run_tool_spend_ceiling_micro_usd: 1000000
+
+run:
+  output_root: runs/my-run
+  shortlist_path: null             # non-null external shortlist is unsupported and fails preflight
+  target_family_ids: []            # non-empty external targeting is unsupported and fails preflight
+  max_families: 6                  # the demonstration cohort shape; six is also the effective cap
+  variants_per_family: 2           # scientifically distinct variants within each generated family
+  max_parallel_family_workers: 3
+  max_revise_rounds: 3             # bounded owner/planner repair rounds

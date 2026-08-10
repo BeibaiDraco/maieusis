@@ -108,6 +108,23 @@ class GenericFamilyBranchOutcomePacket(BaseModel):
     independent_plan_review_message_id: str = ""
     rejection_message_id: str = ""
     escalation_message_id: str = ""
+    # The planner's OWN family-level reason for a non-plan terminal, verbatim from the typed
+    # terminal message. `rejection_message_id` preserved only that message's IDENTITY, so its
+    # words -- 671/613/702 characters of specific science on the 2026-08-04 leg -- had no carrier
+    # between the planner and the dossier and reached none of that run's 93 Markdown files.
+    #
+    # Optional on purpose, but note what it costs: `generic_human_review_override` verifies a
+    # prefilled template by RE-LOADING the persisted packet and recomputing
+    # `stable_hash(model_dump(mode="json"))`, so this field at its default still moves the hash of
+    # a packet written before it existed (measured on that leg: cc507cb1... -> 8729a261...). Every
+    # override template generated before this change must be regenerated from its run. That is
+    # accepted here because the release re-runs all three legs; a provenance digest that hashed the
+    # persisted BYTES would not have this property, and that is the real fix.
+    terminal_reason: str = ""
+    # Verbatim mirror of BranchRejectionMessage.alternatives_for_future_data -- same field name so
+    # the two artifacts diff by eye. This is what tells a reader which dataset WOULD answer the
+    # question, and it is the most actionable line a rejection can carry.
+    alternatives_for_future_data: list[str] = Field(default_factory=list)
     limitations: list[str] = Field(default_factory=list)
     planning_only: Literal[True] = True
     non_terminal: Literal[True] = True
@@ -147,7 +164,12 @@ class GenericFamilyBranchOutcomePacket(BaseModel):
             )
         return value
 
-    @field_validator("source_message_ids", "evidence_ids", "limitations")
+    # `alternatives_for_future_data` joins this validator's field list rather than getting its own:
+    # a new `@field_validator` adds a row to the protected `constraints.yaml`, and the seam scanner
+    # compares validator ID SETS, so extending an existing one leaves that file byte-identical.
+    @field_validator(
+        "source_message_ids", "evidence_ids", "limitations", "alternatives_for_future_data"
+    )
     @classmethod
     def clean_text_lists(cls, value: list[str]) -> list[str]:
         cleaned = [item.strip() for item in value if item.strip()]

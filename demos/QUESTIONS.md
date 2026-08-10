@@ -1,367 +1,304 @@
-# Scientific questions from the public demos
-
-Maieusis developed twelve scientific question families—six for the
-International Brain Laboratory (IBL) Brain-Wide Map and six for the Neural
-Latents Benchmark (NLB) MC_Maze-S dataset. Each family contains two
-deliberately distinct variants, so the gallery preserves 24 possible lines of
-inquiry rather than collapsing them into one generic proposal.
-
-These are worked neuroscience examples, not the scope of the product.
-Maieusis is designed for any scientific discipline and any scientific dataset
-that provides the lawful, read-only inspection surface needed for planning.
-The [main project page](../README.md#explore-the-demos) explains how to try it
-with data from another field or join the scientific collaboration program.
-
-> **These are questions and analysis plans, not scientific results.** No final
-> analysis was executed, novelty was not established, and no hypothesis was
-> confirmed. A plan marked as accepted below was accepted provisionally for
-> planning after automated independent review.
-
-## Featured questions
-
-### IBL-002 — When does shared neural variability matter for a decision?
-
-Neural populations fluctuate from trial to trial, but the size of those
-fluctuations is only part of the story. Two populations can vary by the same
-amount and still have very different behavioral consequences: variability
-aligned with a decision-relevant direction could change a choice, whereas
-equally large variability in an orthogonal direction may be largely irrelevant.
-
-Maieusis developed this distinction into two complementary questions. The first
-asks whether alignment with an independently defined decision direction
-predicts held-out choice and reaction time beyond overall covariance magnitude.
-The second asks whether apparently decision-related dimensions are better
-explained by pose and ongoing behavioral state. Together they distinguish a
-task-specific account of population variability from a generic movement-or-state
-account, rather than treating all shared “noise” as equivalent.
-
-Both variants produced provisionally accepted planning dossiers. No analysis
-was executed, and novelty remained `not_assessed`.
-
-**[Explore both variants, their competing explanations, and what different
-outcomes would mean](ibl/artifacts/questions/question_families_detailed.md#family-002-which-shared-variability-dimensions-matter-for-decisions)**
-
-[See the planned study at a glance](ibl/artifacts/families/covariance-alignment/dossier_detailed.md)
-· [Open the complete planning record](ibl/artifacts/families/covariance-alignment/dossier.md)
-
-### NLB-006 — What kind of neural stability supports generalization?
-
-“Stable representation” can mean several different things. The average
-population activity for each reach may move while the relationships among
-reaches remain reproducible. And geometry that repeats reliably within straight
-or curved reaches does not necessarily transfer between those two movement
-demands.
-
-Using MC_Maze-S recordings from primary motor cortex (M1) and dorsal premotor
-cortex (PMd), Maieusis separated these claims into two tests. One compares
-relational stability with centroid stability within matched reach conditions
-and asks whether the distinction differs between regions. The other first
-requires reliable geometry within each demand, then asks whether that geometry
-transfers between straight and curved barrier-maze reaches or is consistently
-remapped. This distinction separates a shared motor scaffold from stable but
-demand-specific organization without mistaking unreliable estimates for
-remapping.
-
-Both variants produced provisionally accepted planning dossiers. The dataset
-contains one recorded subject, the proposed claims remain descriptive or
-predictive rather than causal, and no analysis was executed.
-
-**[Explore both variants, their competing explanations, and what different
-outcomes would mean](nlb/artifacts/questions/question_families_detailed.md#family-006-which-geometric-stability-supports-generalization-in-reaching)**
-
-[See the planned study at a glance](nlb/artifacts/families/geometry-definition-generalization/dossier_detailed.md)
-· [Open the complete planning record](nlb/artifacts/families/geometry-definition-generalization/dossier.md)
-
-These highlights are entry points, not a ranking. The complete gallery below
-shows every family, including a mixed IBL outcome and an NLB validation warning.
-
-## How to read the gallery
-
-- **Plan developed (provisional):** an automated independent reviewer accepted
-  the plan as a credible next step. The analysis has not been run.
-- **Mixed:** sibling variants reached different outcomes; inspect each one
-  separately.
-- **Validation warning:** the scientific question remains visible, but the
-  returned planning material did not pass validation. There is no accepted
-  analysis plan for that family.
-
-For each family, start with **Explore the question**. That page explains the
-scientific background, alternatives, assumptions, and possible positive,
-negative, or null outcomes for both variants. The shorter plan guide then shows
-how the real dataset shaped the proposal, while the complete planning record
-preserves the full closure.
-
-## IBL Brain-Wide Map
-
-The International Brain Laboratory is a multi-institution collaboration. Its
-Brain-Wide Map contains standardized, multi-laboratory recordings from mice
-performing a sensory decision-making task, as described in [*A brain-wide map
-of neural activity during complex behaviour*
-(2025)](https://doi.org/10.1038/s41586-025-09235-0) and the
-[official release guide](https://docs.internationalbrainlab.org/notebooks_external/2025_data_release_brainwidemap.html).
-The demo asks how stable decisions can emerge from heterogeneous, brain-wide
-population activity. Five families produced plans for both variants; one
-family is intentionally mixed.
+# All demo questions
 
-### 1. Stable decisions under changing population organization
+[IBL](ibl/README.md) · [NLB](nlb/README.md) · [Climate](climate/README.md) ·
+[Source papers](PAPER_SOURCES.md)
 
-Stable behavior could arise from an invariant population organization or from
-flexible dynamics that preserve an effective readout. The variants separate
-cross-context relational invariance from within-episode reconfiguration.
+Eighteen scientific question families across three datasets, six each, two variants apiece. Thirty-six
+lines of inquiry, developed from source papers and a real dataset.
 
-1. [Cross-context invariance](ibl/artifacts/questions/question_families_detailed.md#variant-001001-cross-context-invariance-branch): Across subjects, sessions, and laboratories,
-   does relational population geometry predict stable decisions better than
-   preservation of particular activity patterns?
-2. [Within-episode reconfiguration](ibl/artifacts/questions/question_families_detailed.md#variant-001002-within-episode-reconfiguration-branch): Can task- and state-dependent
-   trajectories reconfigure while preserving a stable decision-relevant
-   subspace?
+> **Nothing here was executed.** No effect was measured, no hypothesis was tested, and no dossier
+> reports an outcome. These are plans and reasons not to proceed. Prior-art review ran on every
+> variant within a recorded scope, and no question is claimed to be novel.
 
-Outcome: **plan developed for both variants (provisional).**
+**Three of these families closed without a plan, and five variants were held back before planning
+because the prior-art review found a close prior work.** Those are on this page with the rest. A
+system that only shows you what worked is not showing you anything.
 
-[Explore the question](ibl/artifacts/questions/question_families_detailed.md#family-001-stable-decisions-under-changing-population-organization)
-· [See the plan at a glance](ibl/artifacts/families/stability-reconfiguration/dossier_detailed.md)
-· [Open the complete planning record](ibl/artifacts/families/stability-reconfiguration/dossier.md)
+Evidence in these runs is visibly draft and largely abstract-only: the literature supporting a
+family was often not full-text verified, and the pages say so where it applies.
 
-### 2. Which shared-variability dimensions matter for decisions?
+These artifacts were produced by demonstration runs on the release-candidate source tree, not by the
+published package. They show the scientific workflow; they are not a statement about the exact bytes
+you install. Each demo page names the run that produced it.
 
-Aggregate co-variability magnitude cannot show whether shared fluctuations are
-decision-relevant or merely reflect movement and global state. These variants
-ask whether the orientation of variability relative to independently defined
-dimensions carries the more informative signal.
-
-1. [Decision alignment](ibl/artifacts/questions/question_families_detailed.md#variant-002001-decision-alignment-branch): Does alignment with decision geometry predict choice
-   and response-time variation better than overall shared-variability magnitude?
-2. [Embodied-state specificity](ibl/artifacts/questions/question_families_detailed.md#variant-002002-embodied-state-specificity-branch): Are apparently decision-related variability
-   dimensions better explained by multidimensional pose and ongoing behavioral
-   state?
 
-Outcome: **plan developed for both variants (provisional).**
+## IBL Brain-Wide Map — mouse decision-making
 
-[Explore the question](ibl/artifacts/questions/question_families_detailed.md#family-002-which-shared-variability-dimensions-matter-for-decisions)
-· [See the plan at a glance](ibl/artifacts/families/covariance-alignment/dossier_detailed.md)
-· [Open the complete planning record](ibl/artifacts/families/covariance-alignment/dossier.md)
-
-### 3. Latent decision state versus observable embodied state
+Standardized multi-laboratory Neuropixels recordings from mice performing a sensory decision task, with the same protocol repeated across laboratories. That repetition is what makes questions about reproducibility and idiosyncrasy askable at all.
 
-History-dependent population activity can be interpreted as an internal
-decision state, observable behavior, immediate task variables, or unexplained
-intrinsic dynamics. The variants make those explanations compete instead of
-assuming that unexplained neural variation is latent cognition.
-
-1. [Inferred internal state](ibl/artifacts/questions/question_families_detailed.md#variant-003001-inferred-internal-state-branch): Is a history-dependent decision state
-   represented across regions beyond sensory input, choice, response time, and
-   measured pose?
-2. [Observed embodied state](ibl/artifacts/questions/question_families_detailed.md#variant-003002-observed-embodied-state-branch): Does multidimensional pose explain distributed
-   activity otherwise attributed to latent state or intrinsic noise?
+Featured on the [ibl demo page](ibl/README.md): *Task relevance of structured neural co-variability*.
 
-Outcome: **plan developed for both variants (provisional).**
+### 1. Invariant and reorganized population geometry during decision-making
 
-[Explore the question](ibl/artifacts/questions/question_families_detailed.md#family-003-latent-decision-state-versus-observable-embodied-state)
-· [See the plan at a glance](ibl/artifacts/families/latent-decision-state/dossier_detailed.md)
-· [Open the complete planning record](ibl/artifacts/families/latent-decision-state/dossier.md)
-
-### 4. How input influence changes during a decision
+Population representations may preserve decision-relevant organization across contexts, reorganize while preserving equivalent meaning, or change because sensory, movement, and sampling conditions differ.
 
-This family contrasts a discrete within-episode change in input sensitivity
-with a distributed transformation of information across regions. The two
-scientifically attractive accounts did not receive the same dataset-grounded
-outcome.
+1. [Cross-context conservation and predictive transfer](ibl/artifacts/questions/question_families_detailed.md#variant-001001-cross-context-conservation-and-predictive-transfer): Does decision-relevant population geometry remain sufficiently conserved across subjects, sessions, and laboratories to support predictive generalization of stimulus and choice relationships?
+2. [Semantic preservation despite geometric reorganization](ibl/artifacts/questions/question_families_detailed.md#variant-001002-semantic-preservation-despite-geometric-reorganization): Can population geometry reorganize across behavioral contexts while preserving equivalent stimulus or decision meaning?
 
-1. [Within-episode sensitivity transition](ibl/artifacts/questions/question_families_detailed.md#variant-004001-within-episode-sensitivity-transition-branch): Do trajectories show a
-   reproducible input-sensitivity change whose timing predicts choice stability
-   and response time? **No plan—`rejected_operationalization_failure`.**
-2. [Cross-region transformation](ibl/artifacts/questions/question_families_detailed.md#variant-004002-cross-region-transformation-branch): Does decision information transform from
-   stimulus-aligned toward choice- and response-aligned organization across
-   regions? **Plan developed as `accepted_requires_new_skill`.**
+Outcome: **Plan developed (provisional)** — both variants reached independently reviewed plans.
 
-Outcome: **mixed family.** Only the second variant has provisional accepted-plan
-authority.
+**[Explore both variants, their competing explanations, and what positive, negative, or null outcomes would mean](ibl/artifacts/questions/question_families_detailed.md#family-001-invariant-and-reorganized-population-geometry-during-decision-making)** · [See the study plan at a glance, including proposal hypothesis versus inspected evidence](ibl/artifacts/families/invariant-decision-geometry/dossier_detailed.md) · [Open the full plan itself — every control, estimand, and stated limit](ibl/artifacts/families/invariant-decision-geometry/dossier.md)
 
-[Explore the question](ibl/artifacts/questions/question_families_detailed.md#family-004-how-input-influence-changes-during-a-decision)
-· [See the plan at a glance](ibl/artifacts/families/input-to-choice-dynamics/dossier_detailed.md)
-· [Open the complete planning record](ibl/artifacts/families/input-to-choice-dynamics/dossier.md)
-
-### 5. Expansion and compression of decision geometry
+### 2. Task relevance of structured neural co-variability
 
-Dimensional expansion can separate confusable states, while compression can
-support stable readout across heterogeneous activity. The family asks whether
-these are distinct computational roles rather than generic consequences of
-population size, reliability, or pooling.
-
-1. [Expansion for separation](ibl/artifacts/questions/question_families_detailed.md#variant-005001-expansion-for-separation-branch): Is transient geometric expansion associated
-   with better separation of otherwise confusable sensory-decision states?
-2. [Compression for generalization](ibl/artifacts/questions/question_families_detailed.md#variant-005002-compression-for-generalization-branch): Is lower-dimensional decision geometry
-   associated with stable readout across subjects, sessions, or laboratories?
+Co-variability may be a global nuisance, a task-aligned computational resource, or structured modulation associated primarily with embodied state rather than decision processing.
 
-Outcome: **plan developed for both variants (provisional).**
+1. [Task-aligned structure versus aggregate magnitude](ibl/artifacts/questions/question_families_detailed.md#variant-002001-task-aligned-structure-versus-aggregate-magnitude): Is the relationship between neural co-variability and decision performance better explained by alignment with stimulus- or choice-relevant population dimensions than by overall co-variability magnitude?
+2. [Decision organization versus embodied co-variation](ibl/artifacts/questions/question_families_detailed.md#variant-002002-decision-organization-versus-embodied-co-variation): Is structured population co-variability associated more strongly with decision variables or with video-derived movement and pose states?
 
-[Explore the question](ibl/artifacts/questions/question_families_detailed.md#family-005-expansion-and-compression-of-decision-geometry)
-· [See the plan at a glance](ibl/artifacts/families/dimensional-transformation/dossier_detailed.md)
-· [Open the complete planning record](ibl/artifacts/families/dimensional-transformation/dossier.md)
+Outcome: **Plan developed (provisional)** — both variants reached independently reviewed plans.
 
-### 6. Reliability and boundary conditions of population-dynamical claims
-
-An apparent organizing principle can be robust, context-bound, or an artifact
-of unreliable estimation. This family treats reproducibility and model
-comparison as scientific boundary questions rather than afterthoughts.
+**[Explore both variants, their competing explanations, and what positive, negative, or null outcomes would mean](ibl/artifacts/questions/question_families_detailed.md#family-002-task-relevance-of-structured-neural-co-variability)** · [See the study plan at a glance, including proposal hypothesis versus inspected evidence](ibl/artifacts/families/covariability-structure/dossier_detailed.md) · [Open the full plan itself — every control, estimand, and stated limit](ibl/artifacts/families/covariability-structure/dossier.md)
 
-1. [Geometric reproducibility](ibl/artifacts/questions/question_families_detailed.md#variant-006001-geometric-reproducibility-branch): Which decision-related geometric relations
-   reproduce across acquisition contexts, and do failures track scientific
-   rather than measurement boundaries?
-2. [Dynamical-model reliability](ibl/artifacts/questions/question_families_detailed.md#variant-006002-dynamical-model-reliability-branch): Are fitted dynamical signatures
-   reproducible enough to predict behavior beyond simpler geometric
-   descriptions?
+### 3. Population-dynamical transitions from sensation to action
 
-Outcome: **plan developed for both variants (provisional).**
+Similar choices can emerge from sequential decision regimes, continuous single-regime dynamics, or trajectories dominated by impending movement.
 
-[Explore the question](ibl/artifacts/questions/question_families_detailed.md#family-006-reliability-and-boundary-conditions-of-population-dynamical-claims)
-· [See the plan at a glance](ibl/artifacts/families/reliability-boundaries/dossier_detailed.md)
-· [Open the complete planning record](ibl/artifacts/families/reliability-boundaries/dossier.md)
+1. [Sequential-regime versus continuous-dynamics test](ibl/artifacts/questions/question_families_detailed.md#variant-003001-sequential-regime-versus-continuous-dynamics-test): Do population dynamics exhibit a transition from stimulus-sensitive to choice-stabilizing organization whose timing predicts response-time variation?
+2. [Choice dynamics versus movement preparation](ibl/artifacts/questions/question_families_detailed.md#variant-003002-choice-dynamics-versus-movement-preparation): Are late decision-related population trajectories specifically associated with choice formation, or are they better explained as distributed preparation of measured movements?
 
-## Neural Latents Benchmark MC_Maze-S
-
-The Neural Latents Benchmark evaluates latent-variable methods for neural
-population activity. Its MC_Maze-S dataset contains spiking activity from one
-rhesus macaque's primary motor cortex (M1) and dorsal premotor cortex (PMd)
-during delayed straight and curved barrier-maze reaches. See [Pei et al.,
-*Neural Latents Benchmark ’21*](https://datasets-benchmarks-proceedings.neurips.cc/paper/2021/hash/979d472a84804b9f647bc185a877a8b5-Abstract-round2.html)
-and [DANDI:000140, version
-0.220113.0408](https://doi.org/10.48324/dandi.000140/0.220113.0408). Five
-families produced provisional plans. One family remains visible as a
-validation warning and has no accepted-plan authority.
+Outcome: **Mixed family** — one variant reached a reviewed plan; its sibling did not, and says why.
 
-### 1. Invariant and reconfigured population geometry across reach demands
+**[Explore both variants, their competing explanations, and what positive, negative, or null outcomes would mean](ibl/artifacts/questions/question_families_detailed.md#family-003-population-dynamical-transitions-from-sensation-to-action)** · [See the study plan at a glance, including proposal hypothesis versus inspected evidence](ibl/artifacts/families/decision-dynamics/dossier_detailed.md) · [Open the full plan itself — every control, estimand, and stated limit](ibl/artifacts/families/decision-dynamics/dossier.md)
 
-Do straight and curved reaching share a conserved motor scaffold, or do they
-require demand-specific reconfiguration? The variants separate regional from
-temporal scope.
+### 4. Broad versus selective brain-wide organization of decision signals
 
-1. [Regional scope](nlb/artifacts/questions/question_families_detailed.md#variant-001001-regional-scope-test-of-geometric-invariance): Is reach-configuration geometry conserved between
-   straight and curved reaches within M1 and PMd, or selectively reconfigured
-   in one region?
-2. [Temporal scope](nlb/artifacts/questions/question_families_detailed.md#variant-001002-temporal-scope-test-of-geometric-invariance): Does relational reach geometry persist from preparation
-   into execution, and is that persistence shared by PMd and M1?
+Brain-wide detectability may reflect genuinely distributed computation, repeated local representations, common task covariates, or selective organization obscured by coarse summaries.
 
-Outcome: **plan developed for both variants (provisional).**
+1. [Anatomical breadth versus differentiation](ibl/artifacts/questions/question_families_detailed.md#variant-004001-anatomical-breadth-versus-differentiation): Are stimulus- and choice-related population representations broadly conserved across anatomical populations, or selectively differentiated across the recorded brain? *(held back before planning: the prior-art review resolved a close prior work — the family page states which, and what would distinguish this variant from it)*
+2. [Selective predictive dimensions versus generic shared activity](ibl/artifacts/questions/question_families_detailed.md#variant-004002-selective-predictive-dimensions-versus-generic-shared-activity): Are predictive relationships between anatomical populations carried by selective task-relevant dimensions rather than by broadly shared population activity?
 
-[Explore the question](nlb/artifacts/questions/question_families_detailed.md#family-001-invariant-and-reconfigured-population-geometry-across-reach-demands)
-· [See the plan at a glance](nlb/artifacts/families/reach-geometry-invariance/dossier_detailed.md)
-· [Open the complete planning record](nlb/artifacts/families/reach-geometry-invariance/dossier.md)
+Outcome: **Deferred on prior-art grounds** — one variant reached an independently reviewed plan; its sibling was held back before planning because the review resolved a close prior work, and the family page names it.
 
-### 2. Selective population coupling between PMd and M1
+**[Explore both variants, their competing explanations, and what positive, negative, or null outcomes would mean](ibl/artifacts/questions/question_families_detailed.md#family-004-broad-versus-selective-brain-wide-organization-of-decision-signals)** · [See the study plan at a glance, including proposal hypothesis versus inspected evidence](ibl/artifacts/families/distributed-selective-organization/dossier_detailed.md) · [Open the full plan itself — every control, estimand, and stated limit](ibl/artifacts/families/distributed-selective-organization/dossier.md)
 
-Cross-region association may reflect task-relevant coordination, dominant local
-fluctuations, shared input, or movement covariation. The variants test
-specificity without turning predictive alignment into a causal claim.
+### 5. Replicable and idiosyncratic components of decision geometry
 
-1. [Task-dimension specificity](nlb/artifacts/questions/question_families_detailed.md#variant-002001-task-dimension-specificity-test): Are PMd–M1 relationships selectively aligned
-   with straight-versus-curved reach dimensions rather than dominant local
-   variability?
-2. [Temporal reorganization](nlb/artifacts/questions/question_families_detailed.md#variant-002002-temporal-reorganization-test): Does coordination specificity change from
-   preparation to execution rather than remain a stationary shared-activity
-   relationship?
+A common task may induce reproducible population organization, but apparent replication can arise from shared observables, while genuine computational solutions may remain individual-specific.
 
-Outcome: **plan developed for both variants (provisional).**
+1. [Laboratory-level reproducibility](ibl/artifacts/questions/question_families_detailed.md#variant-005001-laboratory-level-reproducibility): Which aspects of decision-related population geometry are reproducible across laboratories rather than specific to laboratory context?
+2. [Subject-specific geometry with shared function](ibl/artifacts/questions/question_families_detailed.md#variant-005002-subject-specific-geometry-with-shared-function): Can subject-specific population geometries implement a shared predictive relationship between sensory evidence, decisions, and response times?
 
-[Explore the question](nlb/artifacts/questions/question_families_detailed.md#family-002-selective-population-coupling-between-pmd-and-m1)
-· [See the plan at a glance](nlb/artifacts/families/selective-pmd-m1-coupling/dossier_detailed.md)
-· [Open the complete planning record](nlb/artifacts/families/selective-pmd-m1-coupling/dossier.md)
+Outcome: **Mixed family** — one variant reached a reviewed plan; its sibling did not, and says why.
 
-### 3. Preparatory population dynamics as operating regimes for movement
+**[Explore both variants, their competing explanations, and what positive, negative, or null outcomes would mean](ibl/artifacts/questions/question_families_detailed.md#family-005-replicable-and-idiosyncratic-components-of-decision-geometry)** · [See the study plan at a glance, including proposal hypothesis versus inspected evidence](ibl/artifacts/families/replicable-idiosyncratic-geometry/dossier_detailed.md) · [Open the full plan itself — every control, estimand, and stated limit](ibl/artifacts/families/replicable-idiosyncratic-geometry/dossier.md)
 
-Preparatory trajectories might establish movement-specific operating
-conditions, but they might instead reflect elapsed time, impending movement,
-or behaviorally irrelevant variation. The question remains scientifically
-interesting, but its returned planning material did not pass validation.
+### 6. Behavioral meaning of population geometry
 
-1. [Trajectory-class boundary](nlb/artifacts/questions/question_families_detailed.md#variant-003001-trajectory-class-boundary-test): Do straight and curved reaches recruit
-   distinct preparatory operating regimes, or diverge only after movement
-   begins?
-2. [Independent behavioral consequence](nlb/artifacts/questions/question_families_detailed.md#variant-003002-independent-behavioral-consequence-test): Does proximity to a reach-specific
-   preparatory state predict the subsequent trajectory better than preparatory
-   activity magnitude?
+Population geometry may contribute to decision computation, merely correlate with task conditions, or reflect movement and state variables that independently shape behavior.
 
-Outcome: **validation warning; provisional/degraded; no accepted-plan authority
-for either variant.** This is a pipeline outcome, not evidence that the
-scientific idea is false or that the dataset is unsuitable.
+1. [Geometry-specific prediction of choice errors](ibl/artifacts/questions/question_families_detailed.md#variant-006001-geometry-specific-prediction-of-choice-errors): Do trial-to-trial deviations in decision-related population geometry predict choice errors in a manner that distinguishes distributed coding from simpler signal-strength accounts? *(held back before planning: the prior-art review resolved a close prior work — the family page states which, and what would distinguish this variant from it)*
+2. [Trajectory organization and graded decision timing](ibl/artifacts/questions/question_families_detailed.md#variant-006002-trajectory-organization-and-graded-decision-timing): Does the organization of neural population trajectories predict response-time variation beyond sensory conditions and measured movement?
 
-[Explore the question](nlb/artifacts/questions/question_families_detailed.md#family-003-preparatory-population-dynamics-as-operating-regimes-for-movement)
-· [Read the warning guide](nlb/artifacts/families/preparatory-operating-regimes/dossier_detailed.md)
-· [Open the readable warning record](nlb/artifacts/families/preparatory-operating-regimes/dossier.md)
+Outcome: **Deferred on prior-art grounds** — one variant reached an independently reviewed plan; its sibling was held back before planning because the review resolved a close prior work, and the family page names it.
 
-### 4. Behavioral-state explanations for motor-cortical variability
+**[Explore both variants, their competing explanations, and what positive, negative, or null outcomes would mean](ibl/artifacts/questions/question_families_detailed.md#family-006-behavioral-meaning-of-population-geometry)** · [See the study plan at a glance, including proposal hypothesis versus inspected evidence](ibl/artifacts/families/functional-errors-latency/dossier_detailed.md) · [Open the full plan itself — every control, estimand, and stated limit](ibl/artifacts/families/functional-errors-latency/dossier.md)
 
-Apparently unexplained motor-cortical variability may reflect intrinsic neural
-dynamics, latent readiness, or measured movement and embodied state. The
-variants test these alternatives across regions and population subspaces.
 
-1. [Regional distribution](nlb/artifacts/questions/question_families_detailed.md#variant-004001-regional-distribution-test): Is variability associated with multidimensional
-   behavioral state distributed similarly across PMd and M1 or concentrated in
-   one region?
-2. [Task-state geometric overlap](nlb/artifacts/questions/question_families_detailed.md#variant-004002-task-state-geometric-overlap-test): Do behavioral-state dimensions overlap
-   with or remain distinct from dimensions that distinguish reach demands?
+## NLB MC_Maze-S — macaque reaching
 
-Outcome: **plan developed for both variants (provisional).**
+Simultaneous recordings from primary motor cortex and dorsal premotor cortex during delayed straight and curved reaches. Two areas recorded at once is the feature several of these questions turn on. [Dataset notes](nlb/DATASET_NOTES.md), and a [67-line script](nlb/verify_region_mapping.py) you can run to check the unit counts and electrode correction yourself.
 
-[Explore the question](nlb/artifacts/questions/question_families_detailed.md#family-004-behavioral-state-explanations-for-motor-cortical-population-variability)
-· [See the plan at a glance](nlb/artifacts/families/behavior-explains-neural-variance/dossier_detailed.md)
-· [Open the complete planning record](nlb/artifacts/families/behavior-explains-neural-variance/dossier.md)
+Featured on the [nlb demo page](nlb/README.md): *Shared and selective population organization across M1 and PMd*.
 
-### 5. Neural co-variability relative to movement-relevant readouts
+### 1. Temporal organization of motor population geometry
 
-Large or small shared variability is not intrinsically helpful or harmful; its
-consequence may depend on alignment with movement-relevant or interregional
-dimensions. The variants separate within-region readout from cross-region
-organization.
+Similar reach behavior could arise from a continuously evolving population trajectory or from distinct preparatory and execution-related organizations; descriptive geometry alone cannot distinguish these accounts.
 
-1. [Within-region readout alignment](nlb/artifacts/questions/question_families_detailed.md#variant-005001-within-region-behavioral-readout-alignment-test): Does alignment with a reach-relevant
-   dimension predict movement readout better than aggregate co-variability
-   magnitude within PMd and M1?
-2. [Cross-region variability alignment](nlb/artifacts/questions/question_families_detailed.md#variant-005002-cross-region-variability-alignment-test): Is co-variability in one region
-   selectively aligned with dimensions associated with the other beyond
-   dominant local modes?
+1. [Continuous-organization account](nlb/artifacts/questions/question_families_detailed.md#variant-001001-continuous-organization-account): Does delayed-reach population activity preserve a common task-relevant geometry while continuously transforming from preparation into execution?
+2. [Regime-transition account](nlb/artifacts/questions/question_families_detailed.md#variant-001002-regime-transition-account): Is delayed reaching organized by a qualitative population-dynamics transition from movement preparation to execution rather than by one continuous regime?
 
-Outcome: **plan developed for both variants (provisional).**
+Outcome: **Plan developed (provisional)** — both variants reached independently reviewed plans.
 
-[Explore the question](nlb/artifacts/questions/question_families_detailed.md#family-005-structure-of-neural-co-variability-relative-to-movement-relevant-readouts)
-· [See the plan at a glance](nlb/artifacts/families/variability-alignment-readout/dossier_detailed.md)
-· [Open the complete planning record](nlb/artifacts/families/variability-alignment-readout/dossier.md)
+**[Explore both variants, their competing explanations, and what positive, negative, or null outcomes would mean](nlb/artifacts/questions/question_families_detailed.md#family-001-temporal-organization-of-motor-population-geometry)** · [See the study plan at a glance, including proposal hypothesis versus inspected evidence](nlb/artifacts/families/motor-geometry-temporal-organization/dossier_detailed.md) · [Open the full plan itself — every control, estimand, and stated limit](nlb/artifacts/families/motor-geometry-temporal-organization/dossier.md)
 
-### 6. Which geometric stability supports generalization in reaching?
+### 2. Population geometry across straight and curved reaches
 
-Within-condition reproducibility and transfer across reach demands are
-different meanings of “stable geometry.” The variants keep centroid change,
-relational stability, and demand-specific remapping as distinct claims.
+Stable task-relevant representations may support generalization across trajectory contexts, but apparent stability could reflect shared kinematics, while remapping could reflect either useful context specialization or incidental differences.
 
-1. [Within-condition stability](nlb/artifacts/questions/question_families_detailed.md#variant-006001-within-condition-stability-definition-test): Do M1 and PMd differ in whether relational
-   reach geometry is reproducible despite shifts in population centroids?
-2. [Cross-demand generalization](nlb/artifacts/questions/question_families_detailed.md#variant-006002-cross-demand-generalization-test): Does relational geometry transfer across
-   straight and curved reaches, or can within-condition stability coexist with
-   demand-specific remapping?
+1. [Cross-context invariance branch](nlb/artifacts/questions/question_families_detailed.md#variant-002001-cross-context-invariance-branch): Is a task-relevant population geometry conserved across straight and curved reaches in a way that supports cross-context prediction of movement?
+2. [Adaptive-remapping branch](nlb/artifacts/questions/question_families_detailed.md#variant-002002-adaptive-remapping-branch): Does population geometry remap between straight and curved reaches in a manner that selectively represents barrier-dependent movement demands? *(held back before planning: the prior-art review resolved a close prior work — the family page states which, and what would distinguish this variant from it)*
 
-Outcome: **plan developed for both variants (provisional).**
+Outcome: **Deferred on prior-art grounds** — one variant reached an independently reviewed plan; its sibling was held back before planning because the review resolved a close prior work, and the family page names it.
 
-[Explore the question](nlb/artifacts/questions/question_families_detailed.md#family-006-which-geometric-stability-supports-generalization-in-reaching)
-· [See the plan at a glance](nlb/artifacts/families/geometry-definition-generalization/dossier_detailed.md)
-· [Open the complete planning record](nlb/artifacts/families/geometry-definition-generalization/dossier.md)
+**[Explore both variants, their competing explanations, and what positive, negative, or null outcomes would mean](nlb/artifacts/questions/question_families_detailed.md#family-002-population-geometry-across-straight-and-curved-reaches)** · [See the study plan at a glance, including proposal hypothesis versus inspected evidence](nlb/artifacts/families/trajectory-context-generalization/dossier_detailed.md) · [Open the full plan itself — every control, estimand, and stated limit](nlb/artifacts/families/trajectory-context-generalization/dossier.md)
+
+### 3. Shared and selective population organization across M1 and PMd
+
+Regional activity may reflect a common motor representation expressed across both areas or complementary organizations emphasizing different aspects of preparation and movement; regional decodability alone cannot decide between them.
+
+1. [Shared-geometry branch](nlb/artifacts/questions/question_families_detailed.md#variant-003001-shared-geometry-branch): Do M1 and PMd express a shared population geometry for reach trajectories despite possible differences in local activity patterns?
+2. [Complementary-specialization branch](nlb/artifacts/questions/question_families_detailed.md#variant-003002-complementary-specialization-branch): Are M1 and PMd population geometries selectively organized around complementary preparatory and movement-related information?
+
+Outcome: **Plan developed (provisional)** — both variants reached independently reviewed plans.
+
+**[Explore both variants, their competing explanations, and what positive, negative, or null outcomes would mean](nlb/artifacts/questions/question_families_detailed.md#family-003-shared-and-selective-population-organization-across-m1-and-pmd)** · [See the study plan at a glance, including proposal hypothesis versus inspected evidence](nlb/artifacts/families/m1-pmd-population-organization/dossier_detailed.md) · [Open the full plan itself — every control, estimand, and stated limit](nlb/artifacts/families/m1-pmd-population-organization/dossier.md)
+
+### 4. Functional meaning of motor-population co-variability
+
+Changes in overall population variability may be descriptively prominent but functionally uninformative if only particular covariance components align with task-relevant geometry.
+
+1. [Movement-alignment branch](nlb/artifacts/questions/question_families_detailed.md#variant-004001-movement-alignment-branch): Does the predictive consequence of motor-population co-variability depend more on alignment with movement-relevant dimensions than on its overall magnitude?
+2. [Context-alignment branch](nlb/artifacts/questions/question_families_detailed.md#variant-004002-context-alignment-branch): Is population co-variability selectively aligned with dimensions that distinguish straight from curved reach contexts, beyond alignment with generic movement dimensions?
+
+Outcome: **Plan developed (provisional)** — both variants reached independently reviewed plans.
+
+**[Explore both variants, their competing explanations, and what positive, negative, or null outcomes would mean](nlb/artifacts/questions/question_families_detailed.md#family-004-functional-meaning-of-motor-population-co-variability)** · [See the study plan at a glance, including proposal hypothesis versus inspected evidence](nlb/artifacts/families/covariability-functional-alignment/dossier_detailed.md) · [Open the full plan itself — every control, estimand, and stated limit](nlb/artifacts/families/covariability-functional-alignment/dossier.md)
+
+### 5. Degeneracy and semantic equivalence in motor population codes
+
+Different neural activity patterns may be semantically equivalent for movement, but apparent equivalence could instead result from coarse behavioral measurement or unobserved distinctions in task context.
+
+1. [Movement-equivalence branch](nlb/artifacts/questions/question_families_detailed.md#variant-005001-movement-equivalence-branch): Can structurally distinct motor-population states predict similar reach trajectories, indicating a degenerate population code for movement? *(held back before planning: the prior-art review resolved a close prior work — the family page states which, and what would distinguish this variant from it)*
+2. [Hidden-context branch](nlb/artifacts/questions/question_families_detailed.md#variant-005002-hidden-context-branch): Do population states that appear equivalent for immediate movement preserve distinct information about straight versus curved reach context?
+
+Outcome: **Scientific rejection terminal** — closed without a plan, with the evidence that closed it. One variant had already been deferred on prior-art grounds before planning began.
+
+**[Explore both variants, their competing explanations, and what positive, negative, or null outcomes would mean](nlb/artifacts/questions/question_families_detailed.md#family-005-degeneracy-and-semantic-equivalence-in-motor-population-codes)** · [See the study plan at a glance, including proposal hypothesis versus inspected evidence](nlb/artifacts/families/degenerate-motor-population-codes/dossier_detailed.md) · [Open the full plan itself — every control, estimand, and stated limit](nlb/artifacts/families/degenerate-motor-population-codes/dossier.md)
+
+### 6. Functional meaning of motor-manifold form
+
+Motor population activity may occupy an approximately simple reusable structure or a nonlinear context-dependent manifold, but geometric complexity alone does not establish computational function.
+
+1. [Simple reusable-manifold branch](nlb/artifacts/questions/question_families_detailed.md#variant-006001-simple-reusable-manifold-branch): Does an approximately simple population geometry support reusable prediction of reach kinematics across trajectory contexts?
+2. [Nonlinear context-manifold branch](nlb/artifacts/questions/question_families_detailed.md#variant-006002-nonlinear-context-manifold-branch): Does nonlinear population-manifold structure capture trajectory-context distinctions that are missed by a simple shared geometry?
+
+Outcome: **Plan developed (provisional)** — both variants reached independently reviewed plans.
+
+**[Explore both variants, their competing explanations, and what positive, negative, or null outcomes would mean](nlb/artifacts/questions/question_families_detailed.md#family-006-functional-meaning-of-motor-manifold-form)** · [See the study plan at a glance, including proposal hypothesis versus inspected evidence](nlb/artifacts/families/manifold-form-functional-meaning/dossier_detailed.md) · [Open the full plan itself — every control, estimand, and stated limit](nlb/artifacts/families/manifold-form-functional-meaning/dossier.md)
+
+
+## Climate — ERA5-derived 60 degrees North stratospheric dynamics
+
+A vertical column at one latitude: wave activity, zonal winds, and eddy forcing across 97 heights, six-hourly, over roughly four decades. It can say a great deal about vertical structure and almost nothing about geography, and several of these questions are bounded by exactly that. [Dataset notes](climate/DATASET_NOTES.md).
+
+Featured on the [climate demo page](climate/README.md): *Propagating episodes versus coherent modes of vertical coupling*.
+
+### 1. Recurrent states versus transition-centered organization of the polar stratosphere
+
+Long-lived circulation states may be substantive recurrent organizations of the system, but apparent regimes can also emerge from continuous evolution whose scientifically distinctive structure is concentrated near transitions.
+
+1. [State-centered representation test](climate/artifacts/questions/question_families_detailed.md#variant-001001-state-centered-representation-test): Do recurrent vertically organized circulation states recur robustly across seasonal and multi-decade partitions, and do they provide information about persistence beyond a continuous circulation description?
+2. [Transition-centered dynamical contrast](climate/artifacts/questions/question_families_detailed.md#variant-001002-transition-centered-dynamical-contrast): Are changes in wave activity, eddy forcing, and vertical circulation organization concentrated around transitions between circulation states, or do they evolve similarly during matched within-state intervals?
+
+Outcome: **Mixed family** — one variant reached a reviewed plan; its sibling did not, and says why.
+
+**[Explore both variants, their competing explanations, and what positive, negative, or null outcomes would mean](climate/artifacts/questions/question_families_detailed.md#family-001-recurrent-states-versus-transition-centered-organization-of-the-polar-stratosphere)** · [See the study plan at a glance, including proposal hypothesis versus inspected evidence](climate/artifacts/families/state-versus-transition-organization/dossier_detailed.md) · [Open the full plan itself — every control, estimand, and stated limit](climate/artifacts/families/state-versus-transition-organization/dossier.md)
+
+### 2. Wave forcing, circulation response, and state-dependent feedback
+
+Wave and eddy activity may actively precede circulation transitions, while the circulation state may simultaneously regulate wave propagation and the persistence of the response; covariation alone cannot distinguish these directions.
+
+1. [Forcing-first temporal-ordering test](climate/artifacts/questions/question_families_detailed.md#variant-002001-forcing-first-temporal-ordering-test): Do episodes of anomalous wave activity or eddy forcing consistently precede vertically coherent circulation transitions rather than merely accompanying or following them?
+2. [Background-state effect-modification test](climate/artifacts/questions/question_families_detailed.md#variant-002002-background-state-effect-modification-test): Does the pre-existing vertical circulation state condition whether comparable wave or eddy-forcing episodes produce persistence, transition, or rapid recovery?
+
+Outcome: **Scientific rejection terminal** — closed without a plan, with the evidence that closed it.
+
+**[Explore both variants, their competing explanations, and what positive, negative, or null outcomes would mean](climate/artifacts/questions/question_families_detailed.md#family-002-wave-forcing-circulation-response-and-state-dependent-feedback)** · [See the study plan at a glance, including proposal hypothesis versus inspected evidence](climate/artifacts/families/wave-forcing-and-state-dependence/dossier_detailed.md) · [Open the full plan itself — every control, estimand, and stated limit](climate/artifacts/families/wave-forcing-and-state-dependence/dossier.md)
+
+### 3. Persistence, apparent memory, and path-dependent recovery
+
+Low-frequency persistence may arise from state switching without long intrinsic memory, while asymmetric trajectories and recovery may indicate that forcing history carries predictive information beyond the current circulation state.
+
+1. [State-switching explanation of aggregate persistence](climate/artifacts/questions/question_families_detailed.md#variant-003001-state-switching-explanation-of-aggregate-persistence): Can apparent long-memory behavior in polar-stratospheric circulation be accounted for by seasonal evolution and switching among recurrent states, or does substantial persistence remain within states?
+2. [Path-dependent recovery test](climate/artifacts/questions/question_families_detailed.md#variant-003002-path-dependent-recovery-test): For similar displaced circulation states, does prior wave-forcing and transition history predict distinct recovery trajectories beyond the information in the current vertical state and seasonal context?
+
+Outcome: **Mixed family** — one variant reached a reviewed plan; its sibling did not, and says why.
+
+**[Explore both variants, their competing explanations, and what positive, negative, or null outcomes would mean](climate/artifacts/questions/question_families_detailed.md#family-003-persistence-apparent-memory-and-path-dependent-recovery)** · [See the study plan at a glance, including proposal hypothesis versus inspected evidence](climate/artifacts/families/persistence-memory-and-hysteresis/dossier_detailed.md) · [Open the full plan itself — every control, estimand, and stated limit](climate/artifacts/families/persistence-memory-and-hysteresis/dossier.md)
+
+### 4. Extreme polar-vortex episodes as distinct pathways and recovery classes
+
+Extreme polar-vortex disruptions may be amplified members of ordinary variability with a common lifecycle, or they may comprise heterogeneous dynamical pathways whose onset and recovery cannot be summarized by one composite.
+
+1. [Antecedent-pathway heterogeneity test](climate/artifacts/questions/question_families_detailed.md#variant-004001-antecedent-pathway-heterogeneity-test): Do extreme polar-vortex disruptions separate into recurrent onset pathways distinguished by the vertical timing and composition of antecedent wave and eddy forcing?
+2. [Post-event recovery heterogeneity test](climate/artifacts/questions/question_families_detailed.md#variant-004002-post-event-recovery-heterogeneity-test): After comparably strong polar-vortex disruptions, are rapid recovery, prolonged displacement, and recurrent disruption associated with distinct vertical circulation and forcing trajectories? *(held back before planning: the prior-art review resolved a close prior work — the family page states which, and what would distinguish this variant from it)*
+
+Outcome: **Scientific rejection terminal** — closed without a plan, with the evidence that closed it. One variant had already been deferred on prior-art grounds before planning began.
+
+**[Explore both variants, their competing explanations, and what positive, negative, or null outcomes would mean](climate/artifacts/questions/question_families_detailed.md#family-004-extreme-polar-vortex-episodes-as-distinct-pathways-and-recovery-classes)** · [See the study plan at a glance, including proposal hypothesis versus inspected evidence](climate/artifacts/families/extreme-event-lifecycle-heterogeneity/dossier_detailed.md) · [Open the full plan itself — every control, estimand, and stated limit](climate/artifacts/families/extreme-event-lifecycle-heterogeneity/dossier.md)
+
+### 5. Propagating episodes versus coherent modes of vertical coupling
+
+Vertical coupling may occur as temporally ordered propagation during discrete episodes, or as a continuously coherent mode spanning heights; either appearance could depend on the chosen representation.
+
+1. [Event-first lagged coupling test](climate/artifacts/questions/question_families_detailed.md#variant-005001-event-first-lagged-coupling-test): When upper-stratospheric circulation or wave episodes are defined independently, do lower-stratospheric responses recur with consistent lagged vertical progression, and does that progression differ between ordinary and extreme episodes?
+2. [Continuous-mode robustness test](climate/artifacts/questions/question_families_detailed.md#variant-005002-continuous-mode-robustness-test): Is apparent vertical coupling captured by a robust continuous circulation mode across heights, or does coherence dissolve when circulation, wave activity, reference-flow, and forcing perspectives are compared?
+
+Outcome: **Plan developed (provisional)** — both variants reached independently reviewed plans.
+
+**[Explore both variants, their competing explanations, and what positive, negative, or null outcomes would mean](climate/artifacts/questions/question_families_detailed.md#family-005-propagating-episodes-versus-coherent-modes-of-vertical-coupling)** · [See the study plan at a glance, including proposal hypothesis versus inspected evidence](climate/artifacts/families/vertical-coupling-representations/dossier_detailed.md) · [Open the full plan itself — every control, estimand, and stated limit](climate/artifacts/families/vertical-coupling-representations/dossier.md)
+
+### 6. Historical change in state occupancy versus within-state dynamics
+
+Historical circulation change may arise from redistribution among familiar dynamical states, alteration of the states themselves, or nonphysical inhomogeneity; aggregate change cannot distinguish these possibilities.
+
+1. [State-population change decomposition](climate/artifacts/questions/question_families_detailed.md#variant-006001-state-population-change-decomposition): Across the multi-decade record, is historical change in polar-stratospheric circulation expressed primarily through altered occupancy, persistence, or transition pathways among recurrent states?
+2. [Within-state structural and residual change test](climate/artifacts/questions/question_families_detailed.md#variant-006002-within-state-structural-and-residual-change-test): Within comparable circulation states, is multi-decade change congruent with the established state structure, or does it contain systematic residual changes in vertical organization, wave activity, or eddy forcing?
+
+Outcome: **Mixed family** — one variant reached a reviewed plan; its sibling did not, and says why.
+
+**[Explore both variants, their competing explanations, and what positive, negative, or null outcomes would mean](climate/artifacts/questions/question_families_detailed.md#family-006-historical-change-in-state-occupancy-versus-within-state-dynamics)** · [See the study plan at a glance, including proposal hypothesis versus inspected evidence](climate/artifacts/families/historical-change-in-dynamical-organization/dossier_detailed.md) · [Open the full plan itself — every control, estimand, and stated limit](climate/artifacts/families/historical-change-in-dynamical-organization/dossier.md)
+
+
+## How to read an entry
+
+Every entry ends with three links, richest first. The first goes to the scientific background,
+competing explanations, the discriminating observation, and what positive, negative, or null
+outcomes would mean. The second goes to the reading guide, which sets the proposal-stage hypothesis
+beside what the planner actually found when it inspected the data — and it is the only place the
+Question Owner and the independent reviewer appear in their own words. The third is the plan
+itself: every control, estimand, diagnostic and stated limit, and the full reasoning for any
+variant closed **during planning**. Neither file contains the other, so read both.
+
+One exception is worth knowing before you click: a variant the prior-art review held back **never
+reached planning**, so it appears in no dossier at all. Its reasoning — the priors that were
+resolved and what would distinguish the question from them — lives in the first link. Five of the
+thirty-six variants are in that state, and each is annotated inline where it appears above.
+
+Four outcomes appear. Every other label you will meet — how deeply the planner inspected the
+data, what kind of claim a design could support, how the supporting literature was read — is listed
+with its permitted values in [reading the labels](../docs/LABELS.md).
+
+Four outcomes appear:
+
+- **Plan developed (provisional)** — both variants reached independently reviewed plans. Provisional
+  means reviewed by an automated independent reviewer, for planning only, with no execution.
+- **Mixed family** — one variant reached a plan and its sibling did not. The non-accepted sibling
+  stays visible with its reason rather than disappearing.
+- **Deferred on prior-art grounds** — a variant held back before planning because the review
+  resolved a real prior work. The family page names the prior and what would distinguish the
+  question from it.
+- **Scientific rejection terminal** — the family closed without a plan. This is an outcome, not a
+  failure: the dossier states what the dataset could not support and what would be needed instead.
+
 
 ## How Maieusis reached these questions
 
-Both demos began from the same [12 source papers](PAPER_SOURCES.md). Maieusis
-made a PaperCase for each usable source, reconstructed question-forming moves
-from published evidence, and abstracted reusable patterns without copying the
-papers' conclusions. NLB reused those reviewed paper-derived products, then
-generated a new dataset narrative, literature context, question families,
-dataset inspections, plans, and reviews for MC_Maze-S.
+Each demo publishes its full chain: the source papers it read, the formation traces it built from
+them, the reusable question-forming patterns it induced, the dataset narrative the proposal stage
+was given, and every family dossier.
 
-- IBL: [question-formation patterns](ibl/artifacts/paperbank/question_patterns_detailed.md)
-  · [dataset narrative](ibl/artifacts/dataset/dataset_narrative.md)
-  · [topic evidence](ibl/artifacts/literature/topic_evidence_summary.md)
-- NLB: [question-formation patterns](nlb/artifacts/paperbank/question_patterns_detailed.md)
-  · [dataset narrative](nlb/artifacts/dataset/dataset_narrative.md)
-  · [topic evidence](nlb/artifacts/literature/topic_evidence_summary.md)
+**A comparison worth making:** open a dataset narrative and then the matching dataset notes. The
+narrative is what the proposing model was actually given, and it is deliberately coarse — it does
+not carry the schema. The notes carry the exact shape. That gap is the design, and you can check it
+on the climate and NLB demonstrations. The IBL demonstration publishes no separate dataset notes,
+so that comparison is available for two of the three.
 
-To reproduce the runs, continue to the [IBL guide](ibl/README.md) and then the
-[IBL → NLB guide](nlb/README.md). Machine-readable checksums and technical
-validation facts are available in the [IBL manifest](ibl/demo_manifest.yaml) and
-[NLB manifest](nlb/demo_manifest.yaml).
+- Climate: [paper bank](climate/artifacts/paperbank/paperbank_summary.md) ·
+  [patterns](climate/artifacts/paperbank/question_patterns_detailed.md) ·
+  [dataset narrative](climate/artifacts/dataset/dataset_narrative.md) ·
+  [dataset notes](climate/DATASET_NOTES.md)
+- IBL: [paper bank](ibl/artifacts/paperbank/paperbank_summary.md) ·
+  [patterns](ibl/artifacts/paperbank/question_patterns_detailed.md) ·
+  [dataset narrative](ibl/artifacts/dataset/dataset_narrative.md)
+- NLB: [paper bank](nlb/artifacts/paperbank/paperbank_summary.md) ·
+  [patterns](nlb/artifacts/paperbank/question_patterns_detailed.md) ·
+  [dataset narrative](nlb/artifacts/dataset/dataset_narrative.md) ·
+  [dataset notes](nlb/DATASET_NOTES.md) ·
+  [region-mapping check](nlb/verify_region_mapping.py)
+
+---
+
+[IBL](ibl/README.md) · [NLB](nlb/README.md) · [Climate](climate/README.md) ·
+[Source papers](PAPER_SOURCES.md)

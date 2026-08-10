@@ -107,15 +107,30 @@ _STATUS_LABELS = {
 }
 
 
+def variant_ids_are_ordered_subset(
+    original_variant_ids: Sequence[str], current_variant_ids: Sequence[str]
+) -> bool:
+    """True when novelty retained known variants without changing their relative order."""
+    current = list(current_variant_ids)
+    if not current or len(current) != len(set(current)):
+        return False
+    current_set = set(current)
+    return current == [
+        variant_id for variant_id in original_variant_ids if variant_id in current_set
+    ]
+
+
 def render_family_detailed_page(
     *,
     completion: FamilyCompletionRecord,
     family: QuestionFamily,
+    original_family: QuestionFamily | None = None,
     plan_draft: PlanDraftMessage | None = None,
     owner_review: QuestionOwnerPlanReviewMessage | None = None,
     independent_review: IndependentPlanReviewMessage | None = None,
     inspection_evidence: Sequence[QuestionFamilyInspectionEvidence] = (),
     dossier_href: str = "dossier.md",
+    extra_private_tokens: Sequence[str] = (),
 ) -> str:
     """Render one light scientific reading guide from persisted typed artifacts.
 
@@ -124,9 +139,11 @@ def render_family_detailed_page(
     """
 
     _validate_dossier_href(dossier_href)
+    original_family = original_family or family
     _validate_source_bindings(
         completion=completion,
         family=family,
+        original_family=original_family,
         plan_draft=plan_draft,
         owner_review=owner_review,
         independent_review=independent_review,
@@ -193,8 +210,10 @@ def render_family_detailed_page(
         owner_review=owner_review,
         independent_review=independent_review,
     )
+    original_by_variant = {variant.variant_id: variant for variant in original_family.variants}
 
     for index, variant in enumerate(family.variants, start=1):
+        original_variant = original_by_variant[variant.variant_id]
         role = _public_text(variant.variant_role, field=f"variant {index} role")
         lines.extend(
             [
@@ -211,10 +230,25 @@ def render_family_detailed_page(
                 "",
                 "**Original Question Scientist proposal**",
                 "",
-                _public_text(variant.seed.question, field=f"variant {index} original question"),
+                _public_text(
+                    original_variant.seed.question,
+                    field=f"variant {index} original question",
+                ),
                 "",
             ]
         )
+        if variant.seed.question != original_variant.seed.question:
+            lines.extend(
+                [
+                    "**Post-novelty revised proposal**",
+                    "",
+                    _public_text(
+                        variant.seed.question,
+                        field=f"variant {index} post-novelty question",
+                    ),
+                    "",
+                ]
+            )
         plan = plan_by_variant.get(variant.variant_id)
         final_decision = reviewed_decisions.get(variant.variant_id)
         if accepted_family and final_decision is not None and final_decision.is_accepted:
@@ -383,17 +417,31 @@ def render_family_detailed_page(
         ]
     )
     markdown = "\n".join(lines)
+    # The caller's run-wide set is unioned in, because the promotion step validates against it:
+    # a token only IT knows about would otherwise survive redaction, fail validation, and be
+    # swallowed by the page-isolation handler -- costing the family its whole reading guide. Found
+    # 2026-07-28 by the fault-injection harness; the residue PR #109 did not close.
+    forbidden = _internal_tokens(
+        completion,
+        family,
+        plan_draft,
+        owner_review,
+        independent_review,
+        *inspection_evidence,
+    ) | {token for token in extra_private_tokens if token}
+    # Redact, then validate. The boundary is unchanged -- the identifier still never reaches the
+    # page -- but it is now enforced by removing the token rather than by destroying the page
+    # around it. Live-found 2026-07-28: two families with accepted plans lost their entire reading
+    # guide (12,915 and 18,180 characters) to exactly one internal id each, quoted inside the
+    # agents' own scientific prose where it was doing useful work -- "exactly as ratified by the
+    # Question Owner in <operationalization id>" and "(9 signed-contrast levels x 3 prior blocks;
+    # <evidence id>)". Citing your own evidence id is the traceability this project asks for; it
+    # should not cost the reader the page. The sibling context-page renderer already redacts.
+    markdown = _redact_internal_tokens(markdown, forbidden)
     validate_family_detailed_page(
         markdown,
         dossier_href=dossier_href,
-        forbidden_tokens=_internal_tokens(
-            completion,
-            family,
-            plan_draft,
-            owner_review,
-            independent_review,
-            *inspection_evidence,
-        ),
+        forbidden_tokens=forbidden,
     )
     return markdown
 
@@ -446,6 +494,7 @@ def _validate_source_bindings(
     *,
     completion: FamilyCompletionRecord,
     family: QuestionFamily,
+    original_family: QuestionFamily,
     plan_draft: PlanDraftMessage | None,
     owner_review: QuestionOwnerPlanReviewMessage | None,
     independent_review: IndependentPlanReviewMessage | None,
@@ -459,11 +508,20 @@ def _validate_source_bindings(
         raise FamilyDetailedPageError("family outcome binding mismatch")
     if family.question_family_id != completion.question_family_id:
         raise FamilyDetailedPageError("shortlisted family identity mismatch")
+    if original_family.question_family_id != completion.question_family_id:
+        raise FamilyDetailedPageError("original family identity mismatch")
     if family.context_id != record.context_id:
         raise FamilyDetailedPageError("shortlisted family context mismatch")
+    if original_family.context_id != family.context_id:
+        raise FamilyDetailedPageError("original and shortlisted family context mismatch")
     if family.title != record.family_title:
         raise FamilyDetailedPageError("shortlisted family title mismatch")
     source_variant_ids = [item.variant_id for item in family.variants]
+    original_variant_ids = [item.variant_id for item in original_family.variants]
+    if not variant_ids_are_ordered_subset(original_variant_ids, source_variant_ids):
+        raise FamilyDetailedPageError(
+            "shortlisted family variants are not an ordered subset of the original family"
+        )
     if source_variant_ids != record.variant_ids:
         raise FamilyDetailedPageError("shortlisted family variant order or coverage mismatch")
 
@@ -967,7 +1025,13 @@ def _append_one_review(
                 else "No material revision was detected in this review."
             ),
             "",
-            _public_excerpt(review.rationale, field=f"{label} rationale"),
+            # Rendered whole. A 700-character cap used to sit here, arriving with PR #64 and never
+            # explained in its commit; it was not a policy, it was an unmotivated number. It cut 60
+            # of 124 live plan-review rationales (median overflow 1202 characters, 32567 characters
+            # of reviewer reasoning in total) and left the remainder reachable only inside the
+            # machine-side *_plan_review.yaml, which no reader-facing surface points at. A character
+            # count is not a verdict; the reviewer decides what its reasoning needs to say.
+            _public_text(review.rationale, field=f"{label} rationale"),
             "",
         ]
     )
@@ -1017,6 +1081,12 @@ def _public_text(value: object, *, field: str) -> str:
     text = " ".join(str(value).split()).strip()
     if not text:
         raise FamilyDetailedPageError(f"{field} is empty")
+    # Dataset schemas legitimately use ``event_id`` as a public join-key column. The private
+    # identity boundary below protects run-event provenance, not that scientific schema fact.
+    # Normalize the one typed evidence surface where the homonym is useful to a reader; every
+    # other occurrence remains fail-closed.
+    if "evidence" in field:
+        text = re.sub(r"\bevent_id\b", "event identifier", text, flags=re.IGNORECASE)
     for pattern, label in (
         (_ABSOLUTE_POSIX_PATH, "local absolute path"),
         (_ABSOLUTE_WINDOWS_PATH, "local absolute path"),
@@ -1035,6 +1105,28 @@ def _public_text(value: object, *, field: str) -> str:
         .replace(">", ")")
         .replace("`", "'")
     )
+
+
+_REDACTED_INTERNAL_ID = "[internal id]"
+
+
+def _redact_internal_tokens(markdown: str, forbidden_tokens: set[str]) -> str:
+    """Replace internal identifiers with a readable marker, keeping the prose around them.
+
+    Longest-first so a token that contains a shorter sibling cannot be half-replaced and leave the
+    remainder behind — the validator runs immediately after and would still catch that, but a
+    partial redaction would be a confusing way to fail.
+
+    This does not soften the privacy boundary. The identifier is still absent from the published
+    page; what changes is that the sentence carrying it survives. The alternative in place until
+    2026-07-28 was to raise, which the add-on's page-isolation handler swallowed, so the reader
+    silently received no reading guide at all for that family.
+    """
+
+    for token in sorted((item for item in forbidden_tokens if item), key=len, reverse=True):
+        if token in markdown:
+            markdown = markdown.replace(token, _REDACTED_INTERNAL_ID)
+    return markdown
 
 
 def _internal_tokens(*models: object) -> set[str]:
@@ -1081,14 +1173,6 @@ def _internal_tokens(*models: object) -> set[str]:
         if model is not None:
             visit(model)
     return tokens
-
-
-def _public_excerpt(value: object, *, field: str, limit: int = 700) -> str:
-    text = _public_text(value, field=field)
-    if len(text) <= limit:
-        return text
-    shortened = text[: limit + 1].rsplit(" ", 1)[0].rstrip(" ,;:")
-    return shortened + "…"
 
 
 def _bullet_lines(

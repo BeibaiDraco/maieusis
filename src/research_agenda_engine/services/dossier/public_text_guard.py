@@ -23,11 +23,10 @@ import re
 # Each entry is (human label, compiled pattern). Patterns are tuned to catch the internal-ID *shape*
 # without flagging legitimate scientific prose — notably bare ``M1`` (primary motor cortex) must pass,
 # so the milestone pattern requires a trailing capital letter (``M1H``).
-INTERNAL_JARGON_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
-    # Dev-era phase codes: R5, R5-011, R5-008B, R5-M1H. Real product output never carries them.
-    ("phase code", re.compile(r"\bR5(?:-[A-Za-z0-9]+)?\b")),
-    # Milestone codes: M1B .. M1H. Letter-suffixed so bare "M1" (primary motor cortex) is NOT flagged.
-    ("milestone code", re.compile(r"\bM1[A-Z]\d*\b")),
+# An internal IDENTIFIER escaping into public text is an identity/cross-branch boundary: these name
+# real internal objects, a reader could act on them, and no scientific prose produces their shape.
+# They stay hard everywhere.
+ID_LEAK_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     # Dev fixture family/variant IDs: cfam-003, cfam_003, variant_cfam_003. Real families are
     # ``qfamily-...``; the lookbehind keeps mid-word "cfam" (none today) from matching.
     ("fixture family id", re.compile(r"(?<![A-Za-z])cfam[-_]\d+")),
@@ -38,6 +37,26 @@ INTERNAL_JARGON_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("internal event id", re.compile(r"\bevent-[0-9a-f]{6,}\b", re.I)),
 )
 
+# A dev-era HANDLE is a housekeeping smell, not an identity assertion -- it names a phase of this
+# project's own development, points at nothing a reader could act on, and discloses nothing. Both
+# patterns also collide with ordinary science: `\bR5\b` matches "CCR5-tropic (R5) versus CXCR4-tropic
+# (X4)", and `\bM1[A-Z]\d*\b` matches the start-codon variant "M1V". AGENTS.md rule 11 makes lexical
+# vocabulary checks soft "unless they enforce a literal security/authority boundary", and these do
+# not -- so on surfaces carrying model-written scientific prose they are advisory. `check_public_
+# markdown.py` still enforces all five, because it scans TEMPLATES and renderer output, where a dev
+# handle really is a defect and no reviewer's sentence is at stake.
+DEV_HANDLE_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
+    # Dev-era phase codes: R5, R5-011, R5-008B, R5-M1H. Real product output never carries them.
+    ("phase code", re.compile(r"\bR5(?:-[A-Za-z0-9]+)?\b")),
+    # Milestone codes: M1B .. M1H. Letter-suffixed so bare "M1" (primary motor cortex) is NOT flagged.
+    ("milestone code", re.compile(r"\bM1[A-Z]\d*\b")),
+)
+
+INTERNAL_JARGON_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
+    *DEV_HANDLE_PATTERNS,
+    *ID_LEAK_PATTERNS,
+)
+
 
 def find_public_markdown_jargon(text: str) -> list[str]:
     """Return sorted, de-duplicated labels of internal dev-era jargon present in *rendered public text*.
@@ -46,3 +65,14 @@ def find_public_markdown_jargon(text: str) -> list[str]:
     firewall-term gate); the two are complementary and run together on public surfaces.
     """
     return sorted({label for label, pattern in INTERNAL_JARGON_PATTERNS if pattern.search(text)})
+
+
+def find_public_markdown_id_leaks(text: str) -> list[str]:
+    """The subset that is a genuine identity boundary. For surfaces carrying model-written prose.
+
+    `summary.md` embeds every family's reviewer `reason` verbatim, and `write_run_summary` is called
+    unguarded on three paths -- so under the combined check ONE reviewer rationale saying "R5-tropic"
+    raised an uncaught `ValueError` and cost the run terminal for EVERY family. A housekeeping smell
+    must not be able to do that; an escaped internal identifier still must.
+    """
+    return sorted({label for label, pattern in ID_LEAK_PATTERNS if pattern.search(text)})

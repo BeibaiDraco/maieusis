@@ -45,6 +45,7 @@ class ScientificAgentInfrastructureError(RuntimeError):
 
 
 class ScientificAgentFailureKind(StrEnum):
+    ACCOUNT_EXHAUSTED = "account_exhausted"
     AUTHENTICATION = "authentication"
     RATE_LIMIT = "rate_limit"
     TIMEOUT = "timeout"
@@ -52,6 +53,59 @@ class ScientificAgentFailureKind(StrEnum):
     SERVER_ERROR = "server_error"
     INVALID_RESPONSE = "invalid_response"
     STRUCTURED_OUTPUT_INVALID = "structured_output_invalid"
+    #: The reviewer ran out of room. Reply-shaped like the two above -- the provider answered and
+    #: the answer was cut at the ceiling -- and NOT provider exhaustion, so it is contained per
+    #: artifact. Its absence is why every measured gate truncation reached the run as
+    #: `invalid_response`, indistinguishable from a garbled reply.
+    OUTPUT_TRUNCATED = "output_truncated"
+
+
+_ACCOUNT_EXHAUSTION_CODES = frozenset(
+    {
+        "billing_hard_limit_reached",
+        "credit_balance_too_low",
+        "insufficient_credit",
+        "insufficient_credits",
+        "insufficient_quota",
+    }
+)
+_ACCOUNT_EXHAUSTION_PHRASES = (
+    "billing hard limit",
+    "credit balance is too low",
+    "credit balance too low",
+    "insufficient credit",
+    "insufficient quota",
+)
+
+
+def is_account_exhaustion_error(exc: BaseException) -> bool:
+    """Recognize explicit billing/account exhaustion without treating every 400/429 as billing.
+
+    SDKs expose the stable code in different places, so inspect the finite code/type fields first
+    and use the small provider phrase list only as a compatibility fallback. The caller may use the
+    result for classification, but capture must never persist any of these raw values.
+    """
+
+    candidates: list[str] = []
+    for attribute in ("code", "type"):
+        value = getattr(exc, attribute, None)
+        if value is not None:
+            candidates.append(str(value))
+    body = getattr(exc, "body", None)
+    if isinstance(body, dict):
+        error = body.get("error", body)
+        if isinstance(error, dict):
+            for key in ("code", "type", "message"):
+                value = error.get(key)
+                if value is not None:
+                    candidates.append(str(value))
+    candidates.append(str(exc))
+    normalized = " ".join(candidates).strip().lower().replace("-", "_")
+    tokens = set(normalized.replace(":", " ").replace(",", " ").split())
+    if tokens & _ACCOUNT_EXHAUSTION_CODES:
+        return True
+    phrase_view = normalized.replace("_", " ")
+    return any(phrase in phrase_view for phrase in _ACCOUNT_EXHAUSTION_PHRASES)
 
 
 class ScientificAgentSessionError(ScientificAgentInfrastructureError):
@@ -64,11 +118,17 @@ class ScientificAgentSessionError(ScientificAgentInfrastructureError):
         provider_id: str,
         attempts: int = 1,
         last_error: BaseException,
+        partial_output_text: str = "",
     ) -> None:
         self.kind = kind
         self.provider_id = provider_id
         self.attempts = attempts
         self.last_error = last_error
+        #: Whatever the model DID write before it was cut off. #139 gave the structured-model
+        #: error this attribute and the session error never got one, so a gate reply carrying a
+        #: complete `"decision"` field was discarded as unparseable. Kept off `str(self)` so a
+        #: reply body never leaks into a log line.
+        self.partial_output_text = partial_output_text
         RuntimeError.__init__(self, f"scientific agent session failed: {kind.value}")
 
 

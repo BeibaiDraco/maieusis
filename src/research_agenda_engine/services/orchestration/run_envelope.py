@@ -11,18 +11,25 @@ import hashlib
 import os
 import stat
 import tempfile
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import TYPE_CHECKING
 from uuid import uuid4
 
+if TYPE_CHECKING:
+    from ...schemas.question_scientist_context_v2 import FrontHalfAuthorityCeiling
+    from ...schemas.run_outcome import FamilyRunOutcome
+
 import yaml
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
+from yaml import YAMLError
 
 from ...io import load_model
 from ...provenance import sha256_bytes, sha256_file
 from ...schemas.family_failure import sanitize_family_failure_text
+from ...schemas.gate_outcome import GateDecision
 from ...schemas.presentation import PresentationAddonRecord
 from ...schemas.question_family import QuestionFamily
 from ...schemas.run_manifest import (
@@ -104,8 +111,14 @@ def write_run_manifest(
     manifest: RunManifest,
     *,
     before_readme_promote: Callable[[Path], None] | None = None,
+    integrity_ignore_paths: set[str] | None = None,
 ) -> RunManifest:
-    """Strictly validate and atomically publish manifest first, README second."""
+    """Strictly validate and atomically publish manifest first, README second.
+
+    ``integrity_ignore_paths`` is reserved for ``record_integrity_failure``: recording an
+    already-diagnosed post-promotion mutation must not be blocked by the very mismatch it is
+    reporting. Every other caller leaves it unset and keeps full validation.
+    """
     now = datetime.now(UTC)
     if now < manifest.created_at:
         now = manifest.created_at
@@ -117,7 +130,7 @@ def write_run_manifest(
     )
     # Validate the exact rendered bytes, not only the in-memory object.
     validated = RunManifest.model_validate(yaml.safe_load(payload))
-    _validate_manifest_integrity(paths, validated)
+    _validate_manifest_integrity(paths, validated, ignore_paths=integrity_ignore_paths)
     old_manifest = paths.run_manifest.read_bytes() if paths.run_manifest.is_file() else None
     old_readme = paths.readme.read_bytes() if paths.readme.is_file() else None
     _atomic_replace_bytes(paths.run_manifest, payload.encode("utf-8"))
@@ -580,8 +593,15 @@ def render_run_readme(manifest: RunManifest) -> str:
     else:
         lines.append("- No diagnostics recorded.")
     lines.extend(["", "## Next action", "", manifest.next_action, ""])
-    if any(artifact.kind == ArtifactKind.SUMMARY for artifact in manifest.artifacts):
-        lines.extend(["The terminal [summary](summary.md) is available.", ""])
+    summaries = [
+        artifact for artifact in manifest.artifacts if artifact.kind == ArtifactKind.SUMMARY
+    ]
+    if summaries:
+        preferred = next(
+            (artifact for artifact in summaries if artifact.path == "run_terminal.md"),
+            summaries[-1],
+        )
+        lines.extend([f"The terminal [summary]({preferred.path}) is available.", ""])
     return "\n".join(lines)
 
 
@@ -672,6 +692,40 @@ def add_diagnostic(
     return record
 
 
+def retire_current_run_diagnostics(context: RunContext, *, codes: Sequence[str]) -> RunManifest:
+    """Retire superseded generic run-level diagnostics from the current reader projection.
+
+    Resume receipts and paid-leaf captures retain the historical attempt. This helper removes only
+    exact, caller-supplied generic codes after a later execution reached a new durable state; it
+    cannot clear integrity, scientific, paper, or family diagnostics by broad class matching.
+    """
+
+    selected = set(codes)
+    manifest = load_run_manifest(context.paths)
+    retained_diagnostics = [
+        diagnostic
+        for diagnostic in manifest.diagnostics
+        if not (
+            diagnostic.code in selected
+            and not diagnostic.paper_id
+            and not diagnostic.family_id
+            and not diagnostic.internal_path
+        )
+    ]
+    retired = len(retained_diagnostics) != len(manifest.diagnostics)
+    manifest.diagnostics = retained_diagnostics
+    if retired:
+        manifest.artifacts = [
+            artifact
+            for artifact in manifest.artifacts
+            if artifact.path != context.paths.interruption_summary.name
+        ]
+    persisted = write_run_manifest(context.paths, manifest)
+    if retired:
+        context.paths.interruption_summary.unlink(missing_ok=True)
+    return persisted
+
+
 def record_run_failure(
     context: RunContext,
     *,
@@ -686,11 +740,232 @@ def record_run_failure(
         code=code,
         public_message=public_message,
     )
-    return set_run_state(
+    manifest = set_run_state(
         context,
         RunProcessingState.FAILED if failed else RunProcessingState.INCOMPLETE,
         next_action="Inspect the diagnostics and retained products, correct the cause, then resume.",
     )
+    from .run_layout import write_run_interruption_summary
+
+    terminal_path = write_run_interruption_summary(
+        context.paths,
+        manifest,
+        diagnostic_class=diagnostic_class,
+        code=code,
+        public_message=public_message,
+        resume_valid=True,
+    )
+    if not index_existing_artifact(
+        context,
+        terminal_path,
+        kind=ArtifactKind.SUMMARY,
+        processing_state=ProductProcessingState.DEGRADED,
+        authority=ArtifactAuthority.UNKNOWN,
+    ):
+        raise OSError("run interruption terminal could not be indexed")
+    return load_run_manifest(context.paths)
+
+
+def record_integrity_failure(
+    context: RunContext,
+    *,
+    mismatched_paths: Sequence[str],
+    code: str = "indexed_artifact_integrity_mismatch",
+) -> RunManifest:
+    """CLIM-13: persist an honest INTEGRITY terminal for post-promotion artifact mutations.
+
+    The mutated bytes never regain authority (their records keep the promoted digest and every
+    trusting read still fails closed); this only makes the failure RECORDABLE — a FAILED run
+    state plus one sanitized INTEGRITY diagnostic per mutated run-relative path — so no run ever
+    again needs an off-product manual reindex just to report its own integrity violation.
+    Idempotent: an already-recorded (code, path) pair is not duplicated. Sibling artifact,
+    family, and diagnostic records are left untouched and stay visible.
+    """
+    if not mismatched_paths:
+        raise ValueError("record_integrity_failure requires at least one mismatched path")
+    ignore = set(mismatched_paths)
+    manifest = _load_run_manifest_schema(context.paths)
+    _validate_manifest_integrity(context.paths, manifest, ignore_paths=ignore)
+    already = {
+        (record.code, record.internal_path)
+        for record in manifest.diagnostics
+        if record.diagnostic_class == DiagnosticClass.INTEGRITY
+    }
+    for relative in mismatched_paths:
+        if (code, relative) in already:
+            continue
+        digest = hashlib.sha256(
+            f"{context.run_id}:{len(manifest.diagnostics)}:{DiagnosticClass.INTEGRITY}:{code}".encode()
+        ).hexdigest()[:12]
+        manifest.diagnostics.append(
+            DiagnosticRecord(
+                diagnostic_id=f"diagnostic-{digest}",
+                diagnostic_class=DiagnosticClass.INTEGRITY,
+                code=code,
+                public_message=(
+                    f"An indexed artifact was mutated after promotion: {relative}. The run is "
+                    "honestly failed; the mutated bytes hold no authority, and retained sibling "
+                    "products remain readable."
+                ),
+                internal_path=relative,
+            )
+        )
+    manifest.run_state = RunProcessingState.FAILED
+    manifest.next_action = (
+        "Inspect the integrity diagnostics; restore the artifact from its authoritative source "
+        "or close the run. Mutated bytes are never re-promoted."
+    )
+    from .run_layout import write_run_interruption_summary
+
+    terminal_path = write_run_interruption_summary(
+        context.paths,
+        manifest,
+        diagnostic_class=DiagnosticClass.INTEGRITY,
+        code=code,
+        public_message=(
+            "Artifact integrity validation stopped this run. Mutated bytes hold no authority; "
+            "retained sibling products remain visible."
+        ),
+        resume_valid=False,
+    )
+    relative = terminal_path.relative_to(context.paths.root).as_posix()
+    digest = sha256_file(terminal_path)
+    identity = f"{ArtifactKind.SUMMARY.value}:{relative}::"
+    manifest.artifacts = [item for item in manifest.artifacts if item.path != relative]
+    manifest.artifacts.append(
+        ArtifactRecord(
+            artifact_id=f"artifact-{hashlib.sha256(identity.encode()).hexdigest()[:12]}",
+            kind=ArtifactKind.SUMMARY,
+            path=relative,
+            sha256=digest,
+            processing_state=ProductProcessingState.DEGRADED,
+            authority=ArtifactAuthority.UNKNOWN,
+        )
+    )
+    manifest.artifacts.sort(key=lambda item: (item.kind.value, item.family_id, item.paper_id))
+    ignore.discard(relative)
+    return write_run_manifest(context.paths, manifest, integrity_ignore_paths=ignore)
+
+
+def record_detected_integrity_failure(paths: RunPaths) -> list[str]:
+    """Detection-site helper: persist the honest INTEGRITY terminal for a mutated run.
+
+    Called from except-branches after a trusting read raised. Returns the mismatched
+    run-relative paths (empty when the failure was something other than an artifact
+    mutation, in which case nothing is recorded and the caller re-raises its original
+    error). Never raises on the recording path itself beyond genuinely unreadable state.
+    """
+    mismatched = collect_integrity_mismatches(paths)
+    if mismatched:
+        record_integrity_failure(
+            RunContext(run_id=paths.root.name, paths=paths), mismatched_paths=mismatched
+        )
+    return mismatched
+
+
+def index_gate_diagnostics(context: RunContext) -> int:
+    """Index actionable gate diagnostics into the run manifest. Returns the indexed count.
+
+    The gates are good at WRITING per-artifact diagnostics and were blind at SURFACING them.
+    Measured on the 2026-07-30 climate leg: 24 artifacts did not reach the reader (2 papers, 12
+    formation traces, 1 pattern, 7 variants, 2 families), 29 gate diagnostics sat on disk, and the
+    manifest indexed exactly ONE of them -- a run-level note about none of the 24. Since
+    ``maieusis status`` and ``README.md`` read the manifest, a shepherd inspecting the run saw a
+    clean ``run_state: complete`` that had lost 24 artifacts, and its bounded repair budget had
+    nothing to aim at. A loss the shepherd cannot see is one it cannot back up.
+
+    Indexing here rather than inside ``write_gate_diagnostic`` is deliberate: that function receives
+    a directory, not a ``RunContext``, and threading context through all of its call sites would let
+    a future call site forget. Walking the directory once at closeout cannot miss one.
+
+    Earned accepts remain on disk as audit evidence, but are intentionally absent from the reader
+    manifest: a successful run can contain hundreds of them, and a wall of passes hides the losses
+    the shepherd must act on. The reader-facing ``public_message`` names each non-accept gate and
+    outcome only; the rationale stays behind ``internal_path``, which is what the shepherd opens.
+    """
+    from ..agents.gate_diagnostics import GateDiagnostic
+
+    diagnostics_dir = context.paths.root / "diagnostics"
+    if not diagnostics_dir.is_dir():
+        return 0
+    manifest = load_run_manifest(context.paths)
+    already = {record.internal_path for record in manifest.diagnostics if record.internal_path}
+    indexed = 0
+    for path in sorted(diagnostics_dir.rglob("*.yaml")):
+        relative = path.relative_to(context.paths.root).as_posix()
+        if relative in already:
+            continue
+        try:
+            diagnostic = load_model(path, GateDiagnostic)
+        except (OSError, ValueError, ValidationError, YAMLError):
+            # A run-level note that is not a GateDiagnostic, or an unreadable file. Skipping it is
+            # correct -- this indexer must never be the thing that ends a run at closeout.
+            continue
+        if diagnostic.decision == GateDecision.ACCEPT:
+            continue
+        infrastructure = diagnostic.decision == GateDecision.INFRASTRUCTURE_FAILURE
+        add_diagnostic(
+            context,
+            diagnostic_class=(
+                DiagnosticClass.INFRASTRUCTURE if infrastructure else DiagnosticClass.SCIENTIFIC
+            ),
+            code=f"gate_{diagnostic.gate_name}_{diagnostic.decision.value}",
+            public_message=(
+                f"The {diagnostic.gate_name.replace('_', ' ')} gate recorded "
+                f"'{diagnostic.decision.value}'"
+                + (f" for {diagnostic.artifact_label}." if diagnostic.artifact_label else ".")
+            ),
+            internal_path=relative,
+        )
+        indexed += 1
+    return indexed
+
+
+def seal_run_summary(
+    context: RunContext,
+    outcomes: Sequence[FamilyRunOutcome],
+    *,
+    development_surrogate: bool,
+    authority_ceiling: FrontHalfAuthorityCeiling | None = None,
+    evidence_basis_line: str = "",
+    resume_note: str = "",
+    all_family_processing_finished: bool = True,
+    processing_state: ProductProcessingState = ProductProcessingState.PRODUCED,
+    authority: ArtifactAuthority = ArtifactAuthority.AGENT_REVIEWED,
+) -> Path:
+    """CLIM-13 ordered closeout checkpoint: finalize summary bytes, THEN promote, as one step.
+
+    Every banner/basis/resume line is an INPUT to the render — nothing may write ``summary.md``
+    after this returns; the index promotion is the last write touching it. Re-sealing is the
+    legal crash recovery for a crash between the write and the promotion: it atomically rewrites
+    and re-promotes, keeping exactly one SUMMARY record at the stable path.
+    """
+    from .run_layout import write_run_summary
+
+    # Before the summary is rendered and promoted, so the closeout the reader receives is backed by
+    # an index the shepherd can actually follow.
+    index_gate_diagnostics(context)
+    kwargs: dict[str, object] = {}
+    if authority_ceiling is not None:
+        kwargs["authority_ceiling"] = authority_ceiling
+    summary_path = write_run_summary(
+        context.paths,
+        outcomes,
+        development_surrogate=development_surrogate,
+        evidence_basis_line=evidence_basis_line,
+        resume_note=resume_note,
+        all_family_processing_finished=all_family_processing_finished,
+        **kwargs,  # type: ignore[arg-type]
+    )
+    if not index_existing_artifact(
+        context,
+        summary_path,
+        kind=ArtifactKind.SUMMARY,
+        processing_state=processing_state,
+        authority=authority,
+    ):
+        raise ValueError("summary promotion failed run-boundary integrity validation")
+    return summary_path
 
 
 def index_existing_artifact(
@@ -912,6 +1187,37 @@ def _validate_destination(root: Path, destination: Path) -> None:
         current = current / part
         if current.exists() and current.is_symlink():
             raise ValueError("artifact destination parent is a symlink")
+
+
+def _artifact_integrity_mismatches(
+    paths: RunPaths, manifest: RunManifest, *, ignore_paths: set[str] | None = None
+) -> list[str]:
+    """Every indexed artifact whose bytes no longer match its promoted record (run-relative)."""
+    ignored = ignore_paths or set()
+    mismatched: list[str] = []
+    for artifact in manifest.artifacts:
+        if artifact.path in ignored:
+            continue
+        candidate = paths.root / artifact.path
+        try:
+            relative = _validate_index_candidate(paths.root, candidate)
+            ok = relative == artifact.path and sha256_file(candidate) == artifact.sha256
+        except (OSError, ValueError):
+            ok = False
+        if not ok:
+            mismatched.append(artifact.path)
+    return mismatched
+
+
+def collect_integrity_mismatches(paths: RunPaths) -> list[str]:
+    """CLIM-13: enumerate post-promotion artifact mutations WITHOUT raising.
+
+    The trusting readers (``load_run_manifest`` / ``write_run_manifest``) stay hard and
+    fail-closed; this collector exists so a detection site can turn the hard signal into a
+    persisted honest INTEGRITY terminal via ``record_integrity_failure`` instead of dying
+    inside its own failure-reporting path (the climate trap that forced a manual reindex).
+    """
+    return _artifact_integrity_mismatches(paths, _load_run_manifest_schema(paths))
 
 
 def _validate_manifest_integrity(

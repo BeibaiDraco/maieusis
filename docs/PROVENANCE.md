@@ -49,7 +49,7 @@ It does not answer:
 - Will executing the plan produce a positive result?
 
 Those require scientific judgment and, eventually, empirical analysis outside
-the v0.1.0 product boundary.
+the v0.1.1 product boundary.
 
 ## Authority is earned, not renamed
 
@@ -118,11 +118,12 @@ outputs, and hidden audit files support integrity, diagnosis, and safe resume.
 They should not be substituted for the scientific narrative or published with
 credentials, restricted data, or raw provider traffic.
 
-The public International Brain Laboratory (IBL) Brain-Wide Map and Neural
-Latents Benchmark (NLB) MC_Maze-S examples contain curated readable scientific
+The three public examples -- the climate, International Brain Laboratory (IBL) Brain-Wide Map, and
+Neural Latents Benchmark (NLB) MC_Maze-S demonstrations -- contain curated readable scientific
 products and sanitized inventories. They omit source PDFs, datasets,
 credentials, raw model traffic, provider session IDs, absolute local paths,
-and hidden local audit files. Curation cannot increase the authority of an
+hidden local audit files, and reviewer improvement notes addressed to the
+development team. Each demonstration's manifest lists the curation steps applied. Curation cannot increase the authority of an
 outcome; warnings and non-accepted families remain labeled as such.
 
 ## A practical reading checklist

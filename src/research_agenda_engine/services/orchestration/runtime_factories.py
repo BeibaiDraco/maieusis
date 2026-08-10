@@ -21,6 +21,7 @@ from ...providers.coding_agents.claude_code_agent_runner import (
     CLAUDE_DATASET_ACCESS_ADD_DIR,
     CLAUDE_DATASET_ACCESS_EXTERNAL_READONLY,
     ClaudeCodeAgentRunner,
+    probe_claude_cli_version,
 )
 from ...providers.coding_agents.claude_code_host import ClaudeCodePlannerHost
 from ...providers.coding_agents.codex_agent_runner import (
@@ -181,6 +182,12 @@ def build_planner_host_factory(
         if config.models.coding_host == CodingHost.CLAUDE_CODE:
             claude_runner = ClaudeCodeAgentRunner(
                 model=config.models.coding_model,
+                effort=(
+                    config.models.coding_reasoning_effort.value
+                    if config.models.coding_reasoning_effort is not None
+                    else None
+                ),
+                cli_version=probe_claude_cli_version(),
                 dataset_root=dataset_root,
                 dataset_access_mode=(
                     CLAUDE_DATASET_ACCESS_EXTERNAL_READONLY
@@ -235,11 +242,19 @@ def build_scientific_provider(
         return MockScientificAgentProvider(responses=list(mock_responses))
     if provider == "openai":
         return OpenAIScientificAgentProvider(
-            model=pm.model or None, allow_pro_model=allow_pro_model, system_prompt=system_prompt
+            model=pm.model or None,
+            allow_pro_model=allow_pro_model,
+            system_prompt=system_prompt,
+            thinking=pm.thinking.value,
+            effort=pm.effort.value,
         )
     if provider == "anthropic":
         return AnthropicScientificAgentProvider(
-            model=pm.model or None, allow_pro_model=allow_pro_model, system_prompt=system_prompt
+            model=pm.model or None,
+            allow_pro_model=allow_pro_model,
+            system_prompt=system_prompt,
+            thinking=pm.thinking.value,
+            effort=pm.effort.value,
         )
     raise ValueError(f"unsupported scientific provider: {provider!r}")
 
@@ -276,5 +291,7 @@ def build_owner_reviewer_providers(
         reviewer = build_plan_fidelity_reviewer_provider_from_env(
             provider=reviewer_pm.provider.strip().lower(),  # type: ignore[arg-type]
             allow_pro_model=config.models.allow_pro_model,
+            thinking=reviewer_pm.thinking.value,
+            effort=reviewer_pm.effort.value,
         )
     return owner, reviewer

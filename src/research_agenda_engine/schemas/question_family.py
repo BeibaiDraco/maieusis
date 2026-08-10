@@ -895,6 +895,8 @@ class ShortlistedQuestionFamily(BaseModel):
     review: QuestionFamilyReviewDecision
     active_variant_ids: list[str] = Field(default_factory=list)
     source_batch_id: str
+    novelty_admission_id: str = ""
+    novelty_assessment_ids: dict[str, str] = Field(default_factory=dict)
 
     @model_validator(mode="after")
     def validate_shortlisted_family(self) -> ShortlistedQuestionFamily:
@@ -921,6 +923,12 @@ class ShortlistedQuestionFamily(BaseModel):
             raise ValueError(
                 "ShortlistedQuestionFamily active variants must match ACTIVE review decisions"
             )
+        if self.novelty_admission_id and set(self.novelty_assessment_ids) != set(
+            self.active_variant_ids
+        ):
+            raise ValueError(
+                "novelty-admitted shortlist requires one assessment id per active variant"
+            )
         return self
 
 
@@ -936,6 +944,12 @@ class QuestionFamilyShortlistManifest(BaseModel):
     rejected_family_ids: list[str] = Field(default_factory=list)
     needs_revision_family_ids: list[str] = Field(default_factory=list)
     deferred_family_ids: list[str] = Field(default_factory=list)
+    # An infrastructure fault that stopped this family's shortlist review. It is NOT a deferral:
+    # nothing scientific was decided, and folding it into `deferred` reported an API failure to the
+    # reader as thin evidence. `FamilyInclusionLabel.RUN_INCOMPLETE` and
+    # `ShortlistAxis.RUN_INCOMPLETE` already existed for this; the manifest had no bucket to carry
+    # them, which is why the label could never survive the trip to a run outcome.
+    run_incomplete_family_ids: list[str] = Field(default_factory=list)
     contract_eligible: bool = False
     execution_authorized: bool = False
     authority_ceiling: FrontHalfAuthorityCeiling = FrontHalfAuthorityCeiling.VERIFIED
@@ -958,6 +972,7 @@ class QuestionFamilyShortlistManifest(BaseModel):
             "rejected": set(self.rejected_family_ids),
             "needs_revision": set(self.needs_revision_family_ids),
             "deferred": set(self.deferred_family_ids),
+            "run_incomplete": set(self.run_incomplete_family_ids),
         }
         for bucket_name, ids in bucket_ids.items():
             source = (

@@ -39,6 +39,7 @@ class VariantShortlistDisposition(StrEnum):
     # Kept in an included family but honestly flagged/downweighted because a prior directly answers it.
     FLAGGED_DIRECT_RECAP = "flagged_direct_recap"
     DEFERRED_MATERIAL_REVISION = "deferred_material_revision"
+    DEFERRED_NOVELTY = "deferred_novelty"
     REJECTED = "rejected"
 
 
@@ -48,6 +49,7 @@ class VariantShortlistOutcome(BaseModel):
     variant_id: str
     disposition: VariantShortlistDisposition
     novelty_status: VariantNoveltyStatus
+    novelty_assessment_id: str = ""
     rationale: str = ""
 
 
@@ -59,6 +61,7 @@ class FamilyShortlistOutcome(BaseModel):
     gate_decision: str
     variant_outcomes: list[VariantShortlistOutcome] = Field(default_factory=list)
     active_variant_ids: list[str] = Field(default_factory=list)
+    novelty_admission_id: str = ""
     rationale: str = ""
 
     @property

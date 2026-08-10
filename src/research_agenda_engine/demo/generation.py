@@ -31,7 +31,10 @@ from ..services.agents.formation_trace_reviewer import FORMATION_TRACE_CRITERIA
 from ..services.agents.paper_case_reviewer import PAPER_CASE_FIDELITY_CRITERIA
 from ..services.agents.pattern_reviewer import QUESTION_PATTERN_CRITERIA
 from ..services.agents.shortlist_reviewer import SHORTLIST_WORTHINESS_CRITERIA
-from ..services.agents.topic_evidence_reviewer import TOPIC_EVIDENCE_CRITERIA
+from ..services.agents.topic_evidence_reviewer import (
+    TOPIC_EVIDENCE_CRITERIA,
+    TopicEvidenceReviewContent,
+)
 from ..services.orchestration.end_to_end import StageExecutor
 from ..services.paper_ingest.paperbank_gate import PaperCaseDraft
 from ..services.paper_patterns.induction import QuestionPatternInductionBatch
@@ -109,6 +112,16 @@ class DemoStageExecutor(StageExecutor):
     def gate_session(self, *, gate_name, generator_provider_ids):
         if gate_name == "narrative_fidelity":
             content: Any = _content(DatasetNarrativeFidelityDecision.ACCEPT)
+        elif gate_name == "topic_evidence":
+            content = TopicEvidenceReviewContent(
+                decision=GateModelDecision.ACCEPT,
+                criterion_assessments=[
+                    GateCriterionAssessment(criterion=c, passed=True)
+                    for c in _GATE_CRITERIA[gate_name]
+                ],
+                essential_evidence_absent=False,
+                essential_evidence_gaps=[],
+            )
         else:
             content = GateReviewContent(
                 decision=GateModelDecision.ACCEPT,

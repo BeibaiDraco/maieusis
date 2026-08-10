@@ -155,6 +155,36 @@ _DEFAULT_DISALLOWED_TOOLS: tuple[str, ...] = ("WebFetch", "WebSearch")
 _DEFAULT_MAX_TURNS = 40
 _DEFAULT_TIMEOUT_SECONDS = 1800  # hard <= 30-min wall-clock backstop
 _DEFAULT_MODEL = "opus"
+
+
+def probe_claude_cli_version(executable: str = "claude") -> str:
+    """Best-effort resolved Claude Code CLI version for run-record identity.
+
+    Called once by the host factory, never by the runner itself, so hermetic fake
+    executables in tests are executed exactly as many times as the planner protocol
+    dictates. Degrades to an empty string on ANY failure (missing CLI, sandbox/egress
+    guards, malformed output): the hard version floor for serious runs is enforced by
+    preflight, and ``planner_cli_version=""`` honestly means "not captured".
+    """
+    try:
+        completed = subprocess.run(
+            [executable, "--version"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+        if completed.returncode != 0:
+            return ""
+        version = next((line.strip() for line in completed.stdout.splitlines() if line.strip()), "")
+    except (OSError, ValueError, subprocess.SubprocessError, RuntimeError):
+        # RuntimeError covers sandbox/egress guards that intercept host subprocess launches.
+        return ""
+    if not version or len(version) > 200:
+        return ""
+    return version
+
+
 _DEFAULT_PERMISSION_MODE = "dontAsk"
 _LAUNCH_DIR_PREFIX = "maieusis-claude-launch-"
 _MAX_TRANSIENT_ATTEMPTS = 2
@@ -443,6 +473,8 @@ class ClaudeCodeAgentRunner:
         *,
         executable: str = "claude",
         model: str = _DEFAULT_MODEL,
+        effort: str | None = None,
+        cli_version: str = "",
         max_turns: int = _DEFAULT_MAX_TURNS,
         timeout_seconds: int = _DEFAULT_TIMEOUT_SECONDS,
         permission_mode: str = _DEFAULT_PERMISSION_MODE,
@@ -499,6 +531,14 @@ class ClaudeCodeAgentRunner:
                 )
         self.executable = executable
         self.model = model
+        # Claude Code reasoning-effort for the planner session; None keeps the CLI default.
+        # The value is host-config-owned (ModelsConfig.coding_reasoning_effort) — never inherited
+        # from user-level settings — so serious-run identity stays explicit and auditable.
+        self.effort = effort
+        # Resolved CLI identity is probed ONCE by the factory (probe_claude_cli_version) and
+        # stamped here; the runner itself never re-executes the CLI for identity, so hermetic
+        # fake executables are run exactly as many times as the planner protocol dictates.
+        self.cli_version = cli_version
         self.max_turns = max_turns
         self.timeout_seconds = timeout_seconds
         self.permission_mode = permission_mode
@@ -585,6 +625,8 @@ class ClaudeCodeAgentRunner:
             "--allowedTools",
             ",".join(allowed),
         ]
+        if self.effort:
+            argv += ["--effort", self.effort]
         if self.disallowed_tools:
             argv += ["--disallowedTools", ",".join(self.disallowed_tools)]
         system_prompt = (
@@ -997,6 +1039,7 @@ class ClaudeCodeAgentRunner:
             run_id=run_id,
             branch_id=branch.branch_id,
             runner_name=self.runner_name,
+            planner_cli_version=self.cli_version,
             planner_identity=self._bounded_planner_identity(result_payloads),
             status=CodingAgentRunStatus.RETURNED,
             transcript_path=str(transcript_path),
@@ -1085,12 +1128,14 @@ class ClaudeCodeAgentRunner:
     def _inspection_runtime_display(self) -> tuple[str, str] | None:
         """The (label, verbatim value) for the configured inspection runtime, or None.
 
-        ``inspection_python`` renders the resolved interpreter path (unchanged/backward-compatible);
-        ``inspection_command`` renders the multi-token command verbatim (no Path/resolve mangling).
-        The two are mutually exclusive (enforced in ``__init__``).
+        ``inspection_python`` renders an absolute path without dereferencing a virtualenv's
+        interpreter symlink.  Resolving that symlink starts the base interpreter outside the venv
+        and silently drops its installed inspection packages. ``inspection_command`` renders the
+        multi-token command verbatim (no Path mangling). The two are mutually exclusive (enforced
+        in ``__init__``).
         """
         if self.inspection_python is not None:
-            return ("Configured inspection Python", str(self.inspection_python.resolve()))
+            return ("Configured inspection Python", str(self.inspection_python.absolute()))
         if self.inspection_command is not None:
             return ("Configured inspection command", self.inspection_command)
         return None
@@ -1188,6 +1233,7 @@ class ClaudeCodeAgentRunner:
             f"run_label: {run_label}\n"
             f"runner: {self.runner_name}\n"
             f"model: {self.model}\n"
+            f"effort: {self.effort or 'cli_default'}\n"
             f"dataset_access_mode: {self.dataset_access_mode}\n"
             f"external_dataset_root: {external_dataset_root}\n"
             "dataset_added_as_writable_dir: False\n"
@@ -1214,20 +1260,26 @@ class ClaudeCodeAgentRunner:
     def _parse_result_payload(self, spawn: _SpawnResult) -> Mapping[str, Any]:
         """Parse the CLI envelope without weakening its success-status decision."""
 
+        # Byte-for-byte the same boundary as the Codex runner's `_parse_result_payload`: an
+        # unreadable stdout stream means the host delivered nothing, so it must not close the
+        # family as a validation failure of material that was never returned. Fail-closed is
+        # unchanged — this class derives from ValueError.
         stdout = spawn.stdout.strip()
         if not stdout:
-            raise ValueError(
+            raise CodingAgentProviderUnavailable(
                 f"claude -p returned empty stdout (fail-closed); returncode={spawn.returncode}, "
                 f"stderr={_tail(spawn.stderr, 500)!r}"
             )
         try:
             data = json.loads(stdout)
         except json.JSONDecodeError as exc:
-            raise ValueError(
+            raise CodingAgentProviderUnavailable(
                 f"claude -p did not return valid JSON on stdout (fail-closed): {exc}"
             ) from exc
         if not isinstance(data, Mapping):
-            raise ValueError("claude -p JSON result was not an object (fail-closed)")
+            raise CodingAgentProviderUnavailable(
+                "claude -p JSON result was not an object (fail-closed)"
+            )
         return data
 
     def _result_failure(
@@ -1339,8 +1391,11 @@ class ClaudeCodeAgentRunner:
             if self._external_readonly
             else ("outer_seatbelt" if self.os_process_sandbox else "flags_only")
         )
+        inspection_display = self._inspection_runtime_display()
         inspection_python = (
-            str(self.inspection_python.resolve()) if self.inspection_python is not None else ""
+            inspection_display[1]
+            if inspection_display is not None and self.inspection_python is not None
+            else ""
         )
         inspection_command = self.inspection_command or ""
         # The argv contains the full task prompt; hash it rather than dump it.
@@ -1351,6 +1406,7 @@ class ClaudeCodeAgentRunner:
             f"runner: {self.runner_name}\n"
             f"executable: {self.executable}\n"
             f"model: {self.model}\n"
+            f"effort: {self.effort or 'cli_default'}\n"
             f"max_turns: {self.max_turns}\n"
             f"timeout_seconds: {self.timeout_seconds}\n"
             f"permission_mode: {self.permission_mode}\n"

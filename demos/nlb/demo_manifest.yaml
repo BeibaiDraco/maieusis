@@ -1,169 +1,149 @@
-schema_version: maieusis.public_demo/v1
-demo_id: nlb-mc-maze-s
-release: 0.1.0
+schema_version: maieusis.public_demo/v2
+demo_id: nlb
+release: 0.1.1
+release_contract: release_validation_set/v2
+release_note: 'Release-byte identity -- wheel, sdist, tree, and seal digests -- lives in the published
+  release receipt, not here: the package is built from the tree that contains this file, so no file inside
+  it can carry the resulting hash.'
 release_ready: true
 release_readiness_scope: curated_demo_artifacts_only
-publication_gate: operator_pending
+publication_gate: operator_approved
 release_blocker: null
 raw_pdfs_included: false
+bridge_status: closed
 paper_sources: ../shared/paper_sources.yaml
-paper_cohort_status: frozen_twelve_source_release_input
+paper_cohort_status: shared_twelve_source_neuroscience_cohort
 dataset:
-  name: Neural Latents Benchmark MC_Maze-S
-  dandiset_id: "000140"
+  name: NLB MC_Maze-S
+  dandiset_id: '000140'
   pinned_version: 0.220113.0408
-  landing_page: https://dandiarchive.org/dandiset/000140
+  landing_page: https://doi.org/10.48324/dandi.000140/0.220113.0408
   access_mode: external_readonly
   source_note: DATASET_NOTES.md
-  known_conversion_caveat: m1_unit_electrode_indices_require_plus_96
   metadata_verifier: verify_region_mapping.py
-  files:
-    dandiset.yaml: 2492a05c49b2e3024797b45bc8db263a1bf12078891ec668b0623f0db1e0ba5a
-    sub-Jenkins_ses-small_desc-train_behavior+ecephys.nwb: dcaf3a524e2b2f65f163ee3b07789b8474bdfc6ca66098bc542ab93dff489884
-    sub-Jenkins_ses-small_desc-test_ecephys.nwb: ca8a0bef5f189eafb9db1961d617e065cb461360718fde1c16a538922a6fa5fe
-profile:
-  final_quality: ../../examples/release/nlb-final-quality.yaml
-release_candidate:
-  immutable_rc_commit: a897715b065ee50251924307aaa96771f0e16e3a
-  immutable_rc_version: 0.1.0
-  rc_wheel_sha256: a5826a426f2e708ae1aaa4d42719bf491d78597519db49b208780d3ff5a3ce99
-  pair_receipt_sha256: 2da077057e92f30a0022a0856ad11b7476654223c67e9919c487e65ca243df06
-paperbank_import:
-  status: receipt_bound_exact_reuse
-  source_demo: ibl-brain-wide-map
-  source_run_id: 20260715T173301Z-4eefe86a
-  source_paper_half_receipt_sha256: fbfa86c4ee1e1f925488f3d5c5b8f388a61700ab6e37fac5d613e85ffd03e4d6
-  import_receipt_sha256: 75bc8baaf98629e8deaaead956e025fa07a0de54cdfb1061463cdc6872728f34
-  public_provenance_path: artifacts/provenance/paperbank_import.yaml
-  public_provenance_sha256: 92a52f97bb9736db6002db23d813e9b6537202a9fe4f4bd6e283380ca20dbfbc
-  absolute_source_path_persisted: false
-live_proof:
-  status: passed
-  run_id: 20260715T182133Z-ec7b6cde
-  config_sha256: 8a6674564fd455a4c5d9def8dfec623abbe5f19e9f9d42625b3b5046d7b7a999
-  run_manifest_sha256: bf69416ff18dcda3478911b57400068169f75b5e8ed8a94f5e35fee85f95abf2
-  family_count: 6
-  variants_per_family: 2
-  terminal_family_count: 6
-  accepted_dossier_stack_count: 5
-  validation_warning_family_count: 1
-  run_used_resume: false
-  planning_only: true
-presentation:
-  status: deterministic_replay_from_sealed_scientific_run
-  runtime_commit: f7edb2151e83f5d096a007476b01c7a5f17bfd54
-  pair_output_set_sha256: 350cfa04d71361762b85cfb291b374e620a514c1689e3f525cab43e549cf7c62
-  output_set_sha256: 85a1be4bbda90976cbda422401ff56302bab9f4f98ca883f07dadddab158013c
-  pattern_detailed_sha256: 4940bbcae206d2c14f3f74062d3174a2b6f2e4ffdacfcda2425c3f5bf91c1467
-  question_families_detailed_sha256: b6db73f98ffb9ec157c3675846acceb3522ffae93bded50f616176ac2a0695ae
-  detailed_page_count: 8
-  scientific_pair_reexecuted: false
-  detailed_present_in_original_invocation: false
+  known_conversion_caveat: m1_unit_electrode_indices_require_plus_96
+demo_provenance:
+  qualification_class: candidate_demonstration
+  note: These artifacts come from a demonstration run on the release-candidate source tree, not from the
+    byte-qualification run of the published package.
+  run_id: 20260807T052026Z-f8c2bb19
+  science_build_sha256: 09e158212cede8e7b656d27adf399944184356c5202f7393ac3ef294849a2ea2
+  science_build_version: 0.1.0
+  presentation_build_sha256: null
+  leg_receipt: withheld_private_operator_record
+  leg_receipt_note: The scientific leg receipt is an internal operator record and is not published. Its digest is kept so it can be verified if it is ever released.
+  leg_receipt_sha256: 85ef8541d9b966dc8054914da2e615289e58ee362c2032c1b52cd1de7df64762
 artifacts:
   status: curated
   root: artifacts
-  file_count: 43
-  inventory_sha256: 64ccebe49f946f92abd2a63b662d404d6d4a52fa01cc57a2141602daa6d506a1
-  sanitization:
-    - remove_internal_citation_identifiers
-    - remove_internal_evidence_request_labels
-    - remove_private_reviewer_session_label
-    - summarize_excluded_candidate_diagnostic
-    - sanitize_private_links_from_validation_warning_dossier
-    - derive_public_paperbank_reuse_receipt
-  sanitized_source_bindings:
-    - path: families/preparatory-operating-regimes/dossier.md
-      source_sha256: 65aa4a5132604eb6c74c59227b3ebbadb457c9ab9dfa94c671e61c8685f5afda
-      public_sha256: afa40bcad1fc2c58e3b0543e651ffc9536873c97a82cba0e6ea24bdba592c6f1
-      transform: sanitized_private_links
-  sanitized_inventory:
-    - path: dataset/dataset_narrative.md
-      sha256: 8a5d8616202dcf4794e93b8d498ce71822e97412d7122fff273eb77d637b1929
-    - path: families/behavior-explains-neural-variance/dossier.md
-      sha256: ede8ff2b6724fca37c527833c64e27b3caa47425c07e7db3afb911f350842f76
-    - path: families/behavior-explains-neural-variance/dossier_detailed.md
-      sha256: f95ba7e23eddef40c3c3ae76525ed633eb6cbb6e3b772cbccf47c5bc5a834ee7
-    - path: families/geometry-definition-generalization/dossier.md
-      sha256: be604e04217d214aeaa141d310a8360215668c5f02a9265340e97ed70b25dc56
-    - path: families/geometry-definition-generalization/dossier_detailed.md
-      sha256: b642b0d366dd3c8e2b61bfc4f60f9d1afdd2d17cfaa981d61913b6b410f43b4e
-    - path: families/preparatory-operating-regimes/dossier.md
-      sha256: afa40bcad1fc2c58e3b0543e651ffc9536873c97a82cba0e6ea24bdba592c6f1
-    - path: families/preparatory-operating-regimes/dossier_detailed.md
-      sha256: 4db6d12704279b8f6173cffa4b6b3566c7de31bf689aace3b8636074b075b561
-    - path: families/reach-geometry-invariance/dossier.md
-      sha256: ed2975e05b815ceeb9bf9a2e7e0189b998f73c872bc26beb6f64d23fcb6b41e7
-    - path: families/reach-geometry-invariance/dossier_detailed.md
-      sha256: 2a4fafdfebeae357419f8c4f8bf8dcba3cdca99aadce750045efee752779cb80
-    - path: families/selective-pmd-m1-coupling/dossier.md
-      sha256: f968b9f69cd985e4b72002cb004e423d22091ac94f9c57b7de84f701141cfdf1
-    - path: families/selective-pmd-m1-coupling/dossier_detailed.md
-      sha256: 239743f9e1ecc22471f01d84ebf0bef3098022a0eda76a2f17eda316e622cc5f
-    - path: families/variability-alignment-readout/dossier.md
-      sha256: 512373df0a8415dd718724e90f4acd053eb7f9baab8cb4ffe83f682d92e090a6
-    - path: families/variability-alignment-readout/dossier_detailed.md
-      sha256: ffe6579db3eb04718e9ef32e901ca2ef177af481161c2ef178d7676f1eacc84a
-    - path: literature/research_scope.md
-      sha256: dbf581defab4d2bbea05c80d2f581f6ab47e8e6579366acd9cc1b73f098b0534
-    - path: literature/retrieval_summary.md
-      sha256: 14ee15c888c6e9563b99191aa29b8b1f5aa583fcb9269f9a951a20fb2bf13266
-    - path: literature/topic_evidence_summary.md
-      sha256: 70f27c81526edc419472bde8b228666329329ccbc55e6dc4efe6f24086b8a50c
-    - path: paperbank/formation_traces/1-s2-0-s0896627319300534-main.md
-      sha256: 12176d8d01cc82f6da8b35d58286582f8ab3e9ff2ed2318bde254bb6ddaae8db
-    - path: paperbank/formation_traces/2024-08-30-610535v3-full.md
-      sha256: b16696d6459e589b5ccbf1c6b2708d8cd8669382a6706fa11e63ea47bcbda57d
-    - path: paperbank/formation_traces/ibl-s41586-025-09226-1.md
-      sha256: a02f9cf865ba3cd565537e210e3d233e77f9e854eac252c092a734ea47a4360e
-    - path: paperbank/formation_traces/nature12742.md
-      sha256: 9cd7ed05ce5f9ab18212b51c62853a3c8d9b991969518a7cd74a28c7c36fee9d
-    - path: paperbank/formation_traces/nn-3807.md
-      sha256: 54da4a4646fb9480f91fadeab9da9b7301dde77d3bd1ae701077cc2832a1f765
-    - path: paperbank/formation_traces/s41586-019-1346-5.md
-      sha256: 39562da2a85399298f1c7925715645238ea7a8e6178fa207fb4a8de59490efcb
-    - path: paperbank/formation_traces/s41586-021-04268-7.md
-      sha256: 60d31c3919a3ca199b5d8b4e36703d4cd5e589779b3f186a68f54cfeb257b060
-    - path: paperbank/formation_traces/s41586-025-09528-4-1.md
-      sha256: 490ae8c37b343371b3ce4878c15f03fcc86a215131571fd923abd6c758729f57
-    - path: paperbank/formation_traces/science-aav7893.md
-      sha256: 99a9fc228d1f72da38e124dc640a6df45d32760ebdfbf394dbccad3236b1b705
-    - path: paperbank/formation_traces/srinath-et-al-2026-the-structure-of-correlated-variability-reflects-task-relevant-information-in-sensory-neurons.md
-      sha256: cccc7456219b792f19c510f48b11a014def0a37d1210cb34c0574a806f1860c5
-    - path: paperbank/paperbank_summary.md
-      sha256: 291a75d2adc3d7ddc9d30363aced002f44dfa7f9620058074aaf8fbdf45b4561
-    - path: paperbank/papers/1-s2-0-s0896627319300534-main.md
-      sha256: 881305fce003d4d6d5441cc01eb907a634d3d6a84f89ecb3a8976c080df20808
-    - path: paperbank/papers/2024-08-30-610535v3-full.md
-      sha256: 16d03721773e7769364ada1b96bca407312f7e186d0ca9490fa6b5d81f720436
-    - path: paperbank/papers/ibl-s41586-025-09226-1.md
-      sha256: 5f5cd84c6216fb63dfccb3330e8ac9be1cd99b07ef8173a0cdff355db4bd301e
-    - path: paperbank/papers/nature12160.md
-      sha256: 0ae85830dffa6f860cd728480bf701029a24ea493f37dd51833c6d3478414b8b
-    - path: paperbank/papers/nature12742.md
-      sha256: 2f9297b30c0b87e917d91fe9466309a35f0e0f2ed9ff0d5cf931349e8323d0a7
-    - path: paperbank/papers/nn-3807.md
-      sha256: 620932aacc549870e47f6c2518734477c448cdff287a6b0bc677df128478b2c5
-    - path: paperbank/papers/s41586-019-1346-5.md
-      sha256: 9d5fd813b6adaafbde7da9aab5da0e16d2230ea43601726372f0cfede828f298
-    - path: paperbank/papers/s41586-021-04268-7.md
-      sha256: 6bfbf092ef5e5168d9c4f3683975f7c4207ab6446eff22bf893c200dbc6a9e74
-    - path: paperbank/papers/s41586-025-09528-4-1.md
-      sha256: a579b42448181d2d239aec64d5302ede33ff23cdb2d764ba0f41e88a7500cd09
-    - path: paperbank/papers/science-aav7893.md
-      sha256: bdef2c16d071bb745a48afb9c30eee04f16854bb4e5e6e30e69c761900dae954
-    - path: paperbank/papers/srinath-et-al-2026-the-structure-of-correlated-variability-reflects-task-relevant-information-in-sensory-neurons.md
-      sha256: e9ea239f1fc5728472521988f50b916db14b58e61d93a9eb48b083f0d5ebbe1e
-    - path: paperbank/question_patterns.md
-      sha256: d3d2bbd78ffaa2609ca8da565fe5848098934bea23cd4ab4687441cad0750394
-    - path: paperbank/question_patterns_detailed.md
-      sha256: 4940bbcae206d2c14f3f74062d3174a2b6f2e4ffdacfcda2425c3f5bf91c1467
-    - path: provenance/paperbank_import.yaml
-      sha256: 92a52f97bb9736db6002db23d813e9b6537202a9fe4f4bd6e283380ca20dbfbc
-    - path: questions/question_families.md
-      sha256: 5b7b594480f2e31a417631008c3ae7dce0ec0863f2701013d37410f45d4f695e
-    - path: questions/question_families_detailed.md
-      sha256: b6db73f98ffb9ec157c3675846acceb3522ffae93bded50f616176ac2a0695ae
+  file_count: 44
+  inventory_sha256: d019e48fa6cff4c0d1252b96840f881a336d140a60fdb8cd6caaf7e3ea2920cd
   showcase_family_ids:
-    - family-006
+  - manifold-form-functional-meaning
   showcase_selection_status: operator_selected
-bridge_status: closed
+  sanitization:
+  - remove_internal_citation_identifiers
+  - replace_redaction_residue_with_readable_prose
+  - remove_internal_evidence_request_labels
+  - remove_reviewer_note_lines
+  - summarize_excluded_candidate_diagnostic
+  - strip_internal_family_prefix_from_directory_names
+  sanitized_inventory:
+  - path: dataset/dataset_narrative.md
+    sha256: 6990176585ca4dc74b912f47d91883037955d6245adb22e59c2dcb86209a3a18
+  - path: families/covariability-functional-alignment/dossier.md
+    sha256: 2f3995c5afa551021a28ed868a893e70503e819a31bebbdb038c798fcc0ede14
+  - path: families/covariability-functional-alignment/dossier_detailed.md
+    sha256: 50a3e3bff4af463eb72d28ecc145393cef76b26e2959f1bc72e23b31239756c4
+  - path: families/degenerate-motor-population-codes/dossier.md
+    sha256: 433f2322dc9062d183dd2ecc32c2ceb1aaa933ae8bf5e8c2ab4f2d21458c7c8f
+  - path: families/degenerate-motor-population-codes/dossier_detailed.md
+    sha256: 86d6b0c830fb78fdfe7ef1443214f646d3ff69023113aff772870f971340e44a
+  - path: families/m1-pmd-population-organization/dossier.md
+    sha256: 2ae79e51f87c100b03bb1e7a3227f2338366191b8d8af417f31f2716c7a116ff
+  - path: families/m1-pmd-population-organization/dossier_detailed.md
+    sha256: 0e5029f97670018393f7911e6b1038da91ac8fcedf1f4f323c1f6410d1cff3db
+  - path: families/manifold-form-functional-meaning/dossier.md
+    sha256: 1bd0a21c113d99e78aff92ee8cb33040e501f1a73eb6538c2d1b243a237a206e
+  - path: families/manifold-form-functional-meaning/dossier_detailed.md
+    sha256: 591e063ea2140aca8a1d8d43122722012b690765e059c2792e8f798c9d1f1fc4
+  - path: families/motor-geometry-temporal-organization/dossier.md
+    sha256: 752b70b19d14d23a1f15245f40f2d981150255ce83d551ec5bb1587dedd0c37d
+  - path: families/motor-geometry-temporal-organization/dossier_detailed.md
+    sha256: fd0a7a7163b6787398c00176efde3dc0fe166e6fb79962455e80e6a4dd52ea71
+  - path: families/trajectory-context-generalization/dossier.md
+    sha256: dfd6f206b6ab604947bd9eb1e38f6519c0fd78ebb3c1afec2e1254726b6fd6cd
+  - path: families/trajectory-context-generalization/dossier_detailed.md
+    sha256: ad3dae56dabae5541db381b71df3c9b2d86b8deaa01063d5d9ef9107dd942119
+  - path: literature/research_scope.md
+    sha256: dbf581defab4d2bbea05c80d2f581f6ab47e8e6579366acd9cc1b73f098b0534
+  - path: literature/retrieval_summary.md
+    sha256: caf2d3c73032a1901cfe559a2745ee9ff1bb34f555305516b2c584e43ede5290
+  - path: literature/topic_evidence_summary.md
+    sha256: 8a91b3a3e68099e536dad90a5efb73abdad5111eca20cad3ed8c83d103904600
+  - path: paperbank/formation_traces/1-s2-0-s0896627319300534-main.md
+    sha256: 85d9dc2d0433d5c8e73087dcf4eedde67c4ca9f6a408bb15dc824f840ca68d52
+  - path: paperbank/formation_traces/ibl-s41586-025-09226-1.md
+    sha256: 2bf3865a545a9b5a58a4819bb1479ce0ff277f0e190b574d40f8e37be1865053
+  - path: paperbank/formation_traces/nature12160.md
+    sha256: 9d440f8510f61878002cd913a5db37f5d98cbe9caedd87c1f02951f1a7e2dbfa
+  - path: paperbank/formation_traces/nature12742.md
+    sha256: 31b572ff140acb2ed44488de06d4c56faa7aae5711252cfd88e090ec8b0188a3
+  - path: paperbank/formation_traces/nn-3807.md
+    sha256: 0866366e84247687b8b3ab690ad9d217501b09f2ca3d6c516302e6d7abe426dc
+  - path: paperbank/formation_traces/s41586-019-1346-5.md
+    sha256: 866d8147c3f01a5af62de6637857e54d69920b3b060453be7d12c02198d1604e
+  - path: paperbank/formation_traces/s41586-021-04268-7.md
+    sha256: 0f1f0e69ed0bb67bb2529acd668c5baf24d1c99075cbfee1cb632c1658ab72ee
+  - path: paperbank/formation_traces/s41586-025-09528-4-1.md
+    sha256: 747258ad4387cc1abe2dda2a393dca554c9ce9647c4257e140601cf933232fb7
+  - path: paperbank/formation_traces/s41593-024-01758-5.md
+    sha256: ad4c594d4cda3466c32407d9069b991efcbc87f154ca74511c297899766dc590
+  - path: paperbank/formation_traces/srinath-et-al-2026-the-structure-of-correlated-variability-reflects-task-relevant-information-in-sensory-neurons.md
+    sha256: 60db869243cd17c7f850f3bc3298dd0c71d0f1072a2c8ec3dbf3cfd9a7cd4af6
+  - path: paperbank/paperbank_summary.md
+    sha256: 37e2369b6ff122aa3c6e3a2e981178de55bbc7846d277f47f2928d5ee28e46d1
+  - path: paperbank/papers/1-s2-0-s0896627319300534-main.md
+    sha256: 55251ac7077480361abddcae6579495ef128e1241d63fbab5cdfd8c2be19be51
+  - path: paperbank/papers/2024-08-30-610535v3-full.md
+    sha256: c5134ec92e7cae3f634d53faf9bd5f8d2012ff27bc8775b52a7ae7f3fd4250eb
+  - path: paperbank/papers/ibl-s41586-025-09226-1.md
+    sha256: b00c5174f5ce9dfbe561c58cf2afdc98119996421aa9d1bff4072ab3a250be2d
+  - path: paperbank/papers/nature12160.md
+    sha256: 129562f716e23361804f3eeb5ebf0c25c3b81f8f7b4ce1b5d4e86b1574264c6d
+  - path: paperbank/papers/nature12742.md
+    sha256: 0029e12b0ceac3156d8429667b05c3df78e57ee9ec5c3b1e26b3aea3b3b0760d
+  - path: paperbank/papers/nn-3807.md
+    sha256: 290cd1c5a03f538cd0b32da6b15dc2a952ff045ce4ded5874e884188ef86603f
+  - path: paperbank/papers/s41586-019-1346-5.md
+    sha256: 2b628e5065128333f8387457d20c8937fb55d7b4be29817205314269f59fb9ba
+  - path: paperbank/papers/s41586-021-04268-7.md
+    sha256: 552ab06152d869aef3d28840658970f0fa85e2087c761b34e5211f7bdcdda96b
+  - path: paperbank/papers/s41586-025-09528-4-1.md
+    sha256: 3a0787fc47914cab9ab2fb02165bcac01d78010ac47a75a74ef3d7c68f009e73
+  - path: paperbank/papers/s41593-024-01758-5.md
+    sha256: 139de11418dc5c92f1fef9f9411c6bfd5ca2663dd08819be1fe1a1b61331a120
+  - path: paperbank/papers/science-aav7893.md
+    sha256: d52d37884e7917e3357a8f7df73912e3fda1145ae47cbc22a82acfc648baf0cb
+  - path: paperbank/papers/srinath-et-al-2026-the-structure-of-correlated-variability-reflects-task-relevant-information-in-sensory-neurons.md
+    sha256: 664d87f9728a95bf1ed75d6a071f0cb5d6d513640c5cbaf207808eb1c8530694
+  - path: paperbank/question_patterns.md
+    sha256: fd4dc4437afa1e5fece653eb9c5bc262c5a4fc20eb216e8eb49dfecfb8c9a5cd
+  - path: paperbank/question_patterns_detailed.md
+    sha256: d904df4ff86bebd4bc00960fb84938d705c00a51454f25e872058e7bcaacf533
+  - path: provenance/paperbank_import.yaml
+    sha256: a098157c5b02877065250a213ec0e1a3614ea4ba984d7a7e1827380850651501
+  - path: questions/question_families.md
+    sha256: 53c0b8a6ab7d2d9ad1ca6e52c58049c1c5958c954903d1ec2a9d2606b23b74b4
+  - path: questions/question_families_detailed.md
+    sha256: e8de6f413ef37ec38317712bb64db35e616941599f48bd4acb0506be59ae888e
+presentation:
+  status: produced_in_run
+  pattern_detailed_sha256: d904df4ff86bebd4bc00960fb84938d705c00a51454f25e872058e7bcaacf533
+  question_families_detailed_sha256: e8de6f413ef37ec38317712bb64db35e616941599f48bd4acb0506be59ae888e
+paperbank_import:
+  status: receipt_bound_exact_reuse
+  source_demo: ibl-brain-wide-map
+  source_run_id: 20260806T190138Z-2249f35e
+  public_provenance_path: provenance/paperbank_import.yaml
+  public_provenance_sha256: a098157c5b02877065250a213ec0e1a3614ea4ba984d7a7e1827380850651501

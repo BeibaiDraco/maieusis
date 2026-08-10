@@ -21,7 +21,7 @@ Always run `maieusis check --project maieusis.yaml` after editing.
 | `research_intent` | Open, topic-conditioned, or seed-question direction |
 | `models` | Scientific API roles, independent reviewer, coding host, and coding-host model |
 | `literature` | Public literature retrieval, open-full-text enrichment, and optional Elicit use |
-| `novelty` | Must remain disabled in v0.1.0; unsearched novelty is `not_assessed` |
+| `novelty` | Prior-art review and its bounded web-search lane; enabled in the shipped profile |
 | `run` | Output directory, requested family/variant breadth, concurrency, and revision limit |
 
 Paths are interpreted from the directory in which you run the CLI. The safest
@@ -185,6 +185,7 @@ Every role records an explicit provider and model:
 | `models.topic` | Synthesize current topic evidence |
 | `models.owner` | Protect scientific intent inside a family branch |
 | `models.reviewer` | Independently review the plan and scientific closure |
+| `models.novelty_reviewer` | Review prior art (optional; falls back to `models.reviewer`) |
 
 Example:
 
@@ -196,20 +197,50 @@ models:
   topic: {provider: openai, model: "<model-id>"}
   owner: {provider: openai, model: "<model-id>"}
   reviewer: {provider: anthropic, model: "<model-id>"}
-  coding_host: codex
-  coding_model: "<codex-model-id>"
+  novelty_reviewer: {provider: openai, model: "<model-id>"}
+  coding_host: claude_code
+  coding_model: "<claude-model-id-or-alias>"
   coding_reasoning_effort: high
-  allow_pro_model: false
+  allow_pro_model: true
 ```
+
+`allow_pro_model` opens the gate for pro-tier models. The shipped profile pins
+two pro-tier roles, so it sets this to `true`; leaving it `false` while pinning
+such a model fails preflight unless `MAIEUSIS_ALLOW_PRO_MODEL` is exported. The
+field is folded into every stage configuration digest, so changing it in an
+existing project invalidates resume reuse for that project.
+
+`models.novelty_reviewer` is optional and falls back to `models.reviewer`.
+Pinning it separately is worth doing: on one measured live leg, half the
+prior-art reviews were lost when this role shared the reviewer's model, because
+a safety classifier fired on that model's reasoning output.
 
 In standard mode, `models.owner.provider` and `models.reviewer.provider` must
 be different. Other roles may share a provider, but every configured model
 must be available to your account. Maieusis does not silently substitute a
 different model.
 
+Pin full model IDs rather than mutable aliases: the configuration file is part
+of a run's scientific provenance, and run records additionally persist the
+actually resolved CLI/model identity.
+
+### Which profile should I use?
+
+| Profile | Use it when |
+| --- | --- |
+| `maieusis.yaml` | **Start here.** This is what `maieusis init` writes into your project, and it is the configuration shape that produced the published demonstrations. It runs the Codex planner. |
+| `maieusis.claude-planner.example.yaml` | You run the Claude Code planner instead. The same settings apart from the three `coding_*` lines; some comments are worded for that host. |
+| `examples/release/*-cleanroom.yaml` | **Not a starting point.** Deliberately reduced byte-qualification inputs used to prove the published package ran untouched. They request two families, so they will not reproduce the six-family demonstrations. |
+
+There is no separate "development" profile in the public distribution. The
+recommended profile is the scientific one; if you want a cheaper first run,
+lower `run.max_families` rather than changing the model pins, so what you
+measure is still the configuration the demonstrations used.
+
 ## Coding-agent host
 
-The coding host is a subscription CLI, not a scientific token-API role.
+The coding host is a subscription CLI, not a scientific token-API role. Codex
+and Claude Code are both fully supported hosts; choose per run, not per era.
 
 For Codex:
 
@@ -217,7 +248,7 @@ For Codex:
 models:
   coding_host: codex
   coding_model: "<codex-model-id>"
-  coding_reasoning_effort: high  # minimal | low | medium | high | xhigh
+  coding_reasoning_effort: high  # REQUIRED: minimal | low | medium | high | xhigh
 ```
 
 For Claude Code:
@@ -225,12 +256,12 @@ For Claude Code:
 ```yaml
 models:
   coding_host: claude_code
-  coding_model: "<claude-model-id-or-alias>"
-  # coding_reasoning_effort must be omitted
+  coding_model: "<claude-model-id>"
+  coding_reasoning_effort: high  # OPTIONAL: low | medium | high | xhigh; omit for the CLI default
 ```
 
-The host, model, and Codex reasoning effort are explicit run inputs. Do not
-change them during a run.
+The host, model, and reasoning effort are explicit run inputs. Do not change
+them during a run.
 
 ## Credentials and cost authorization
 
@@ -256,9 +287,9 @@ contract is designed around the user-level location, which also reduces the
 risk of accidental commits and coding-agent exposure.
 
 `models.allow_pro_model: true` and `MAIEUSIS_ALLOW_PRO_MODEL=1` both authorize
-gated models. Leave the YAML value `false` and use the environment variable for
-a deliberate run-specific authorization unless you intentionally want that
-choice versioned with the project.
+gated models. The shipped profile sets this to `true` because it pins pro-tier roles. Use the YAML value when you want that
+choice recorded with the project; use the environment variable when you want a
+deliberate, run-specific authorization that leaves the project file alone.
 
 ## Literature sources and novelty
 
@@ -270,10 +301,20 @@ literature:
   source_profile: public  # public | auto | elicit | hybrid
 
 novelty:
-  enabled: false
+  enabled: true
   direct_recap_threshold: 0.9
   close_prior_threshold: 0.7
   max_candidates: 5
+  web_grounding:
+    enabled: true
+    scout: {provider: anthropic, model: "<model-id>"}
+    max_searches_per_scout: 3
+    max_leads_per_scout: 5
+    max_output_tokens: 21000
+    rate_card: anthropic_direct_web_search_20250305
+    # Micro-USD: 1000000 = one US dollar. This ceiling bounds THIRD-PARTY WEB SEARCH TOOL FEES
+    # ONLY. It does not cap model tokens, the planner host, or anything else you are billed for.
+    hard_run_tool_spend_ceiling_micro_usd: 1000000
 ```
 
 - `public` uses free public scholarly sources.
@@ -282,8 +323,11 @@ novelty:
 - `elicit` and `hybrid` require `ELICIT_API_KEY` and fail preflight without it.
 - Full-text enrichment uses lawful open text when available. Missing full text
   remains visible and may lower authority.
-- Novelty search is not implemented in v0.1.0. Keep `novelty.enabled: false`;
-  the correct status is `not_assessed`.
+- Prior-art review is enabled in the shipped profile. The schema default is `false`, so a project
+  file that omits the `novelty` block loads unchanged and constructs no web provider.
+- The web-search lane makes paid third-party search calls. `maieusis check` discloses the tool-fee
+  reservation and its ceiling before any spend, and refuses when the ceiling cannot fund the
+  configured run shape.
 
 ## Run breadth and bounds
 
@@ -292,10 +336,10 @@ run:
   output_root: runs/my-run
   shortlist_path: null
   target_family_ids: []
-  max_families: 2
-  variants_per_family: 3
-  max_parallel_family_workers: 2
-  max_revise_rounds: 1
+  max_families: 6
+  variants_per_family: 2
+  max_parallel_family_workers: 3
+  max_revise_rounds: 3
 ```
 
 - `max_families` and `variants_per_family` request breadth; they do not promise
@@ -303,7 +347,7 @@ run:
 - `max_parallel_family_workers` bounds concurrent family branches.
 - `max_revise_rounds` bounds Owner–Planner repair after review.
 - Leave `shortlist_path: null` and `target_family_ids: []`; external shortlist
-  injection and family targeting are not supported by the v0.1.0 product path.
+  injection and family targeting are not supported by the product path.
 - Do not change configuration while a run is active. A later `resume` reuses
   work only when all bound inputs still match.
 

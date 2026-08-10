@@ -41,12 +41,18 @@ def build_user_description_coarse_facts(
     seed: DatasetSeed,
     provider: StructuredModelProvider,
     max_prompt_chars: int = 250_000,
-) -> CoarseUserDescriptionFacts:
-    """Extract coarse facts from the user's ``seed.docs`` (Source D). Raises if no readable doc."""
-    excerpts = _user_doc_excerpts(seed.docs, dataset_id=seed.dataset_id)
+) -> tuple[CoarseUserDescriptionFacts, dict[str, str]]:
+    """Extract coarse facts from the user's ``seed.docs`` (Source D). Raises if no readable doc.
+
+    CLIM-08: every document is admitted INDEPENDENTLY — one unreadable/unsafe document is
+    excluded with a per-document reason (second return value) while safe sibling documents
+    still feed the packet. Zero admissible documents remains the honest source-level failure.
+    """
+    excerpts, exclusions = _user_doc_excerpts(seed.docs, dataset_id=seed.dataset_id)
     if not excerpts:
         raise UnreadableUserDocumentationError(
             "Source D requires at least one readable user description doc in seed.docs"
+            + (f" (excluded: {', '.join(sorted(exclusions))})" if exclusions else "")
         )
     packet = build_dataset_narrative_source_packet(
         dataset_id=seed.dataset_id, source_excerpts=excerpts
@@ -57,7 +63,7 @@ def build_user_description_coarse_facts(
         dataset_id=seed.dataset_id,
         max_prompt_chars=max_prompt_chars,
     )
-    return import_coarse_facts(
+    facts = import_coarse_facts(
         raw,
         CoarseUserDescriptionFacts,
         provenance={
@@ -69,32 +75,43 @@ def build_user_description_coarse_facts(
         },
         belt_context="user_description_coarse_facts(raw)",
     )
+    return facts, exclusions
 
 
 def _user_doc_excerpts(
     docs: list[Path], *, dataset_id: str = "configured"
-) -> list[ProposalSourceExcerpt]:
+) -> tuple[list[ProposalSourceExcerpt], dict[str, str]]:
+    """Admit each user doc independently; exclusions carry per-document honest reasons."""
     excerpts: list[ProposalSourceExcerpt] = []
+    exclusions: dict[str, str] = {}
     for index, doc in enumerate(docs):
         path = Path(doc)
-        if not path.exists() or not path.is_file():
-            continue
-        text = _read_doc_text(path)
-        if not text.strip():
-            continue
-        excerpts.append(
-            ProposalSourceExcerpt(
-                source_id=f"user-doc:{index}:{path.name}",
-                source_type=DatasetNarrativeSourceType.EXPERT_NOTE,
-                title=path.name,
-                locator=f"{user_description_source_locator(dataset_id)}/{index}/{path.name}",
-                excerpt=text[:_MAX_USER_DOC_CHARS],
-                source_digest=sha256_file(path),
-                section="user_provided_description",
-                snippet_kind="user_description",
+        name = f"{index}:{path.name}"
+        try:
+            if not path.exists() or not path.is_file():
+                exclusions[name] = "excluded: file is missing or not a regular file"
+                continue
+            text = _read_doc_text(path)
+            if not text.strip():
+                exclusions[name] = "excluded: no readable text content"
+                continue
+            excerpts.append(
+                ProposalSourceExcerpt(
+                    source_id=f"user-doc:{index}:{path.name}",
+                    source_type=DatasetNarrativeSourceType.EXPERT_NOTE,
+                    title=path.name,
+                    locator=f"{user_description_source_locator(dataset_id)}/{index}/{path.name}",
+                    excerpt=text[:_MAX_USER_DOC_CHARS],
+                    source_digest=sha256_file(path),
+                    section="user_provided_description",
+                    snippet_kind="user_description",
+                )
             )
-        )
-    return excerpts
+        except (OSError, ValueError, RuntimeError, UnicodeError) as exc:
+            # CLIM-08: one unsafe document (parser fault, filesystem race, undecodable bytes)
+            # is excluded with a per-document reason; sibling documents keep feeding the packet.
+            exclusions[name] = f"excluded: {type(exc).__name__}"
+    return excerpts, exclusions
 
 
 def _read_doc_text(path: Path) -> str:

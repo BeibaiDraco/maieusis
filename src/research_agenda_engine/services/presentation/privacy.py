@@ -10,7 +10,7 @@ import re
 from collections.abc import Iterable, Sequence
 from pathlib import PurePosixPath
 
-from ..dossier.public_text_guard import find_public_markdown_jargon
+from ..dossier.public_text_guard import find_public_markdown_id_leaks
 
 _MARKDOWN_LINK_RE = re.compile(r"(?<!!)\[[^\]]+\]\(([^)]+)\)")
 _ABSOLUTE_PATH_RE = re.compile(
@@ -36,6 +36,10 @@ _CREDENTIAL_RE = re.compile(
     r"(?:(?<![A-Za-z0-9_])sk-[A-Za-z0-9_-]{12,}|AKIA[0-9A-Z]{16}|"
     r"-----BEGIN [A-Z ]*PRIVATE KEY-----)",
 )
+_PUBLIC_DOI_RE = re.compile(
+    r"(?<![A-Za-z0-9])10\.\d{4,9}/[-._;()/:A-Za-z0-9]*[A-Za-z0-9]",
+    re.IGNORECASE,
+)
 
 
 class PresentationMarkdownError(ValueError):
@@ -46,6 +50,7 @@ def validate_detailed_markdown(
     text: str,
     *,
     private_tokens: Iterable[str] = (),
+    allowed_public_dois: Iterable[str] = (),
     required_headings: Sequence[str] = (),
 ) -> None:
     """Validate one complete candidate before it can replace the current detailed page."""
@@ -66,12 +71,17 @@ def validate_detailed_markdown(
         raise PresentationMarkdownError("detailed Markdown names a private provenance field")
     if _CREDENTIAL_RE.search(text):
         raise PresentationMarkdownError("detailed Markdown contains credential-shaped text")
-    jargon = find_public_markdown_jargon(text)
-    if jargon:
+    # The detailed add-on is model-written scientific prose and this raise costs the family its
+    # `dossier_detailed.md`. Only an escaped internal IDENTIFIER earns that; a dev-era handle
+    # discloses nothing and both of its patterns collide with ordinary science ("CCR5-tropic (R5)",
+    # the start-codon variant "M1V"). Every genuine identity check above -- absolute path, digest,
+    # internal id, private field, credential, run-private token -- is untouched.
+    leaks = find_public_markdown_id_leaks(text)
+    if leaks:
         raise PresentationMarkdownError(
-            "detailed Markdown contains internal project jargon: " + ", ".join(jargon)
+            "detailed Markdown contains internal project jargon: " + ", ".join(leaks)
         )
-    visible_text = _text_without_link_targets(text)
+    visible_text = remove_allowed_public_dois(_text_without_link_targets(text), allowed_public_dois)
     for token in private_tokens:
         token = token.strip()
         if len(token) >= 6 and re.search(
@@ -80,6 +90,19 @@ def validate_detailed_markdown(
             raise PresentationMarkdownError("detailed Markdown contains a run-private token")
     for href in _MARKDOWN_LINK_RE.findall(text):
         _validate_href(href.strip())
+
+
+def extract_public_dois(text: str) -> tuple[str, ...]:
+    """Return exact DOI literals that a receipt-bound public citation already declared."""
+    return tuple(dict.fromkeys(match.group(0) for match in _PUBLIC_DOI_RE.finditer(text)))
+
+
+def remove_allowed_public_dois(text: str, allowed_public_dois: Iterable[str]) -> str:
+    """Remove only exact, syntactically valid public DOI literals before token comparison."""
+    for doi in dict.fromkeys(item.strip() for item in allowed_public_dois if item.strip()):
+        if _PUBLIC_DOI_RE.fullmatch(doi):
+            text = text.replace(doi, "")
+    return text
 
 
 def _validate_href(href: str) -> None:

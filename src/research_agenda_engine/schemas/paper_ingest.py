@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from datetime import UTC, datetime
 from enum import StrEnum
 from pathlib import Path
@@ -8,6 +9,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from ..provenance import stable_hash
+from .stage_receipt import FailureClass
 
 
 class ParserKind(StrEnum):
@@ -276,6 +278,147 @@ class ExternalPaperRecord(BaseModel):
     response_hashes: dict[str, str] = Field(default_factory=dict)
 
 
+_SHA256_PATTERN = re.compile(r"[0-9a-f]{64}")
+_BOUNDED_TOKEN_PATTERN = re.compile(r"[A-Za-z0-9_.:-]{1,80}")
+
+SOURCE_DERIVATIVE_RECEIPT_SCHEMA_VERSION = "source_derivative_receipt/v1"
+ARTICLE_SPAN_SCHEMA_VERSION = "article_span/v1"
+
+
+class DerivativePageMapEntry(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    original_page: int = Field(ge=1)
+    derived_page: int = Field(ge=1)
+
+
+class SourceDerivativeReceipt(BaseModel):
+    """Admission contract for an externally produced source derivative (CLIM-02, Option B).
+
+    The receipt binds the ORIGINAL bytes' digest, the derived bytes' digest, both page counts,
+    and a complete page mapping. The original stays the paper's identity — the derived digest
+    never replaces ``source_sha256`` anywhere downstream. No OCR engine enters the core
+    dependency tree; the derivative is produced outside and admitted only through this receipt.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    schema_version: str = SOURCE_DERIVATIVE_RECEIPT_SCHEMA_VERSION
+    original_filename: str
+    original_sha256: str
+    original_page_count: int = Field(ge=1)
+    derived_filename: str
+    derived_sha256: str
+    derived_page_count: int = Field(ge=1)
+    page_map: list[DerivativePageMapEntry]
+    tool_label: str
+
+    @field_validator("original_sha256", "derived_sha256")
+    @classmethod
+    def validate_sha256(cls, value: str) -> str:
+        value = value.strip().lower()
+        if not _SHA256_PATTERN.fullmatch(value):
+            raise ValueError("derivative receipt digests must be 64-hex sha256 values")
+        return value
+
+    @field_validator("tool_label")
+    @classmethod
+    def validate_tool_label(cls, value: str) -> str:
+        value = value.strip()
+        if not _BOUNDED_TOKEN_PATTERN.fullmatch(value):
+            raise ValueError("tool_label must be a bounded token ([A-Za-z0-9_.:-], 1-80 chars)")
+        return value
+
+    @field_validator("original_filename", "derived_filename")
+    @classmethod
+    def validate_filename(cls, value: str) -> str:
+        value = value.strip()
+        if not value or "/" in value or "\\" in value or value.startswith("."):
+            raise ValueError("derivative receipt filenames must be bare inbox file names")
+        return value
+
+    @model_validator(mode="after")
+    def validate_receipt(self) -> SourceDerivativeReceipt:
+        if self.schema_version != SOURCE_DERIVATIVE_RECEIPT_SCHEMA_VERSION:
+            raise ValueError(f"schema_version must be {SOURCE_DERIVATIVE_RECEIPT_SCHEMA_VERSION}")
+        if self.original_sha256 == self.derived_sha256:
+            raise ValueError("a derivative must not share the original's digest")
+        if self.original_filename == self.derived_filename:
+            raise ValueError("a derivative must not share the original's filename")
+        derived_pages = sorted(entry.derived_page for entry in self.page_map)
+        if derived_pages != list(range(1, self.derived_page_count + 1)):
+            raise ValueError("page_map must cover every derived page exactly once")
+        out_of_range = [
+            entry.original_page
+            for entry in self.page_map
+            if entry.original_page > self.original_page_count
+        ]
+        if out_of_range:
+            raise ValueError("page_map references pages beyond original_page_count")
+        return self
+
+
+class ArticleSpanDeclaration(BaseModel):
+    """Typed article-span isolation for a bundled source (CLIM-03).
+
+    Declares which 1-based inclusive page range of the source constitutes THIS article; pages
+    outside the span are bundled material and never enter the parsed artifact. The whole-file
+    digest stays the source identity; the span rides the parse metadata as lineage.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    schema_version: str = ARTICLE_SPAN_SCHEMA_VERSION
+    page_start: int = Field(ge=1)
+    page_end: int = Field(ge=1)
+    reason: str
+
+    @field_validator("reason")
+    @classmethod
+    def validate_reason(cls, value: str) -> str:
+        value = value.strip()
+        if not _BOUNDED_TOKEN_PATTERN.fullmatch(value):
+            raise ValueError("reason must be a bounded token ([A-Za-z0-9_.:-], 1-80 chars)")
+        return value
+
+    @model_validator(mode="after")
+    def validate_span(self) -> ArticleSpanDeclaration:
+        if self.schema_version != ARTICLE_SPAN_SCHEMA_VERSION:
+            raise ValueError(f"schema_version must be {ARTICLE_SPAN_SCHEMA_VERSION}")
+        if self.page_end < self.page_start:
+            raise ValueError("page_end must be greater than or equal to page_start")
+        return self
+
+
+class TitleConfidence(StrEnum):
+    """Outcome of the deterministic page-1 title-candidate pass (CLIM-01).
+
+    ``NO_CANDIDATE`` is an honest terminal, not a failure: external identity lookup proceeds on
+    DOI/ID evidence alone rather than searching providers with running-header noise.
+    """
+
+    CONFIDENT = "confident"
+    NO_CANDIDATE = "no_candidate"
+
+
+class TitleCandidateResult(BaseModel):
+    """Typed result of title-candidate selection with auditable rejection reasons."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    title: str = ""
+    confidence: TitleConfidence
+    rejections: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def validate_confidence(self) -> TitleCandidateResult:
+        if self.confidence == TitleConfidence.CONFIDENT and not self.title.strip():
+            raise ValueError("a confident title candidate requires a non-empty title")
+        if self.confidence == TitleConfidence.NO_CANDIDATE and self.title.strip():
+            raise ValueError("no_candidate results must not carry a title")
+        return self
+
+
 class PaperIdentityQuery(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -448,6 +591,8 @@ class PaperIngestItem(BaseModel):
     filename: str
     source_sha256: str = ""
     status: PaperIngestStatus = PaperIngestStatus.DISCOVERED
+    # Set only for machinery loss. Source/text unavailability remains a distinct typed status.
+    failure_class: FailureClass | None = None
     parsed_artifact: str = ""
     completeness_artifact: str = ""
     external_artifact: str = ""

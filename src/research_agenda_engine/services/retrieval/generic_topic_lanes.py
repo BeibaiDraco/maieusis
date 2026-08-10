@@ -26,7 +26,8 @@ from ...schemas.topic_literature import (
 )
 from .topic_sources import _source_families_for_profile, resolve_topic_source_profile
 
-GENERIC_TOPIC_EVIDENCE_QUERY_PLAN_VERSION = "generic_topic_evidence_lanes/v1"
+GENERIC_TOPIC_EVIDENCE_QUERY_PLAN_VERSION = "generic_topic_evidence_lanes/v2"
+GENERIC_SCOPE_TERM_QUERY_LANE = "scope_term_acquisition"
 
 # Domain-neutral lane templates. Each is combined with the scope's OWN keywords; no domain vocabulary.
 GENERIC_TOPIC_LANES: tuple[tuple[str, str], ...] = (
@@ -43,7 +44,8 @@ GENERIC_TOPIC_LANES: tuple[tuple[str, str], ...] = (
     ("open_gaps", "open questions future directions unanswered gaps"),
 )
 
-# The lanes a generic TopicEvidenceBrief must cover (used by the topic-evidence gate).
+# Domain-neutral scientific dimensions for model review. They are not retrieval identities and
+# their coverage is never inferred from query provenance.
 GENERIC_REQUIRED_LANES: tuple[str, ...] = tuple(lane for lane, _ in GENERIC_TOPIC_LANES)
 
 
@@ -55,38 +57,64 @@ def build_generic_topic_evidence_query_plan(
     elicit_api_key: str = "",
     max_results_per_query: int = 8,
 ) -> TopicSourceQueryPlan:
-    """Build domain-neutral literature queries from a resolved research scope."""
+    """Build one domain-neutral acquisition lineage per source family and unique scope term.
+
+    The eight generic scientific dimensions remain reviewer criteria. They are deliberately not
+    query identities: repeating one search under eight labels manufactured coverage without
+    acquiring any additional evidence.
+    """
     resolved_profile = resolve_topic_source_profile(source_profile, elicit_api_key=elicit_api_key)
     families = list(source_families or _source_families_for_profile(resolved_profile))
-    terms = list(scope.terms)
-    terms_str = " ".join(terms)
+    terms = _unique_scope_terms(scope.terms)
     queries: list[TopicSourceQuery] = []
     for family in families:
         is_elicit = family == TopicLensSourceFamily.ELICIT
-        for lane, template in GENERIC_TOPIC_LANES:
-            query = f"{terms_str} {template}".strip()
+        for term in terms:
+            # One exact scope phrase per query. OpenAlex's title-and-abstract phrase search then
+            # retrieves works about that term instead of documents containing a large AND-ed bag of
+            # words. Ambiguous terms remain isolated to their own lineage for later scientific review.
             queries.append(
                 TopicSourceQuery(
                     query_id=(
-                        f"generic-topic-{family.value}-{lane}-"
-                        f"{stable_hash({'family': family.value, 'lane': lane, 'query': query})[:8]}"
+                        f"generic-topic-{family.value}-{GENERIC_SCOPE_TERM_QUERY_LANE}-"
+                        f"{stable_hash({'family': family.value, 'query': term})[:8]}"
                     ),
                     source_family=family,
-                    query=query,
-                    query_lane=lane,
-                    topic_terms=terms,
+                    query=term,
+                    query_lane=GENERIC_SCOPE_TERM_QUERY_LANE,
+                    topic_terms=[term],
                     max_results=max_results_per_query,
                     corpus="elicit" if is_elicit else "",
                     search_mode="semantic" if is_elicit else "",
                 )
             )
+    plan_identity = {
+        "version": GENERIC_TOPIC_EVIDENCE_QUERY_PLAN_VERSION,
+        "profile": resolved_profile.value,
+        "terms": terms,
+        "families": [family.value for family in families],
+        "max_results_per_query": max_results_per_query,
+        "queries": [query.model_dump(mode="json") for query in queries],
+    }
     return TopicSourceQueryPlan(
-        plan_id=(
-            "generic-topic-evidence-plan-"
-            f"{stable_hash({'terms': terms, 'profile': resolved_profile.value})[:12]}"
-        ),
+        plan_id=(f"generic-topic-evidence-plan-v2-{stable_hash(plan_identity)[:12]}"),
         source_profile=resolved_profile,
         topic_terms=terms,
         queries=queries,
         prompt_version=GENERIC_TOPIC_EVIDENCE_QUERY_PLAN_VERSION,
     )
+
+
+def _unique_scope_terms(values: Iterable[str]) -> list[str]:
+    """Preserve first spelling/order while collapsing whitespace and case-only duplicates."""
+
+    terms: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        term = " ".join(value.split())
+        key = term.casefold()
+        if not term or key in seen:
+            continue
+        seen.add(key)
+        terms.append(term)
+    return terms

@@ -1,23 +1,25 @@
 schema_version: maieusis.public_demo.paper_sources/v1
-release: 0.1.0
-status: frozen_twelve_source_release_input
+release: 0.1.1
+status: shared_twelve_source_neuroscience_cohort
 raw_pdfs_included: false
 note: >-
-  These are the 12 unique source inputs used by the accepted Luna release-validation front half and the
-  final-quality IBL run. Each DOI URL is an
-  acquisition/metadata starting point, not a promise that publisher full text is freely available.
-  Users must obtain lawful copies themselves. The frozen screen retains 11 accepted PaperCases, 10 reviewed
-  formation traces, and eight reviewed question-formation patterns. The s41593-024-01758-5 candidate remains
-  visible for provenance but is excluded from the accepted/importable PaperBank because its citation context
-  could not be verified. Warnings and imperfect intermediate artifacts remain visible rather than being
-  rewritten as stronger evidence.
+  The 12 unique source inputs shared by the IBL and NLB demonstrations. The NLB run did not
+  re-extract them: it imported the IBL run's reviewed paper half under a receipt-bound check that
+  verifies the source digests, parser configuration, model identities, and prompt versions all
+  match, and it made no paper-stage provider call. That is why one cohort serves two demos.
+  Each DOI URL is an acquisition and metadata starting point, not a promise that publisher full
+  text is freely available; obtain lawful copies yourself. Warnings and imperfect intermediate
+  artifacts stay visible rather than being rewritten as stronger evidence.
 final_screen:
   source_input_count: 12
-  accepted_paper_case_count: 11
+  accepted_paper_case_count: 12
+  excluded_count: 0
   reviewed_formation_trace_count: 10
   reviewed_pattern_count: 8
-  excluded_from_accepted_paperbank:
-    - s41593-024-01758-5.pdf
+  note: >-
+    Every candidate was accepted in this screen. The 0.1.0 demonstrations excluded one of these
+    same papers on citation-context grounds; that exclusion belongs to the earlier release and its
+    record remains at tag v0.1.0.
 papers:
   - filename: 1-s2.0-S0896627319300534-main.pdf
     title: Cortical Areas Interact through a Communication Subspace

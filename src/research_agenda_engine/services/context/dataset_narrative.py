@@ -19,6 +19,7 @@ from ...schemas.dataset_narrative import (
     DatasetNarrativeSourceRef,
     DatasetNarrativeSourceType,
 )
+from ..agents.promotion import assert_promoted_status_is_holdable
 from .evidence_requests import (
     R5ContextEvidenceRequest,
     R5ContextEvidenceRequestKind,
@@ -563,6 +564,9 @@ def import_dataset_narrative_review_decisions(
                 continue
             narrative = item.recommended_narrative.model_copy(deep=True)
             narrative.review_status = DatasetNarrativeReviewStatus.EXPERT_REVIEWED
+            assert_promoted_status_is_holdable(
+                narrative, expected_gate="dataset_narrative_expert_import"
+            )
             narrative.dataset_narrative_id = f"dataset-narrative-{item.dataset_id}-expert-reviewed"
             narrative.field_evidence_source_ids = item.field_evidence_source_ids
             narrative.prompt_version = item.prompt_version

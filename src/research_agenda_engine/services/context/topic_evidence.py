@@ -5,6 +5,7 @@ import re
 from datetime import UTC, date, datetime
 from enum import StrEnum
 from pathlib import Path
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from pydantic.json_schema import SkipJsonSchema
@@ -13,6 +14,10 @@ from ...assets import resolve_asset
 from ...io import dump_data
 from ...provenance import stable_hash
 from ...providers.models.base import StructuredModelProvider
+from ...schemas.external_evidence import (
+    ExternalEvidenceRightsAssertion,
+    assert_secret_free_persisted_value,
+)
 from ...schemas.fulltext_excerpt import FulltextExcerpt
 from ...schemas.inferred_research_scope import ResolvedResearchScope
 from ...schemas.research_intent import ResearchIntent
@@ -24,8 +29,10 @@ from ...schemas.scientific_context import (
     TopicEvidenceClaimStatus,
 )
 from ...schemas.topic_literature import TopicSourceRecord, TopicSourceTable
+from ..agents.promotion import assert_promoted_status_is_holdable
 from ..retrieval.generic_topic_lanes import (
     GENERIC_REQUIRED_LANES,
+    GENERIC_SCOPE_TERM_QUERY_LANE,
     GENERIC_TOPIC_EVIDENCE_QUERY_PLAN_VERSION,
     build_generic_topic_evidence_query_plan,
 )
@@ -113,9 +120,24 @@ class R5TopicSourceRecordEvidence(BaseModel):
     ranking_features: dict[str, float] = Field(default_factory=dict)
     dedupe_key: str = ""
     source_quality_flags: list[str] = Field(default_factory=list)
+    fulltext_rights_assertions: list[ExternalEvidenceRightsAssertion] = Field(default_factory=list)
+    # The lawful, lower-authority text that existed before an enrichment attempt replaced the
+    # display field with a fetched full-text excerpt.  These fields are intentionally distinct from
+    # fulltext_provenance: an unverified fetched excerpt may be discarded while a retained abstract
+    # or provider snippet remains usable at its original authority.
+    fulltext_fallback_abstract_or_snippet: str = ""
+    fulltext_fallback_snippet_kind: TopicSourceSnippetKind | None = None
     # Live-readiness LR-C: present iff this record was upgraded to FULLTEXT_EXCERPT by the OA enrichment
     # plus-on. The FulltextExcerpt validator enforces content_digest == hash(excerpt).
     fulltext_provenance: FulltextExcerpt | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def refuse_persisted_credentials(cls, value: object) -> object:
+        """Keep source YAML and every later prompt/export surface credential-free."""
+
+        assert_secret_free_persisted_value(value, path=cls.__name__)
+        return value
 
     @field_validator("source_record_id", "title")
     @classmethod
@@ -142,6 +164,20 @@ class R5TopicSourceRecordEvidence(BaseModel):
                 )
         elif self.fulltext_provenance is not None:
             raise ValueError("fulltext_provenance is only valid on a FULLTEXT_EXCERPT record")
+        assertion_ids = [item.assertion_id for item in self.fulltext_rights_assertions]
+        if len(assertion_ids) != len(set(assertion_ids)):
+            raise ValueError("R5 topic source fulltext rights assertion IDs must be unique")
+        fallback_text = self.fulltext_fallback_abstract_or_snippet.strip()
+        if bool(fallback_text) != (self.fulltext_fallback_snippet_kind is not None):
+            raise ValueError("full-text fallback text and snippet kind must be present together")
+        if self.fulltext_fallback_snippet_kind not in {
+            None,
+            TopicSourceSnippetKind.ABSTRACT,
+            TopicSourceSnippetKind.PROVIDER_SNIPPET,
+        }:
+            raise ValueError("full-text fallback may be only an abstract or provider snippet")
+        if fallback_text and self.snippet_kind != TopicSourceSnippetKind.FULLTEXT_EXCERPT:
+            raise ValueError("full-text fallback is valid only on a FULLTEXT_EXCERPT record")
         if (
             self.snippet_kind
             in {
@@ -156,12 +192,103 @@ class R5TopicSourceRecordEvidence(BaseModel):
 
     @property
     def can_support_claims(self) -> bool:
+        if (
+            self.snippet_kind == TopicSourceSnippetKind.FULLTEXT_EXCERPT
+            and not fulltext_rights_are_verified(self)
+        ):
+            return fulltext_fallback_can_support_claims(self)
         return (
             self.abstract_status == TopicSourceAbstractStatus.AVAILABLE
             and self.snippet_kind
             not in {TopicSourceSnippetKind.TITLE_ONLY, TopicSourceSnippetKind.METADATA}
             and _contains_non_metadata_source_text(self)
         )
+
+
+_RIGHTS_VERIFIED_VALUES = frozenset(
+    {
+        "verified",
+        "rights_verified",
+        "open_access_verified",
+        "verified_open_access",
+    }
+)
+_RIGHTS_UNVERIFIED_VALUES = frozenset(
+    {
+        "false",
+        "missing",
+        "not_verified",
+        "rights_unverified",
+        "unknown",
+        "unverified",
+    }
+)
+
+
+def fulltext_rights_are_verified(record: R5TopicSourceRecordEvidence) -> bool:
+    """Return true only for an explicit, non-conflicting full-text rights decision.
+
+    Historical ``FulltextExcerpt`` objects predate the typed rights contract.  Their route and
+    source URL are provenance, not authorization, so absence of a verification marker fails low.
+    The deliberately small amount of shape tolerance here lets this boundary consume the new typed
+    location assertion without coupling scientific authority to its final field spelling.
+    """
+    if record.snippet_kind != TopicSourceSnippetKind.FULLTEXT_EXCERPT:
+        return False
+    provenance = record.fulltext_provenance
+    if provenance is None or _explicit_rights_marker(provenance) is not True:
+        return False
+    assertion = getattr(provenance, "rights_assertion", None)
+    attempt = getattr(provenance, "retrieval_attempt", None)
+    if assertion is None or attempt is None:
+        return False
+    if _explicit_rights_marker(assertion) is not True:
+        return False
+    if getattr(attempt, "source_record_id", "") != record.source_record_id:
+        return False
+    if getattr(attempt, "provider", None) != getattr(assertion, "provider", None):
+        return False
+    matching = [
+        item
+        for item in record.fulltext_rights_assertions
+        if item.assertion_id == assertion.assertion_id
+    ]
+    return len(matching) == 1 and matching[0] == assertion
+
+
+def _explicit_rights_marker(value: object) -> bool | None:
+    verified = getattr(value, "has_verified_rights", None)
+    if type(verified) is bool:
+        return verified
+    authorized = getattr(value, "authorizes_short_excerpt", None)
+    if type(authorized) is bool:
+        return authorized
+    direct = getattr(value, "rights_verified", None)
+    if type(direct) is bool:
+        return direct
+    if isinstance(value, dict):
+        payload = value
+    elif hasattr(value, "model_dump"):
+        payload = value.model_dump(mode="python")
+    else:
+        payload = vars(value) if hasattr(value, "__dict__") else {}
+    for key in (
+        "rights_verified",
+        "rights_status",
+        "verification_status",
+        "access_verification_status",
+    ):
+        marker = payload.get(key)
+        if type(marker) is bool:
+            return marker
+        if marker is None:
+            continue
+        normalized = str(getattr(marker, "value", marker)).strip().lower()
+        if normalized in _RIGHTS_VERIFIED_VALUES:
+            return True
+        if normalized in _RIGHTS_UNVERIFIED_VALUES:
+            return False
+    return None
 
 
 def _contains_non_metadata_source_text(record: R5TopicSourceRecordEvidence) -> bool:
@@ -208,6 +335,44 @@ def _contains_non_metadata_source_text(record: R5TopicSourceRecordEvidence) -> b
     return any(token not in metadata_tokens for token in text_tokens)
 
 
+def rights_safe_source_text_and_kind(
+    record: R5TopicSourceRecordEvidence,
+) -> tuple[str, TopicSourceSnippetKind | None]:
+    """Return only text whose authority survives the full-text rights boundary."""
+
+    if record.snippet_kind != TopicSourceSnippetKind.FULLTEXT_EXCERPT:
+        return record.abstract_or_snippet.strip(), record.snippet_kind
+    if fulltext_rights_are_verified(record):
+        return record.abstract_or_snippet.strip(), TopicSourceSnippetKind.FULLTEXT_EXCERPT
+    fallback_text = record.fulltext_fallback_abstract_or_snippet.strip()
+    if fallback_text and record.fulltext_fallback_snippet_kind in {
+        TopicSourceSnippetKind.ABSTRACT,
+        TopicSourceSnippetKind.PROVIDER_SNIPPET,
+    }:
+        return fallback_text, record.fulltext_fallback_snippet_kind
+    return "", None
+
+
+def fulltext_fallback_can_support_claims(record: R5TopicSourceRecordEvidence) -> bool:
+    """Whether an unverified full-text record retains lawful abstract/snippet authority."""
+
+    fallback_text, fallback_kind = rights_safe_source_text_and_kind(record)
+    if fallback_kind not in {
+        TopicSourceSnippetKind.ABSTRACT,
+        TopicSourceSnippetKind.PROVIDER_SNIPPET,
+    }:
+        return False
+    fallback_record = record.model_copy(
+        update={
+            "abstract_or_snippet": fallback_text,
+            "snippet_kind": fallback_kind,
+            "abstract_status": TopicSourceAbstractStatus.AVAILABLE,
+            "fulltext_provenance": None,
+        }
+    )
+    return _contains_non_metadata_source_text(fallback_record)
+
+
 class R5TopicEvidenceSourceTable(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -217,6 +382,68 @@ class R5TopicEvidenceSourceTable(BaseModel):
     records: list[R5TopicSourceRecordEvidence] = Field(default_factory=list)
     lane_coverage: dict[str, int] = Field(default_factory=dict)
     source_quality_flags: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="before")
+    @classmethod
+    def refuse_persisted_credentials(cls, value: object) -> object:
+        assert_secret_free_persisted_value(value, path=cls.__name__)
+        return value
+
+
+class TopicEvidenceRightsDegradationReceipt(BaseModel):
+    """Pure authority projection over an immutable persisted source table.
+
+    The orchestration layer may persist this receipt beside a legacy artifact.  This context helper
+    never rewrites that artifact; the original table digest remains the binding identity.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    schema_version: Literal["topic_evidence_rights_degradation/v1"] = (
+        "topic_evidence_rights_degradation/v1"
+    )
+    source_table_digest: str
+    degraded_source_record_ids: list[str] = Field(default_factory=list)
+    abstract_fallback_source_record_ids: list[str] = Field(default_factory=list)
+    metadata_only_source_record_ids: list[str] = Field(default_factory=list)
+    authority_after_degradation: Literal["abstract_or_metadata_only"] = "abstract_or_metadata_only"
+    warning_code: Literal["fulltext_rights_unverified"] = "fulltext_rights_unverified"
+    warning_message: str = (
+        "Full-text rights were not verified for the listed legacy or injected records; "
+        "their fetched text is excluded and they retain only an original abstract/provider "
+        "snippet when recorded, otherwise metadata-only authority."
+    )
+
+
+def assess_fulltext_rights_degradation(
+    source_table: R5TopicEvidenceSourceTable,
+) -> TopicEvidenceRightsDegradationReceipt:
+    """Identify legacy/injected full-text records that fail the new rights boundary."""
+
+    degraded_ids = sorted(
+        {
+            record.source_record_id
+            for record in source_table.records
+            if record.snippet_kind == TopicSourceSnippetKind.FULLTEXT_EXCERPT
+            and not fulltext_rights_are_verified(record)
+        }
+    )
+    return TopicEvidenceRightsDegradationReceipt(
+        source_table_digest=stable_hash(source_table),
+        degraded_source_record_ids=degraded_ids,
+        abstract_fallback_source_record_ids=[
+            record.source_record_id
+            for record in source_table.records
+            if record.source_record_id in degraded_ids
+            and fulltext_fallback_can_support_claims(record)
+        ],
+        metadata_only_source_record_ids=[
+            record.source_record_id
+            for record in source_table.records
+            if record.source_record_id in degraded_ids
+            and not fulltext_fallback_can_support_claims(record)
+        ],
+    )
 
 
 class TopicEvidenceGroup(BaseModel):
@@ -248,6 +475,13 @@ class SourceEvidenceCard(BaseModel):
     can_support_claims: bool = False
     quality_flags: list[str] = Field(default_factory=list)
     exclusion_reason: str = ""
+
+    @model_validator(mode="before")
+    @classmethod
+    def refuse_prompt_credentials(cls, value: object) -> object:
+        # These cards are serialized directly into the field-state and Question Scientist packets.
+        assert_secret_free_persisted_value(value, path=cls.__name__)
+        return value
 
     @field_validator("source_record_id", "title")
     @classmethod
@@ -454,10 +688,10 @@ def build_topic_evidence_brief_draft_bundle(
         "prompt_version": TOPIC_FIELD_STATE_SYNTHESIZER_PROMPT_VERSION,
         "research_intent": intent.model_dump(mode="json"),
         "required_sections": TOPIC_FIELD_STATE_REQUIRED_SECTIONS,
-        # T6: the product harvest tags sources with the domain-neutral GENERIC lanes, so the field-state
-        # packet must declare those (not the legacy 11 neuroscience lanes) — otherwise the model is asked
-        # to cover lanes the evidence is never tagged with. Dataset-agnostic + aligned with the gate.
+        # These are semantic review dimensions, not query labels. Generic v2 source cards carry only
+        # truthful scope-term acquisition lineage; the model must judge dimensions from the evidence.
         "required_lanes": list(GENERIC_REQUIRED_LANES),
+        "query_lineage_is_not_semantic_coverage": True,
         "source_evidence_cards": [
             card.model_dump(mode="json")
             for card in source_evidence_cards
@@ -486,11 +720,11 @@ def build_topic_evidence_brief_draft_bundle(
             ],
         },
     }
-    field_state_user_prompt = json.dumps(
-        field_state_user_packet, sort_keys=True, ensure_ascii=False
+    field_state_user_prompt, field_state_compaction_flags = _compact_topic_packet(
+        field_state_user_packet,
+        packet_name="topic_field_state",
+        max_prompt_chars=max_prompt_chars,
     )
-    if len(field_state_user_prompt) > max_prompt_chars:
-        raise ValueError("topic field-state source packet exceeds prompt budget")
     field_state_draft = provider.generate_structured(
         system_prompt=_load_prompt(TOPIC_FIELD_STATE_SYNTHESIZER_PROMPT_VERSION),
         user_prompt=field_state_user_prompt,
@@ -513,8 +747,9 @@ def build_topic_evidence_brief_draft_bundle(
         "r5_lane_source_table": r5_source_table.model_dump(mode="json"),
         "field_state_status": "draft_not_supplied_to_brief_synthesizer",
         "reviewed_field_state_claims": [],
-        # T6: declare the domain-neutral GENERIC lanes (the harvest's actual lane vocabulary).
+        # These are semantic drafting dimensions. They are deliberately not acquisition labels.
         "required_lanes": list(GENERIC_REQUIRED_LANES),
+        "query_lineage_is_not_semantic_coverage": True,
         "local_evidence_groups": [group.model_dump(mode="json") for group in local_evidence_groups],
         "local_candidate_claims": [claim.model_dump(mode="json") for claim in local_brief.claims],
         "instructions": {
@@ -534,9 +769,9 @@ def build_topic_evidence_brief_draft_bundle(
             ],
         },
     }
-    user_prompt = json.dumps(user_packet, sort_keys=True, ensure_ascii=False)
-    if len(user_prompt) > max_prompt_chars:
-        raise ValueError("topic evidence source packet exceeds prompt budget")
+    user_prompt, brief_compaction_flags = _compact_topic_packet(
+        user_packet, packet_name="topic_evidence_brief", max_prompt_chars=max_prompt_chars
+    )
     input_digest = stable_hash(user_packet)
     model_brief = provider.generate_structured(
         system_prompt=_load_prompt(TOPIC_EVIDENCE_BRIEF_SYNTHESIZER_PROMPT_VERSION),
@@ -570,6 +805,8 @@ def build_topic_evidence_brief_draft_bundle(
             *_topic_bundle_flags(gpt_brief, source_table, evidence_requests),
             *finalize_flags,
             *field_state_flags,
+            *field_state_compaction_flags,
+            *brief_compaction_flags,
         ],
     )
 
@@ -658,9 +895,10 @@ def merge_topic_evidence_briefs(
     recommended.nearest_dataset_reuse_work = _dedupe_strings(
         [*local_brief.nearest_dataset_reuse_work, *gpt_brief.nearest_dataset_reuse_work]
     )
-    recommended.questions_already_answered = _dedupe_strings(
-        [*local_brief.questions_already_answered, *gpt_brief.questions_already_answered]
-    )
+    # ``claims`` is the authoritative typed literature surface. This redundant reader summary has
+    # no independent authority, so derive it rather than allowing a contested/open claim to acquire
+    # an ``already answered`` label through separately generated prose.
+    recommended.questions_already_answered = project_questions_already_answered(recommended.claims)
     recommended.unresolved_tensions = _dedupe_strings(
         [*local_brief.unresolved_tensions, *gpt_brief.unresolved_tensions]
     )
@@ -739,6 +977,7 @@ def import_topic_evidence_brief_review_decisions(
                 continue
             brief = item.recommended_brief.model_copy(deep=True)
             brief.review_status = TopicEvidenceBriefReviewStatus.EXPERT_REVIEWED
+            assert_promoted_status_is_holdable(brief, expected_gate="topic_evidence_expert_import")
             brief.brief_id = "topic-evidence-expert-reviewed"
             brief.prompt_version = item.prompt_version
             brief.provider_id = item.provider_id
@@ -833,7 +1072,7 @@ def render_topic_evidence_brief_review_markdown(pack: TopicEvidenceBriefReviewPa
                 f"- Canonical scope: {brief.canonical_scope}",
                 f"- Auto flags: {', '.join(item.auto_flags) if item.auto_flags else 'none'}",
                 "",
-                "### Lane Coverage",
+                "### Retrieval Acquisition Lineage",
                 "",
                 *_render_lane_coverage(item.r5_source_table),
                 "",
@@ -844,7 +1083,7 @@ def render_topic_evidence_brief_review_markdown(pack: TopicEvidenceBriefReviewPa
                     for group in item.local_evidence_groups
                 ],
                 "",
-                "### Complete Lane Source Table",
+                "### Complete Topic Source Table",
                 "",
                 *_render_complete_topic_source_table(item.r5_source_table),
                 "",
@@ -911,7 +1150,7 @@ def render_topic_field_state_review_markdown(pack: TopicEvidenceBriefReviewPack)
                 f"- Source table digest: `{item.source_table_digest or 'missing'}`",
                 f"- Auto flags: {', '.join(item.auto_flags) if item.auto_flags else 'none'}",
                 "",
-                "## Lane Coverage And Blocking Requests",
+                "## Retrieval Acquisition Lineage And Evidence Requests",
                 "",
                 *_render_lane_coverage(item.r5_source_table),
                 "",
@@ -1086,10 +1325,17 @@ def _finalize_gpt_brief(
         )
     if dropped_claim_ids:
         flags.append("gpt_brief_dropped_unsupported_claims:" + ",".join(dropped_claim_ids))
+    projected_questions = project_questions_already_answered(claims)
+    raw_questions = _dedupe_strings(list(model_output.questions_already_answered))
+    if raw_questions and not projected_questions:
+        flags.append("questions_already_answered_without_typed_close_prior_claim")
+    if raw_questions != projected_questions:
+        flags.append("gpt_brief_projected_close_prior_summary_from_typed_claims")
     brief = TopicEvidenceBrief.model_validate(
         {
             **model_output.model_dump(mode="python"),
             "claims": claims,
+            "questions_already_answered": projected_questions,
             "brief_id": f"topic-evidence-gpt-{input_digest[:12]}",
             "canonical_scope": canonical_scope,
             "retrieval_manifest_digest": stable_hash(source_table),
@@ -1119,6 +1365,91 @@ def _claim_from_record(record: TopicSourceRecord, *, index: int) -> TopicEvidenc
         source_record_ids=[record.source_record_id],
         origin=TopicEvidenceClaimOrigin.LOCAL_SUPPORTED,
         confidence=min(0.95, 0.45 + record.metadata_quality_score),
+    )
+
+
+class TopicPromptBudgetError(ValueError):
+    """CLIM-09: the packet exceeds the prompt budget even after floor compaction.
+
+    Subclasses ``ValueError`` so every existing infrastructure-failure catch still classifies it;
+    carries exact measurements so the honest close is auditable without re-running anything.
+    """
+
+    def __init__(
+        self, *, packet_name: str, measured_chars: int, floor_chars: int, max_prompt_chars: int
+    ) -> None:
+        super().__init__(
+            f"topic packet '{packet_name}' exceeds the prompt budget even after compaction "
+            f"(measured={measured_chars}, floor_compacted={floor_chars}, "
+            f"budget={max_prompt_chars})"
+        )
+        self.packet_name = packet_name
+        self.measured_chars = measured_chars
+        self.floor_chars = floor_chars
+        self.max_prompt_chars = max_prompt_chars
+
+
+# Only free-text evidence excerpts are compactable. Identifiers, digests, verdicts, and every
+# structured field are never trimmed — compaction changes packaging density, never identity.
+_COMPACTABLE_TEXT_KEYS = frozenset(
+    {"snippet_or_abstract", "abstract", "snippet", "excerpt", "fulltext_excerpt", "summary"}
+)
+_COMPACTION_FLOOR_CHARS = 400
+
+
+def _compact_topic_packet(
+    packet: dict, *, packet_name: str, max_prompt_chars: int
+) -> tuple[str, list[str]]:
+    """CLIM-09 measured compaction: fit the packet or close with exact measurements.
+
+    Deterministic passes trim only long free-text evidence fields (largest first, stable order)
+    toward a floor; a fit returns the rendered prompt plus one measured flag that stays visible on
+    the bundle. An irreducible overflow raises :class:`TopicPromptBudgetError` — never the old
+    bare guard, never a raised limit. The packet is mutated in place BEFORE digesting, so the
+    input digest always binds exactly what the model received.
+    """
+    rendered = json.dumps(packet, sort_keys=True, ensure_ascii=False)
+    if len(rendered) <= max_prompt_chars:
+        return rendered, []
+    original_chars = len(rendered)
+    leaves: list[tuple[dict, str]] = []
+
+    def _walk(node: object) -> None:
+        if isinstance(node, dict):
+            for key, value in node.items():
+                if (
+                    isinstance(value, str)
+                    and key in _COMPACTABLE_TEXT_KEYS
+                    and len(value) > _COMPACTION_FLOOR_CHARS
+                ):
+                    leaves.append((node, key))
+                else:
+                    _walk(value)
+        elif isinstance(node, list):
+            for item in node:
+                _walk(item)
+
+    _walk(packet)
+    for shrink in (0.5, 0.25, 0.0):
+        for node, key in sorted(
+            leaves,
+            key=lambda item: (-len(item[0][item[1]]), str(item[0].get("source_record_id", ""))),
+        ):
+            target = max(_COMPACTION_FLOOR_CHARS, int(len(node[key]) * shrink))
+            if len(node[key]) > target:
+                node[key] = node[key][:target]
+        rendered = json.dumps(packet, sort_keys=True, ensure_ascii=False)
+        if len(rendered) <= max_prompt_chars:
+            return rendered, [
+                f"topic_prompt_compacted:{packet_name}:original_chars={original_chars}:"
+                f"compacted_chars={len(rendered)}:budget_chars={max_prompt_chars}:"
+                f"trimmed_fields={len(leaves)}"
+            ]
+    raise TopicPromptBudgetError(
+        packet_name=packet_name,
+        measured_chars=original_chars,
+        floor_chars=len(rendered),
+        max_prompt_chars=max_prompt_chars,
     )
 
 
@@ -1182,37 +1513,43 @@ def build_r5_topic_source_table(source_table: TopicSourceTable) -> R5TopicEviden
         snippet_kind = _snippet_kind(record)
         abstract_status = _abstract_status(record)
         quality_flags = _source_quality_flags(record, snippet_kind)
-        records.append(
-            R5TopicSourceRecordEvidence(
-                source_record_id=record.source_record_id,
-                lane_ids=lanes,
-                query_ids=record.query_ids,
-                title=record.title,
-                year=record.year,
-                doi=record.doi,
-                pmid=record.pmid,
-                openalex_id=record.openalex_id,
-                semantic_scholar_id=record.semantic_scholar_id,
-                url=record.url,
-                venue=record.venue,
-                publication_types=record.publication_types,
-                abstract_or_snippet=record.snippet,
-                abstract_status=abstract_status,
-                snippet_kind=snippet_kind,
-                ranking_features={
-                    "relevance_score": float(record.relevance_score),
-                    "metadata_quality_score": float(record.metadata_quality_score),
-                    "cited_by_count": float(record.cited_by_count or 0),
-                    "lane_count": float(len(lanes)),
-                },
-                dedupe_key=_topic_record_dedupe_key(record),
-                source_quality_flags=quality_flags,
-            )
-        )
-    # Coverage over the lanes ACTUALLY present (vocabulary-agnostic): a generic-lane source table
-    # reports generic-lane coverage, a legacy neuroscience table reports domain-lane coverage. The
-    # required-lane check belongs to the caller (the topic-evidence gate compares its own
-    # required_lanes against this via ``.get(lane, 0)``), so the builder stays lane-vocabulary-neutral.
+        record_payload = {
+            "source_record_id": record.source_record_id,
+            "lane_ids": lanes,
+            "query_ids": record.query_ids,
+            "title": record.title,
+            "year": record.year,
+            "doi": record.doi,
+            "pmid": record.pmid,
+            "openalex_id": record.openalex_id,
+            "semantic_scholar_id": record.semantic_scholar_id,
+            "url": record.url,
+            "venue": record.venue,
+            "publication_types": record.publication_types,
+            "abstract_or_snippet": record.snippet,
+            "abstract_status": abstract_status,
+            "snippet_kind": snippet_kind,
+            "ranking_features": {
+                "relevance_score": float(record.relevance_score),
+                "metadata_quality_score": float(record.metadata_quality_score),
+                "cited_by_count": float(record.cited_by_count or 0),
+                "lane_count": float(len(lanes)),
+            },
+            "dedupe_key": _topic_record_dedupe_key(record),
+            "source_quality_flags": quality_flags,
+        }
+        # Card 1 adds a typed full-text-location assertion to both source schemas.  Preserve every
+        # shared typed authority field without teaching this context layer provider-specific names.
+        for field_name in R5TopicSourceRecordEvidence.model_fields:
+            if field_name in record_payload or not hasattr(record, field_name):
+                continue
+            lowered = field_name.lower()
+            if "fulltext" in lowered or "rights" in lowered:
+                record_payload[field_name] = getattr(record, field_name)
+        records.append(R5TopicSourceRecordEvidence.model_validate(record_payload))
+    # Preserve the acquisition labels actually present (vocabulary-agnostic). Generic v2 records
+    # scope-term lineage; legacy tables retain their historical labels for readability. Neither is
+    # promoted to semantic coverage here; the reviewer judges that from evidence content.
     present_lanes = sorted(
         {lane for record in records for lane in record.lane_ids if lane != "unassigned"}
     )
@@ -1230,6 +1567,11 @@ def build_r5_topic_source_table(source_table: TopicSourceTable) -> R5TopicEviden
     return R5TopicEvidenceSourceTable(
         table_id=f"r5-topic-source-table-{stable_hash({'source_table': source_table.table_id, 'records': [record.model_dump(mode='json') for record in records]})[:12]}",
         query_plan_id=source_table.query_plan_id,
+        protocol_version=(
+            GENERIC_TOPIC_EVIDENCE_QUERY_PLAN_VERSION
+            if source_table.query_plan_id.startswith("generic-topic-evidence-plan-v2-")
+            else R5_TOPIC_EVIDENCE_QUERY_PLAN_VERSION
+        ),
         records=records,
         lane_coverage=lane_coverage,
         source_quality_flags=table_flags,
@@ -1259,16 +1601,39 @@ def build_source_evidence_cards(
 ) -> list[SourceEvidenceCard]:
     cards: list[SourceEvidenceCard] = []
     for record in source_table.records:
-        off_topic = _topic_record_is_obviously_off_topic(record, scope)
-        lexical_scope_mismatch = _topic_record_lacks_scope_tokens(record, scope)
+        rights_unverified = (
+            record.snippet_kind == TopicSourceSnippetKind.FULLTEXT_EXCERPT
+            and not fulltext_rights_are_verified(record)
+        )
+        authority_text, authority_kind = rights_safe_source_text_and_kind(record)
+        fallback_used = rights_unverified and authority_kind in {
+            TopicSourceSnippetKind.ABSTRACT,
+            TopicSourceSnippetKind.PROVIDER_SNIPPET,
+        }
+        authority_record = record.model_copy(
+            update={
+                "abstract_or_snippet": authority_text,
+                "snippet_kind": authority_kind or TopicSourceSnippetKind.METADATA,
+                "abstract_status": (
+                    TopicSourceAbstractStatus.AVAILABLE
+                    if authority_text
+                    else TopicSourceAbstractStatus.UNAVAILABLE
+                ),
+                "fulltext_provenance": None if rights_unverified else record.fulltext_provenance,
+            }
+        )
+        off_topic = _topic_record_is_obviously_off_topic(authority_record, scope)
+        lexical_scope_mismatch = _topic_record_lacks_scope_tokens(authority_record, scope)
         can_support = record.can_support_claims and not off_topic
         exclusion_reason = ""
         if off_topic:
             exclusion_reason = "off_topic"
+        elif rights_unverified and not fallback_used:
+            exclusion_reason = "fulltext_rights_unverified"
         elif not record.can_support_claims:
             exclusion_reason = "title_or_metadata_only"
-        tags = _topic_record_subfield_tags(record)
-        contribution = _topic_record_key_contribution(record)
+        tags = _topic_record_subfield_tags(authority_record)
+        contribution = _topic_record_key_contribution(authority_record)
         cards.append(
             SourceEvidenceCard(
                 source_record_id=record.source_record_id,
@@ -1281,13 +1646,15 @@ def build_source_evidence_cards(
                 url=record.url,
                 lane_ids=record.lane_ids,
                 subfield_tags=tags,
-                abstract_or_excerpt=record.abstract_or_snippet,
-                why_included=_topic_record_inclusion_reason(record, tags),
+                abstract_or_excerpt=authority_record.abstract_or_snippet,
+                why_included=_topic_record_inclusion_reason(authority_record, tags),
                 key_contribution=contribution,
-                claims_or_gaps_supported=_topic_record_supported_claims(record, tags),
+                claims_or_gaps_supported=_topic_record_supported_claims(authority_record, tags),
                 can_support_claims=can_support,
                 quality_flags=[
                     *record.source_quality_flags,
+                    *(["fulltext_rights_unverified"] if rights_unverified else []),
+                    *(["fulltext_fallback_used"] if fallback_used else []),
                     *(["off_topic"] if off_topic else []),
                     *(
                         ["scope_token_mismatch_advisory"]
@@ -1306,27 +1673,10 @@ def build_context_evidence_requests(
     source_table: R5TopicEvidenceSourceTable,
 ) -> list[R5ContextEvidenceRequest]:
     requests: list[R5ContextEvidenceRequest] = []
-    # T6: evaluate coverage over the GENERIC lanes the harvest actually tags sources with (the legacy
-    # 11 neuroscience lanes are never present on generic-path cards, so iterating them emitted a
-    # spurious "need more sources" request for every neuro lane on every run).
-    supporting_by_lane = {
-        lane: sum(1 for card in source_cards if card.can_support_claims and lane in card.lane_ids)
-        for lane in GENERIC_REQUIRED_LANES
-    }
-    for lane in GENERIC_REQUIRED_LANES:
-        if supporting_by_lane.get(lane, 0) == 0:
-            requests.append(
-                R5ContextEvidenceRequest(
-                    request_id=f"topic-evidence-request-{lane}",
-                    kind=R5ContextEvidenceRequestKind.NEED_MORE_SOURCES_FOR_LANE,
-                    target_lane=lane,
-                    description=(
-                        "Need at least one claim-supporting source with abstract/excerpt "
-                        f"for required lane `{lane}`."
-                    ),
-                    blocking=True,
-                )
-            )
+    # Generic v2 acquisition records which scope term produced a source. It cannot mechanically
+    # establish background, tension, method, confound, boundary, reuse, close-prior, or open-gap
+    # meaning. Missing semantic dimensions are therefore judged from actual evidence by the
+    # independent reviewer, not converted into host-built blocking requests from query labels.
     for record in source_table.records:
         if (
             record.abstract_status == TopicSourceAbstractStatus.UNAVAILABLE
@@ -1359,13 +1709,21 @@ def _lane_by_query_id(source_table: TopicSourceTable) -> dict[str, str]:
     return lane_by_query
 
 
-# Known topic-evidence lane vocabularies. The ACTIVE generic path tags queries with
-# GENERIC_REQUIRED_LANES; the legacy neuroscience path uses REQUIRED_TOPIC_EVIDENCE_LANES. A query_id
-# embeds exactly one lane, and no generic lane is a substring of any domain lane (or vice versa), so a
-# union match resolves either vocabulary without cross-contamination. Longer names first, so a lane is
-# never matched as a prefix of a longer sibling.
+# Known topic-evidence retrieval vocabularies. The ACTIVE generic path uses one scope-term
+# acquisition lineage; older generic and neuroscience artifacts retain their historical query
+# labels. A query_id embeds exactly one label, and no generic label is a substring of a domain label
+# (or vice versa), so a union match resolves any readable legacy artifact without promoting those
+# labels to scientific coverage. Longer names first prevents prefix matches.
 _ALL_KNOWN_TOPIC_LANES: tuple[str, ...] = tuple(
-    sorted({*GENERIC_REQUIRED_LANES, *REQUIRED_TOPIC_EVIDENCE_LANES}, key=len, reverse=True)
+    sorted(
+        {
+            GENERIC_SCOPE_TERM_QUERY_LANE,
+            *GENERIC_REQUIRED_LANES,
+            *REQUIRED_TOPIC_EVIDENCE_LANES,
+        },
+        key=len,
+        reverse=True,
+    )
 )
 
 
@@ -1735,9 +2093,6 @@ def _topic_brief_serious_import_errors(
         errors.append("TopicEvidenceBrief serious import requires R5 lane source table")
         return errors
     record_by_id = {record.source_record_id: record for record in item.r5_source_table.records}
-    for lane in REQUIRED_TOPIC_EVIDENCE_LANES:
-        if item.r5_source_table.lane_coverage.get(lane, 0) == 0:
-            errors.append(f"TopicEvidenceBrief lane lacks sources: {lane}")
     for claim in item.recommended_brief.claims:
         source_ids = claim.source_record_ids or claim.source_refs
         if not source_ids:
@@ -1903,6 +2258,19 @@ def _render_source_evidence_cards(cards: list[SourceEvidenceCard]) -> list[str]:
                 f"- Lanes: {', '.join(card.lane_ids) or 'unassigned'}",
                 f"- Subfield tags: {', '.join(card.subfield_tags) or 'none'}",
                 f"- Synthesis status: {status}",
+                *(
+                    [
+                        "- Rights warning: full-text rights were not verified; the fetched text "
+                        + (
+                            "is excluded. The retained original abstract/provider snippet is used "
+                            "for scientific claim support and proposer export at abstract authority."
+                            if "fulltext_fallback_used" in card.quality_flags
+                            else "is excluded from scientific claim support and proposer export."
+                        )
+                    ]
+                    if "fulltext_rights_unverified" in card.quality_flags
+                    else []
+                ),
                 f"- Why included: {card.why_included}",
                 f"- Claims/gaps supported: {'; '.join(card.claims_or_gaps_supported) or 'none'}",
                 "- Key contribution/excerpt:",
@@ -1931,11 +2299,13 @@ def _render_lane_coverage(
     source_table: R5TopicEvidenceSourceTable | None,
 ) -> list[str]:
     if source_table is None:
-        return ["- Missing R5 lane source table."]
+        return ["- Missing topic source table."]
     lines = [
         f"- `{lane}`: {source_table.lane_coverage.get(lane, 0)} source(s)"
-        for lane in REQUIRED_TOPIC_EVIDENCE_LANES
+        for lane in sorted(source_table.lane_coverage)
     ]
+    if not lines:
+        lines.append("- No retrieval lineage recorded.")
     if source_table.source_quality_flags:
         lines.append("- Source quality flags: " + "; ".join(source_table.source_quality_flags))
     return lines
@@ -1964,10 +2334,14 @@ def _render_complete_topic_source_table(
     source_table: R5TopicEvidenceSourceTable | None,
 ) -> list[str]:
     if source_table is None:
-        return ["- Missing R5 lane source table."]
+        return ["- Missing topic source table."]
     lines: list[str] = []
+    lineage_labels = sorted(
+        set(source_table.lane_coverage)
+        | {lane for record in source_table.records for lane in record.lane_ids}
+    )
     records_by_lane: dict[str, list[R5TopicSourceRecordEvidence]] = {
-        lane: [] for lane in REQUIRED_TOPIC_EVIDENCE_LANES
+        lane: [] for lane in lineage_labels
     }
     unassigned: list[R5TopicSourceRecordEvidence] = []
     for record in source_table.records:
@@ -1978,7 +2352,7 @@ def _render_complete_topic_source_table(
                 assigned = True
         if not assigned:
             unassigned.append(record)
-    for lane in REQUIRED_TOPIC_EVIDENCE_LANES:
+    for lane in lineage_labels:
         records = records_by_lane[lane]
         lines.extend([f"#### `{lane}`", ""])
         if not records:
@@ -1996,9 +2370,24 @@ def _render_complete_topic_source_table(
 
 
 def _render_topic_source_record(record: R5TopicSourceRecordEvidence) -> list[str]:
+    authority_text, authority_kind = rights_safe_source_text_and_kind(record)
+    rights_unverified = (
+        record.snippet_kind == TopicSourceSnippetKind.FULLTEXT_EXCERPT
+        and not fulltext_rights_are_verified(record)
+    )
+    fallback_used = rights_unverified and authority_kind in {
+        TopicSourceSnippetKind.ABSTRACT,
+        TopicSourceSnippetKind.PROVIDER_SNIPPET,
+    }
     identifiers = _topic_record_identifier_text(record)
     can_support = "yes" if record.can_support_claims else "no"
-    flags = ", ".join(record.source_quality_flags) if record.source_quality_flags else "none"
+    display_flags = [
+        *record.source_quality_flags,
+        *(["fulltext_rights_unverified"] if rights_unverified else []),
+        *(["fulltext_fallback_used"] if fallback_used else []),
+    ]
+    flags = ", ".join(display_flags) if display_flags else "none"
+    displayed_kind = authority_kind.value if authority_kind is not None else "metadata"
     lines = [
         f"- Source record: `{record.source_record_id}`",
         f"  - Title: {record.title}",
@@ -2008,13 +2397,13 @@ def _render_topic_source_record(record: R5TopicSourceRecordEvidence) -> list[str
         f"  - Query IDs: {', '.join(record.query_ids)}",
         (
             "  - Evidence status: "
-            f"{record.abstract_status.value}; snippet kind `{record.snippet_kind.value}`; "
+            f"{record.abstract_status.value}; usable snippet kind `{displayed_kind}`; "
             f"can support claims: {can_support}; flags: {flags}"
         ),
         f"  - Ranking features: {_format_ranking_features(record.ranking_features)}",
         "  - Abstract/snippet:",
         "",
-        _indent_block(record.abstract_or_snippet.strip() or "[missing abstract/snippet]", "    "),
+        _indent_block(authority_text or "[missing rights-safe abstract/snippet]", "    "),
         "",
     ]
     return lines
@@ -2111,3 +2500,21 @@ def _dedupe_strings(values: list[str]) -> list[str]:
             seen.add(key)
             output.append(cleaned)
     return output
+
+
+def project_questions_already_answered(claims: list[TopicEvidenceClaim]) -> list[str]:
+    """Build the non-authoritative close-prior summary from authoritative typed claims.
+
+    The model still authors every claim, status, source binding, rationale, and limitation. The
+    host performs no semantic matching or reclassification here: it copies claim text verbatim only
+    when the model's typed status is ``already_answered``. Historical artifacts are not rewritten
+    on load; this function is used only while constructing fresh synthesis/revision candidates.
+    """
+
+    return _dedupe_strings(
+        [
+            claim.claim
+            for claim in claims
+            if claim.status == TopicEvidenceClaimStatus.ALREADY_ANSWERED
+        ]
+    )

@@ -1,0 +1,130 @@
+# NOT A STARTING POINT. This is a byte-qualification profile for the release cleanroom, reduced on
+# purpose to two families by two variants so the published package can be proved to have run
+# untouched. It demonstrates nothing about scientific breadth and will not reproduce the published
+# demonstrations, which used six families.
+#
+# To run Maieusis for science, use the profile `maieusis init` writes into your project.
+#
+# Release-qualification leg 1 of 3: Climate, Codex planner, fresh 20-PDF PaperBank.
+version: maieusis_project_config/v1
+mode: standard
+
+paperbank:
+  inbox_dir: /ABSOLUTE/PATH/TO/CLIMATE/PAPERS
+  extraction: {provider: openai, model: "gpt-5.6-luna"}
+  parser: docling
+  citation_contexts_by_agent: true
+  citation_context_agent_parallel: 4
+  evidence_mode: source_span
+  max_workers: 4
+  cited_literature: true
+  select_key_citations: true
+  external_reference_fallback: true
+  min_local_reference_count: 10
+  crossref_mailto: ""
+  openalex_email: ""
+  citation_prompt_char_budget: 300000
+
+dataset:
+  seed:
+    dataset_id: era5-derived-60n-stratospheric-dynamics
+    link: ""
+    docs:
+      - /ABSOLUTE/PATH/TO/CLIMATE/DATASET/proposal-safe-coarse-context.md
+  inspection_runtime:
+    dataset_root: /ABSOLUTE/PATH/TO/CLIMATE/DATASET
+    dataset_access_mode: external_readonly
+    inspection_python: /ABSOLUTE/PATH/TO/CLIMATE/INSPECTION/VENV/bin/python
+    inspection_command: ""
+    inspection_pythonpath: ""
+    inspection_extra_env: {}
+    source_tree_root: /ABSOLUTE/PATH/TO/CLEAN_PUBLIC_RC_CHECKOUT
+    max_turns: 60
+    timeout_seconds: 2400
+  allowed_inspection_resources:
+    - local read-only NetCDF files and encoded structural metadata
+    - operator-supplied proposal-safe dataset context
+    - local download, hash, readability, and structural verification reports
+    - public source-folder metadata
+    - official ERA5 documentation for upstream context only
+  # Upstream ERA5 only. The one-dimensional derived product this leg inspected is supplied by the
+  # collaborating group and is not a citable public resource, so no share link belongs in a file
+  # that ships inside the wheel and the public repository.
+  official_online_resources:
+    - https://www.ecmwf.int/en/forecasts/datasets
+    - https://www.ecmwf.int/en/forecasts/dataset/ecmwf-reanalysis-v5
+    - https://confluence.ecmwf.int/spaces/CKB/pages/76414402/ERA5+data+documentation
+
+research_intent:
+  theme: large-scale Northern Hemisphere circulation organization, transitions, and change
+  mode: topic_conditioned
+  topic_terms:
+    - weather regimes
+    - atmospheric blocking
+    - weather regime transitions
+    - eddy-driven jet
+    - jet stream variability
+    - storm track variability
+    - wave-mean flow interaction
+    - Rossby wave breaking
+    - eddy feedback
+    - stratospheric polar vortex
+    - sudden stratospheric warming
+    - stratosphere-troposphere coupling
+    - annular mode
+    - atmospheric low-frequency variability
+    - atmospheric predictability
+    - cold air outbreaks
+  topic_description: >-
+    Develop scientifically distinct question families around how recurrent circulation states and
+    transient dynamical episodes are organized across time and height; how wave and eddy forcing,
+    background circulation, feedbacks, and seasonal evolution shape persistence, transitions,
+    memory, heterogeneous responses, and recovery; and how these relationships may differ between
+    ordinary variability, extremes, and historical change. Keep continuous versus event-based
+    descriptions, competing dynamical explanations, and robustness to scientific representation
+    open. Treat the ERA5-derived 60-degree-north vertical dataset as an opportunity surface and
+    constraint, not as evidence for regional impacts or causal climate attribution.
+  seed_question: ""
+  novelty_distance: adjacent
+
+models:
+  pattern: {provider: openai, model: "gpt-5.6-sol"}
+  questioner: {provider: openai, model: "gpt-5.6-sol"}
+  narrator: {provider: openai, model: "gpt-5.6-luna"}
+  topic: {provider: openai, model: "gpt-5.6-terra"}
+  owner: {provider: openai, model: "gpt-5.6-terra"}
+  reviewer: {provider: anthropic, model: "claude-sonnet-5"}
+  novelty_reviewer: {provider: openai, model: "gpt-5.6-terra"}
+  coding_host: codex
+  coding_model: gpt-5.6-terra
+  coding_reasoning_effort: high
+  allow_pro_model: true
+
+literature:
+  enabled: true
+  openalex_email: ""
+  fulltext_enrichment: true
+  source_profile: public
+
+novelty:
+  enabled: true
+  direct_recap_threshold: 0.9
+  close_prior_threshold: 0.7
+  max_candidates: 5
+  web_grounding:
+    enabled: true
+    scout: {provider: anthropic, model: "claude-sonnet-5"}
+    max_searches_per_scout: 3
+    max_leads_per_scout: 5
+    max_output_tokens: 21000
+    rate_card: anthropic_direct_web_search_20250305
+    hard_run_tool_spend_ceiling_micro_usd: 1000000
+
+run:
+  output_root: /ABSOLUTE/PATH/TO/QUALIFICATION/RUNS/climate
+  shortlist_path: null
+  target_family_ids: []
+  max_families: 2
+  variants_per_family: 2
+  max_parallel_family_workers: 2
+  max_revise_rounds: 2

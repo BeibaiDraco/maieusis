@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Literal
@@ -762,6 +763,65 @@ class FamilyDossierOutputRecord(BaseModel):
             )
 
 
+class ProviderWarningActor(StrEnum):
+    """Which agent boundary produced a recoverable provider-warning terminal.
+
+    ``OWNER_OR_INDEPENDENT_REVIEWER`` is the honest combined label for the shared bounded-retry
+    dialogue boundary, where the exhausted exception does not attribute a single actor. Claiming
+    a single actor there would invent a fact the boundary does not know.
+    """
+
+    OWNER = "owner"
+    INDEPENDENT_REVIEWER = "independent_reviewer"
+    OWNER_OR_INDEPENDENT_REVIEWER = "owner_or_independent_reviewer"
+    PLANNER = "planner"
+    RENDERER = "renderer"
+
+
+_PROVIDER_WARNING_TOKEN = re.compile(r"[A-Za-z0-9_.-]{1,80}")
+_PROVIDER_WARNING_PROVIDER_ID = re.compile(r"[A-Za-z0-9_.:/-]{1,120}")
+
+
+class ProviderWarningReceipt(BaseModel):
+    """Typed, secret-free metadata for one recoverable provider-warning family terminal.
+
+    Every text field is constrained to a bounded token vocabulary (enum values, exception class
+    names, provider identifiers) — raw provider message text is structurally unrepresentable, so
+    the no-secret guarantee is a hard truth boundary, not a wording heuristic.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    actor: ProviderWarningActor
+    stage: str
+    provider_id: str = ""
+    failure_kind: str
+    attempt_count: int = Field(default=1, ge=1)
+    bounded_retry_used: bool = False
+
+    @field_validator("stage", "failure_kind")
+    @classmethod
+    def require_bounded_token(cls, value: str) -> str:
+        value = value.strip()
+        if not _PROVIDER_WARNING_TOKEN.fullmatch(value):
+            raise ValueError(
+                "ProviderWarningReceipt stage/failure_kind must be a bounded token "
+                "([A-Za-z0-9_.-], 1-80 chars), never raw provider text"
+            )
+        return value
+
+    @field_validator("provider_id")
+    @classmethod
+    def require_bounded_provider_id(cls, value: str) -> str:
+        value = value.strip()
+        if value and not _PROVIDER_WARNING_PROVIDER_ID.fullmatch(value):
+            raise ValueError(
+                "ProviderWarningReceipt provider_id must be a bounded identifier "
+                "([A-Za-z0-9_.:/-], 1-120 chars), never raw provider text"
+            )
+        return value
+
+
 class FamilyOutcomeAuditSidecar(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -777,6 +837,9 @@ class FamilyOutcomeAuditSidecar(BaseModel):
     blockers: list[str]
     human_review_authority: ReviewAuthority = ReviewAuthority.MISSING
     human_review_status: str = "not_imported"
+    # Additive after the frozen v0.1 baseline: optional with a None default so every persisted
+    # sidecar loads unchanged; no frozen digest binds this model's dump (verified for CLIM-12).
+    provider_warning: ProviderWarningReceipt | None = None
     dataset_grounding_level: DatasetGroundingLevel = (
         DatasetGroundingLevel.DOCUMENTATION_INVENTORY_ONLY
     )

@@ -15,6 +15,7 @@ from pydantic import BaseModel
 
 from ...io import load_model
 from ...provenance import sha256_file
+from ...schemas.novelty_admission import FamilyNoveltyAdmission, VariantNoveltyAssessment
 from ...schemas.planning_dialogue import (
     IndependentPlanReviewMessage,
     PlanDraftMessage,
@@ -26,6 +27,9 @@ from ...schemas.presentation import (
     PresentationAddonState,
     PresentationArtifactKind,
     PresentationArtifactRecord,
+    PresentationWarningCode,
+    classify_presentation_warning,
+    presentation_warning_sentence,
 )
 from ...schemas.question_family import (
     QuestionFamily,
@@ -56,8 +60,12 @@ from .context_pages import (
     render_question_families_detailed,
     render_question_patterns_detailed,
 )
-from .family_page import render_family_detailed_page, validate_family_detailed_page
-from .privacy import validate_detailed_markdown
+from .family_page import (
+    render_family_detailed_page,
+    validate_family_detailed_page,
+    variant_ids_are_ordered_subset,
+)
+from .privacy import extract_public_dois, validate_detailed_markdown
 
 _ModelT = TypeVar("_ModelT", bound=BaseModel)
 
@@ -65,6 +73,7 @@ _ModelT = TypeVar("_ModelT", bound=BaseModel)
 @dataclass(frozen=True, slots=True)
 class FamilyPresentationSource:
     completion: FamilyCompletionRecord
+    original_family: QuestionFamily
     family: QuestionFamily
     plan_draft: PlanDraftMessage | None
     owner_review: QuestionOwnerPlanReviewMessage | None
@@ -79,10 +88,13 @@ class PresentationSources:
     question_batch: QuestionFamilyBatch | None
     shortlist: QuestionFamilyShortlistManifest | None
     question_context: QuestionScientistContextPayloadV2 | None
+    novelty_admissions: tuple[FamilyNoveltyAdmission, ...]
+    novelty_assessments: tuple[VariantNoveltyAssessment, ...]
     families: tuple[FamilyPresentationSource, ...]
     input_paths: tuple[Path, ...]
     expected_output_paths: tuple[str, ...]
     private_tokens: tuple[str, ...]
+    public_dois: tuple[str, ...]
 
     @property
     def input_digests(self) -> dict[str, str]:
@@ -99,14 +111,24 @@ def load_presentation_sources(paths: RunPaths) -> PresentationSources:
 
     patterns, pattern_links = _load_pattern_sources(paths, manifest, source_paths)
     batch, shortlist, context = _load_question_sources(paths, source_paths)
-    family_by_id: dict[str, QuestionFamily] = {}
+    novelty_admissions = _load_novelty_admissions(paths, source_paths)
+    novelty_assessments = _load_novelty_assessments(paths, source_paths)
+    original_family_by_id: dict[str, QuestionFamily] = {}
     if batch is not None:
-        family_by_id.update((family.question_family_id, family) for family in batch.families)
+        original_family_by_id.update(
+            (family.question_family_id, family) for family in batch.families
+        )
+    current_family_by_id = dict(original_family_by_id)
     if shortlist is not None:
-        family_by_id.update(
+        current_family_by_id.update(
             (item.family.question_family_id, item.family) for item in shortlist.shortlisted
         )
-    family_sources = _load_family_sources(paths, family_by_id, source_paths)
+    family_sources = _load_family_sources(
+        paths,
+        original_family_by_id=original_family_by_id,
+        current_family_by_id=current_family_by_id,
+        source_paths=source_paths,
+    )
 
     expected: list[str] = []
     if patterns:
@@ -124,6 +146,8 @@ def load_presentation_sources(paths: RunPaths) -> PresentationSources:
         question_batch=batch,
         shortlist=shortlist,
         question_context=context,
+        novelty_admissions=novelty_admissions,
+        novelty_assessments=novelty_assessments,
         families=family_sources,
         input_paths=tuple(sorted(source_paths)),
         expected_output_paths=tuple(expected),
@@ -133,6 +157,11 @@ def load_presentation_sources(paths: RunPaths) -> PresentationSources:
             shortlist,
             context,
             family_sources,
+        ),
+        public_dois=tuple(
+            dict.fromkeys(
+                doi for link in pattern_links for doi in extract_public_dois(link.paper_label)
+            )
         ),
     )
 
@@ -222,7 +251,12 @@ def materialize_detailed_presentation(context: RunContext) -> PresentationAddonR
     started_at = datetime.now(UTC)
     sources = load_presentation_sources(context.paths)
     outputs: list[PresentationArtifactRecord] = []
-    warning_labels: list[str] = []
+    # The typed reasons, not a boolean. The previous version collected page LABELS, deduplicated
+    # them, then used the list only for its truthiness and threw both the labels and the renderers'
+    # typed codes away -- so fourteen of sixteen live runs persisted a byte-identical sentence that
+    # named neither the page nor the cause, and told every reader to run a resume that could not fix
+    # a content-level warning.
+    warning_codes: list[PresentationWarningCode] = []
 
     def promote_page(
         *,
@@ -237,8 +271,9 @@ def materialize_detailed_presentation(context: RunContext) -> PresentationAddonR
             rendered = render()
             if isinstance(rendered, RenderedPresentationPage):
                 text = rendered.markdown
-                if rendered.warnings:
-                    warning_labels.append(label)
+                warning_codes.extend(
+                    classify_presentation_warning(code) for code in rendered.warnings
+                )
             else:
                 text = rendered
             _promote_presentation_text(
@@ -246,6 +281,7 @@ def materialize_detailed_presentation(context: RunContext) -> PresentationAddonR
                 destination=destination,
                 text=text,
                 private_tokens=sources.private_tokens,
+                allowed_public_dois=sources.public_dois,
                 validator=validator,
             )
             outputs.append(
@@ -257,7 +293,9 @@ def materialize_detailed_presentation(context: RunContext) -> PresentationAddonR
                 )
             )
         except Exception:  # noqa: BLE001 - page isolation is the add-on's public contract
-            warning_labels.append(label)
+            # A page that threw does not exist at all; that is a different fact from a page that
+            # rendered with an unresolved entry, and it earns the opposite advice.
+            warning_codes.append(PresentationWarningCode.PAGE_RENDER_FAILED)
 
     if sources.patterns:
         promote_page(
@@ -282,6 +320,8 @@ def materialize_detailed_presentation(context: RunContext) -> PresentationAddonR
                     if sources.question_context is not None
                     else None
                 ),
+                novelty_admissions=sources.novelty_admissions,
+                novelty_assessments=sources.novelty_assessments,
             ),
         )
     for family_source in sources.families:
@@ -290,11 +330,18 @@ def materialize_detailed_presentation(context: RunContext) -> PresentationAddonR
         def render_family(source: FamilyPresentationSource = family_source) -> str:
             return render_family_detailed_page(
                 completion=source.completion,
+                original_family=source.original_family,
                 family=source.family,
                 plan_draft=source.plan_draft,
                 owner_review=source.owner_review,
                 independent_review=source.independent_review,
                 inspection_evidence=source.inspection_evidence,
+                # The renderer redacts against ONE family's own models; the promotion below
+                # validates against the run-wide set. A token only the wide set knows therefore
+                # survived redaction, failed validation, and was swallowed by the page-isolation
+                # handler -- the family silently lost its reading guide, which is the residue PR
+                # #109 did not close. Redaction and validation now share one set.
+                extra_private_tokens=sources.private_tokens,
             )
 
         promote_page(
@@ -306,16 +353,14 @@ def materialize_detailed_presentation(context: RunContext) -> PresentationAddonR
             validator=validate_family_detailed_page,
         )
 
-    # Stable de-duplication preserves the first failing page position without leaking an exception.
-    warning_labels = list(dict.fromkeys(warning_labels))
-    warning = ""
-    state = PresentationAddonState.PRODUCED
-    if warning_labels or len(outputs) != len(sources.expected_output_paths):
-        state = PresentationAddonState.WARNING
-        warning = (
-            "Detailed presentation is incomplete; one or more applicable pages need a safe redraw. "
-            "Scientific run state and compact products are unchanged."
-        )
+    if len(outputs) != len(sources.expected_output_paths):
+        warning_codes.append(PresentationWarningCode.EXPECTED_PAGE_MISSING)
+    # Stable de-duplication keeps first-seen order without leaking an exception or a page identity.
+    warning_codes = list(dict.fromkeys(warning_codes))
+    # Derived, never hardcoded: the sentence cannot contradict the codes it came from, and a
+    # WARNING state cannot exist without at least one code to explain it.
+    warning = presentation_warning_sentence(warning_codes)
+    state = PresentationAddonState.WARNING if warning_codes else PresentationAddonState.PRODUCED
     ended_at = datetime.now(UTC)
     output_digests = {item.path: item.sha256 for item in outputs}
     receipt = PresentationAddonReceipt(
@@ -326,6 +371,7 @@ def materialize_detailed_presentation(context: RunContext) -> PresentationAddonR
         output_paths=list(output_digests),
         output_digests=output_digests,
         warning=warning,
+        warning_codes=warning_codes,
         started_at=started_at,
         ended_at=ended_at,
     )
@@ -335,6 +381,7 @@ def materialize_detailed_presentation(context: RunContext) -> PresentationAddonR
         receipt_path=context.paths.presentation_receipt.relative_to(context.paths.root).as_posix(),
         outputs=outputs,
         warning=warning,
+        warning_codes=warning_codes,
     )
     manifest = load_run_manifest(context.paths)
     manifest.presentation_addon = record
@@ -461,7 +508,9 @@ def _load_question_sources(
 
 def _load_family_sources(
     paths: RunPaths,
-    family_by_id: dict[str, QuestionFamily],
+    *,
+    original_family_by_id: dict[str, QuestionFamily],
+    current_family_by_id: dict[str, QuestionFamily],
     source_paths: set[Path],
 ) -> tuple[FamilyPresentationSource, ...]:
     sources: list[FamilyPresentationSource] = []
@@ -471,9 +520,21 @@ def _load_family_sources(
             raise ValueError("family completion belongs to a different run")
         if completion.slug != completion_path.parent.name:
             raise ValueError("family completion slug differs from its run directory")
-        family = family_by_id.get(completion.question_family_id)
+        original_family = original_family_by_id.get(completion.question_family_id)
+        family = current_family_by_id.get(completion.question_family_id)
+        if original_family is None:
+            raise ValueError(
+                "a completed family is absent from the original Question Scientist batch"
+            )
         if family is None:
             raise ValueError("a completed family is absent from the typed Question Scientist batch")
+        if not variant_ids_are_ordered_subset(
+            [variant.variant_id for variant in original_family.variants],
+            [variant.variant_id for variant in family.variants],
+        ):
+            raise ValueError(
+                "post-novelty family variants are not an ordered subset of the original family"
+            )
         artifact_dir = paths.family_artifacts(completion.slug)
         imported_dir = artifact_dir / "imported"
         plan_path = _single_optional(sorted(imported_dir.glob("*-plan_draft.yaml")))
@@ -502,6 +563,7 @@ def _load_family_sources(
         sources.append(
             FamilyPresentationSource(
                 completion=completion,
+                original_family=original_family,
                 family=family,
                 plan_draft=plan,
                 owner_review=owner,
@@ -542,8 +604,8 @@ def _common_run_root(paths: Sequence[Path]) -> Path:
     raise ValueError("presentation source paths are not inside a run envelope")
 
 
-def _validate_scientific_source_bindings(paths: RunPaths, source_paths: set[Path]) -> None:
-    """Every consumed typed/source file must already be signed by a six-stage receipt."""
+def _receipt_bound_digests(paths: RunPaths) -> dict[str, str]:
+    """Run-relative path → digest for every output a six-stage receipt signed."""
     bound: dict[str, str] = {}
     for receipt in read_stage_receipts(paths):
         for relative_path, digest in receipt.output_digests.items():
@@ -551,6 +613,56 @@ def _validate_scientific_source_bindings(paths: RunPaths, source_paths: set[Path
             if prior is not None and prior != digest:
                 raise ValueError("scientific stage receipts disagree about one source digest")
             bound[relative_path] = digest
+    return bound
+
+
+def _load_novelty_admissions(
+    paths: RunPaths, source_paths: set[Path]
+) -> tuple[FamilyNoveltyAdmission, ...]:
+    """The receipt-bound prior-art records that explain a filtered variant's disposition.
+
+    Only records a six-stage receipt actually signed are consumed. An unsigned file is skipped
+    rather than loaded, which keeps the add-on's "never consume an unbound scientific source"
+    contract intact AND stops a run whose Stage D predates this binding from losing every detailed
+    page to a strict-construction failure. A skipped record simply leaves its variant with the
+    honest no-record sentence.
+    """
+    bound = _receipt_bound_digests(paths)
+    admissions: list[FamilyNoveltyAdmission] = []
+    root = paths.corpus / "question_families" / "novelty"
+    for candidate in sorted(root.glob("*/*.family_novelty_admission.yaml")):
+        relative = candidate.relative_to(paths.root).as_posix()
+        if relative not in bound:
+            continue
+        admissions.append(_load_source(paths, candidate, FamilyNoveltyAdmission, source_paths))
+    return tuple(admissions)
+
+
+def _load_novelty_assessments(
+    paths: RunPaths, source_paths: set[Path]
+) -> tuple[VariantNoveltyAssessment, ...]:
+    """The reviewer's OWN words for each variant, and the priors it actually compared against.
+
+    A scientific "no" has to carry its evidence -- that is shape (2) of the shepherd contract. The
+    disposition alone told a reader their question "duplicates prior work" and stopped there, while
+    the rationale and the DOI-identified comparisons sat in the assessment file next door, paid for
+    and unread. Loaded under the same receipt binding as the admissions: an unsigned record is
+    skipped rather than consumed, so an older run simply keeps the bare disposition.
+    """
+    bound = _receipt_bound_digests(paths)
+    assessments: list[VariantNoveltyAssessment] = []
+    root = paths.corpus / "question_families" / "novelty"
+    for candidate in sorted(root.glob("*/assessments/novelty-assessment-*.yaml")):
+        relative = candidate.relative_to(paths.root).as_posix()
+        if relative not in bound:
+            continue
+        assessments.append(_load_source(paths, candidate, VariantNoveltyAssessment, source_paths))
+    return tuple(assessments)
+
+
+def _validate_scientific_source_bindings(paths: RunPaths, source_paths: set[Path]) -> None:
+    """Every consumed typed/source file must already be signed by a six-stage receipt."""
+    bound = _receipt_bound_digests(paths)
     for source_path in source_paths:
         relative = source_path.relative_to(paths.root).as_posix()
         expected = bound.get(relative)
@@ -566,6 +678,7 @@ def _promote_presentation_text(
     destination: Path,
     text: str,
     private_tokens: Sequence[str],
+    allowed_public_dois: Sequence[str],
     validator: Callable[[str], None] | None,
 ) -> None:
     root = root.absolute()
@@ -590,7 +703,11 @@ def _promote_presentation_text(
         if not stat.S_ISREG(candidate_stat.st_mode):
             raise ValueError("presentation candidate is not a regular file")
         candidate_text = candidate.read_text(encoding="utf-8")
-        validate_detailed_markdown(candidate_text, private_tokens=private_tokens)
+        validate_detailed_markdown(
+            candidate_text,
+            private_tokens=private_tokens,
+            allowed_public_dois=allowed_public_dois,
+        )
         if validator is not None:
             validator(candidate_text)
         os.replace(candidate, destination)
@@ -619,6 +736,21 @@ def _assert_safe_presentation_destination(root: Path, destination: Path) -> None
             raise ValueError("presentation destination contains a symlink")
 
 
+#: Field names whose values are PUBLIC vocabulary, not identifiers this run minted.
+#:
+#: The `_id` suffix is a proxy for "this is private", and on 2026-07-28 the fault-injection harness
+#: showed the proxy firing on public facts: 19 of a live run's 304 "private" tokens were ordinary
+#: prose, among them `anthropic`, `openai`, `crossref`, `openalex` (vendor names, published in every
+#: dossier's provenance) and `open_gaps`, `background_core_constructs` (topic-literature lane
+#: categories, a fixed vocabulary). Each of these fields carries a closed vocabulary that exists
+#: before any run and is identical across runs -- the opposite of a run-scoped identifier.
+#:
+#: This matters because the redaction pass and the validation pass must share one set: widening
+#: redaction to cover a set containing "anthropic" would replace the word wherever a reviewer wrote
+#: it, mangling the prose the page exists to carry.
+_PUBLIC_VOCABULARY_FIELDS = frozenset({"lane_id", "lane_ids", "provider_id", "source_id"})
+
+
 def _presentation_private_tokens(*values: object) -> tuple[str, ...]:
     """Collect exact typed identifiers; ordinary scientific compounds are never guessed as IDs."""
     tokens: set[str] = set()
@@ -637,7 +769,12 @@ def _presentation_private_tokens(*values: object) -> tuple[str, ...]:
                 collect(
                     item,
                     identifier_field=(
-                        key_text == "id" or key_text.endswith("_id") or key_text.endswith("_ids")
+                        key_text not in _PUBLIC_VOCABULARY_FIELDS
+                        and (
+                            key_text == "id"
+                            or key_text.endswith("_id")
+                            or key_text.endswith("_ids")
+                        )
                     ),
                 )
             return

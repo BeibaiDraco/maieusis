@@ -1,7 +1,9 @@
 cff-version: 1.2.0
 message: >-
-  If you use Maieusis v0.1.0, please cite this software release using its
-  version-specific DOI.
+  If you use Maieusis, please cite it. The DOI recorded here is the concept DOI,
+  which represents the software across versions and always resolves to the latest
+  release. When you need to report the exact version you ran, use that release's
+  version DOI instead; the citation guide lists both.
 type: software
 title: "Maieusis"
 abstract: >-
@@ -18,9 +20,13 @@ authors:
   - family-names: "Doiron"
     given-names: "Brent"
     orcid: "https://orcid.org/0000-0002-6916-5511"
-version: "0.1.0"
-date-released: 2026-07-16
-doi: "10.5281/zenodo.21388806"
+version: "0.1.1"
+date-released: 2026-08-07
+# Concept DOI, deliberately, not a version DOI. A version DOI does not exist until Zenodo mints it
+# from the published GitHub Release, while the release workflow validates this file during the
+# freeze that precedes publication -- so a version DOI here could only ever be invented or stale.
+# The concept DOI is true at every point in that sequence and resolves to the latest release.
+doi: "10.5281/zenodo.21388805"
 license: "Apache-2.0"
 repository-code: "https://github.com/BeibaiDraco/maieusis"
 keywords:

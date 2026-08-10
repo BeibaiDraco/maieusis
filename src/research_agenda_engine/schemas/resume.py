@@ -31,6 +31,7 @@ from .run_outcome import FamilyRunOutcome
 class StageResumeDecisionKind(StrEnum):
     REUSE = "reuse"
     RUN = "run"
+    TERMINAL_NOT_APPLICABLE = "terminal_not_applicable"
 
 
 class PresentationResumeDecisionKind(StrEnum):
@@ -75,6 +76,7 @@ class StageRunReason(StrEnum):
     INPUT_DIGEST_CHANGED = "input_digest_changed"
     CONFIG_OR_MODEL_CHANGED = "config_or_model_changed"
     UPSTREAM_RAN = "upstream_ran"
+    UPSTREAM_SCIENTIFIC_TERMINAL = "upstream_scientific_terminal"
     # back_half only: the stage receipt verified but one or more families are incomplete on disk —
     # the stage re-runs with the completed families fed to ``completed_records`` (family-level skip).
     INCOMPLETE_FAMILIES = "incomplete_families"
@@ -98,11 +100,24 @@ class StageResumeDecision(BaseModel):
 
     @model_validator(mode="after")
     def _reason_matches_decision(self) -> StageResumeDecision:
-        is_reuse_reason = self.reason == StageRunReason.REUSE_VERIFIED
-        if (self.decision == StageResumeDecisionKind.REUSE) != is_reuse_reason:
+        expected_reason = {
+            StageResumeDecisionKind.REUSE: StageRunReason.REUSE_VERIFIED,
+            StageResumeDecisionKind.TERMINAL_NOT_APPLICABLE: (
+                StageRunReason.UPSTREAM_SCIENTIFIC_TERMINAL
+            ),
+        }.get(self.decision)
+        if expected_reason is not None and self.reason != expected_reason:
             raise ValueError(
                 f"stage decision {self.decision.value!r} is inconsistent with reason "
-                f"{self.reason.value!r} (REUSE ⟺ reuse_verified)"
+                f"{self.reason.value!r}"
+            )
+        if expected_reason is None and self.reason in {
+            StageRunReason.REUSE_VERIFIED,
+            StageRunReason.UPSTREAM_SCIENTIFIC_TERMINAL,
+        }:
+            raise ValueError(
+                "stage decision is inconsistent: RUN stage cannot carry a reuse or "
+                "terminal-barrier reason"
             )
         return self
 
@@ -130,6 +145,8 @@ class FamilyResumeDecision(BaseModel):
 
     @model_validator(mode="after")
     def _reason_matches_decision(self) -> FamilyResumeDecision:
+        if self.decision == StageResumeDecisionKind.TERMINAL_NOT_APPLICABLE:
+            raise ValueError("terminal_not_applicable is a shared-stage decision, not a family one")
         is_reuse_reason = self.reason == FamilyResumeReason.TERMINAL_COMPLETE
         if (self.decision == StageResumeDecisionKind.REUSE) != is_reuse_reason:
             raise ValueError(

@@ -41,10 +41,11 @@ Its implemented workflow:
    Planner branch that can plan, revise, reject, defer, or close with a warning
    before full scientific analysis.
 
-The v0.1.0 demos exercise this workflow on the International Brain Laboratory
-(IBL) Brain-Wide Map and Neural Latents Benchmark (NLB) MC_Maze-S datasets.
-Cross-disciplinary evaluation is ongoing, so the placement describes the
-implemented task design rather than benchmark superiority.
+The public demonstrations exercise this workflow on the International Brain Laboratory (IBL)
+Brain-Wide Map, the Neural Latents Benchmark (NLB) MC_Maze-S dataset, and an ERA5-derived
+stratospheric record -- two fields, with no part of the system adapted for either. Cross-
+disciplinary evaluation continues, so the placement describes the implemented task design rather
+than benchmark superiority.
 
 ## How to read the map
 

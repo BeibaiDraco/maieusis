@@ -77,12 +77,38 @@ class OwnerPlanReviewContent(BaseModel):
     review_artifact_issues: list[str] = Field(default_factory=list)
 
 
+def _normalized_criterion_status(value: str) -> PlanReviewCriterionStatus | None:
+    """Resolve a reviewer's status label mechanically, or return None to degrade honestly.
+
+    Mechanical ONLY -- case, surrounding whitespace, and hyphen/space against the enum's
+    underscores. There is deliberately no synonym table: mapping ``needs_changes`` onto ``concern``
+    or ``fail`` would be guessing at a scientific judgement the reviewer did not make, and a
+    growing thesaurus is exactly the deterministic word-game this project does not want. The
+    reviewer prompt states the four values; anything that still does not resolve degrades to a
+    non-authoritative concern that keeps the reviewer's own prose intact.
+    """
+
+    cleaned = value.strip().lower().replace("-", "_").replace(" ", "_")
+    if not cleaned:
+        return None
+    try:
+        return PlanReviewCriterionStatus(cleaned)
+    except ValueError:
+        return None
+
+
 class PlanReviewCriterionAssessmentMirror(BaseModel):
     """Model-facing criterion mirror; blank/missing rationale is reconciled after provider parse."""
 
     model_config = ConfigDict(extra="forbid")
 
     criterion: str
+    # Deliberately `str`, not the enum. The vocabulary is stated in the reviewer prompt -- telling
+    # the agent is the fix -- while this field stays tolerant so a non-conforming reply still
+    # ARRIVES and can be repaired before strict construction (AGENTS.md rule 11: truth boundaries
+    # hard, wording heuristics soft; repair or degrade honestly BEFORE strict construction).
+    # Refusing it at the provider boundary would make a single word cost a paid reattempt, which
+    # is the same over-correction rule 11 exists to prevent.
     status: str = ""
     rationale: str = ""
     evidence_ids: list[str] = Field(default_factory=list)
@@ -159,7 +185,12 @@ class IndependentPlanReviewModelOutput(BaseModel):
     decision: Literal["accept", "revise", "reject", "human_review"]
     rationale: str = ""
     classified_required_changes: list[IndependentNewIssueModelOutput] = Field(default_factory=list)
-    rejection_reason: str = ""
+    # Same shape as `criterion_assessments[].status` above, latent rather than firing only because
+    # no reviewer in the live corpus has yet rejected a plan (0 of 167). Its six legal values are
+    # non-obvious snake_case compounds that appeared in no reviewer prompt, so the first genuine
+    # rejection would have been reconciled to "no typed basis" and converted into an
+    # infrastructure terminal instead of the scientific rejection it was.
+    rejection_reason: BranchDecisionKind | None = None
     criterion_assessments: list[PlanReviewCriterionAssessmentMirror] = Field(default_factory=list)
     owner_change_assessments: list[IndependentOwnerIssueAssessmentModelOutput] = Field(
         default_factory=list
@@ -177,8 +208,12 @@ class IndependentPlanReviewModelOutput(BaseModel):
         cleaned.pop("required_changes", None)
         cleaned.pop("review_complete", None)
         cleaned.pop("review_artifact_issues", None)
-        if cleaned.get("rejection_reason") is None:
-            cleaned["rejection_reason"] = ""
+        # Historical replay payloads wrote "" for "no rejection basis"; the field is now typed, so
+        # normalize the empty string back to None rather than failing an old artifact. Anything
+        # else that was persisted stays as-is and is validated against the enum, which is the
+        # point of the change.
+        if cleaned.get("rejection_reason") == "":
+            cleaned["rejection_reason"] = None
         return cleaned
 
 
@@ -222,14 +257,8 @@ def expand_independent_plan_review_model_output(
                 evidence_ids=item.evidence_ids,
             )
         )
-    rejection_reason: BranchDecisionKind | None = None
-    if output.rejection_reason.strip():
-        try:
-            rejection_reason = BranchDecisionKind(output.rejection_reason.strip())
-        except ValueError:
-            # Reconciliation treats this as a missing typed rejection basis. Raw text remains in
-            # the scientific-agent transcript and gains no terminal authority.
-            rejection_reason = None
+    # Already typed at the provider boundary; the previous free-text parse-and-discard is gone.
+    rejection_reason: BranchDecisionKind | None = output.rejection_reason
     return IndependentPlanReviewContent(
         decision=PlanReviewDecisionValue(output.decision),
         rationale=output.rationale,
@@ -366,7 +395,17 @@ def reconcile_owner_plan_review(
     if classified_required_changes:
         required_changes = list(dict.fromkeys([*canonical_changes, *retained_change_text]))
 
-    if decision == PlanReviewDecisionValue.REVISE and not artifact_issues:
+    # The count mismatch no longer withholds review authority, but it still closes this upgrade:
+    # unmatched display prose may be a blocker the model never classified, and normalizing revise
+    # to accept on that input is the one direction that must stay conservative.
+    display_count_mismatched = any(
+        code == "change_classification_count_mismatch" for code, *_ in pending
+    )
+    if (
+        decision == PlanReviewDecisionValue.REVISE
+        and not artifact_issues
+        and not display_count_mismatched
+    ):
         blockers = [
             item
             for item in classified_required_changes
@@ -519,20 +558,25 @@ def reconcile_independent_plan_review(
         criterion = assessment.criterion.strip() or "incomplete_review_criterion"
         rationale = assessment.rationale.strip()
         assessment_complete = True
-        try:
-            status = PlanReviewCriterionStatus(assessment.status.strip())
-        except ValueError:
+        status = _normalized_criterion_status(assessment.status)
+        if status is None:
+            # This ONE criterion loses its authority and says so; the review as a whole keeps its
+            # decision. Operator ruling 2026-07-27: the authority boundary is the top-level
+            # `decision` field -- a Literal that failed 0 of 167 live reviews -- not the wording of
+            # one criterion label. Appending to `artifact_issues` here withheld review-complete
+            # authority for the WHOLE review, which is how 8 live reviews were nullified outright,
+            # one of them a unanimous 8-of-8 accept whose only fault was answering "satisfied".
+            # AGENTS.md rule 11: never discard a traceable result for phrasing.
             status = PlanReviewCriterionStatus.CONCERN
             assessment_complete = False
-            artifact_issues.append("unknown_criterion_status")
             pending.append(
                 (
                     "unknown_criterion_status",
                     CRITERION_SEAM_ID,
                     f"criterion_assessments[{index}].status",
-                    "criterion retained with its prose, but the unknown status label was stored "
-                    "as a non-authoritative concern and review-complete authority was withheld: "
-                    f"{assessment.status!r}",
+                    "criterion retained with its prose, but its status label did not resolve to a "
+                    "controlled value, so this criterion alone was stored as a non-authoritative "
+                    "concern; the review's own decision is unaffected",
                 )
             )
         if not rationale:
@@ -632,14 +676,40 @@ def reconcile_independent_plan_review(
         )
 
     if decision == PlanReviewDecisionValue.REVISE and not classified_required_changes:
+        # Adopt the reviewer's own endorsed blockers before calling the review empty. The active
+        # prompt (plan_fidelity_reviewer/v6) tells the reviewer to put endorsements of Owner
+        # issues in `owner_change_assessments` and reserve `classified_required_changes` for NEW
+        # issues -- so a compliant reviewer produces exactly the shape this check called
+        # incomplete. Measured: 11 of 11 independent `revise` verdicts in the live corpus were
+        # nullified here, and 8 families burned their whole 3-round revise budget at
+        # rounds_used: 0 while holding a reviewer-endorsed, change_id-bound scientific blocker.
+        # The promotion itself is not new -- the ACCEPT branch directly above does the same thing
+        # with the same list; this is its missing mirror image.
+        for owner_assessment in blocking_owner_assessments:
+            classified_required_changes.append(owner_assessment)
+            required_changes.append(owner_assessment.change)
+        if classified_required_changes:
+            pending.append(
+                (
+                    "revise_adopted_endorsed_owner_blockers",
+                    REVIEWER_SEAM_ID,
+                    "decision,owner_change_assessments",
+                    "revise raised no new issue of its own; the reviewer's endorsed blocking "
+                    "Owner issues were adopted as the planner's work rather than discarding the "
+                    "review",
+                )
+            )
+    if decision == PlanReviewDecisionValue.REVISE and not classified_required_changes:
+        # Genuinely uninterpretable: revise with no new issue AND no endorsed blocker leaves the
+        # planner nothing to act on, so this one stays an artifact issue.
         artifact_issues.append("missing_required_changes")
         pending.append(
             (
                 "missing_required_changes",
                 REVIEWER_SEAM_ID,
                 "required_changes",
-                "revise supplied no classified issue; marked review-incomplete without creating "
-                "scientific work for the planner",
+                "revise supplied no classified issue and endorsed no blocking Owner issue; "
+                "marked review-incomplete without creating scientific work for the planner",
             )
         )
 
@@ -822,14 +892,25 @@ def _reconcile_classified_changes(
             )
         )
     elif cleaned_required and len(cleaned_required) != len(reconciled):
-        artifact_issues.append("change_classification_count_mismatch")
+        # Diagnostic only. `required_changes` is a compatibility DISPLAY list -- the active
+        # question_owner/v3 prompt says so in as many words, and the independent reviewer's DTO
+        # deletes the field outright and derives it from the typed list. This check was still
+        # enforcing question_owner/v2's contract, which required exact coverage, and its own
+        # message admitted the incoherence: "typed issues were retained but review-complete
+        # authority was withheld". It converted a unanimous owner-plus-independent ACCEPT into
+        # failed_validation, with the artifact showing 4 display and 4 typed changes perfectly
+        # paired -- the mismatch existed only in the raw reply, before this function repaired it.
+        #
+        # It does NOT lose all effect: it still blocks the revise-to-accept normalization below,
+        # because unmatched display prose could be a blocker the model never classified, and
+        # upgrading a verdict on ambiguous input is the one direction that must stay closed.
         diagnostics.append(
             (
                 "change_classification_count_mismatch",
                 seam_id,
                 field,
-                "display change count differed from typed issue count; typed issues were retained "
-                "but review-complete authority was withheld",
+                "display change count differed from typed issue count; the typed issues are "
+                "authoritative and were retained, and the review keeps its own decision",
             )
         )
     return reconciled, [item.change for item in reconciled], diagnostics, artifact_issues

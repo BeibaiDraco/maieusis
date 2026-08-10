@@ -28,7 +28,6 @@ from research_agenda_engine.schemas.topic_literature import (
     TopicSourceTable,
 )
 from research_agenda_engine.services.retrieval.generic_topic_lanes import (
-    GENERIC_REQUIRED_LANES,
     build_generic_topic_evidence_query_plan,
 )
 
@@ -36,29 +35,24 @@ _SOURCE_IDS = ["source-1", "source-2"]
 
 
 def _generic_source_table() -> TopicSourceTable:
-    """A generic-lane source table: 8 generic-lane query_ids split across 2 claim-supporting records."""
+    """Two truthful provider/scope-term lineages with claim-supporting demo records."""
     scope = ResolvedResearchScope(
         source_mode=ResearchScopeSourceMode.OPEN_INFERRED, terms=["movement"]
     )
     plan = build_generic_topic_evidence_query_plan(
-        scope, source_families=[TopicLensSourceFamily.OPENALEX]
+        scope,
+        source_families=[TopicLensSourceFamily.OPENALEX, TopicLensSourceFamily.CROSSREF],
     )
-    qid_by_lane = {q.query_lane: q.query_id for q in plan.queries}
-    lanes = list(GENERIC_REQUIRED_LANES)
-    half = len(lanes) // 2
-    query_ids_per_record = [
-        [qid_by_lane[lane] for lane in lanes[:half]],
-        [qid_by_lane[lane] for lane in lanes[half:]],
-    ]
     return TopicSourceTable(
         table_id="generic-source-table",
+        query_plan_id=plan.plan_id,
         topic_terms=["movement"],
         max_records=20,
         records=[
             TopicSourceRecord(
                 source_record_id=sid,
-                source_family=TopicLensSourceFamily.OPENALEX,
-                query_ids=query_ids,
+                source_family=query.source_family,
+                query_ids=[query.query_id],
                 title=f"Movement-related population geometry source {sid}",
                 year=2024,
                 url=f"https://example.org/{sid}",
@@ -67,7 +61,7 @@ def _generic_source_table() -> TopicSourceTable:
                 metadata_quality_score=0.8,
                 source_payload_hash=f"h-{sid}",
             )
-            for sid, query_ids in zip(_SOURCE_IDS, query_ids_per_record, strict=True)
+            for sid, query in zip(_SOURCE_IDS, plan.queries, strict=True)
         ],
     )
 

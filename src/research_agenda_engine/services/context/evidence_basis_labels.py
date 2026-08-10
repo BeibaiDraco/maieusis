@@ -77,13 +77,13 @@ def dossier_evidence_basis_banner() -> str:
     )
 
 
-def summary_evidence_basis_line(abstract_only_families: int, total_included: int) -> str:
-    """Aggregate line for ``summary.md`` (surface 7). Empty when no included family is abstract-only."""
+def summary_evidence_basis_line(abstract_only_families: int, total_planning_families: int) -> str:
+    """Aggregate line over families that reached planning, not final accepted dossiers."""
     if abstract_only_families <= 0:
         return ""
     return (
-        f"Evidence basis: {abstract_only_families} of {total_included} included families rest on "
-        "abstract-only literature (see each dossier's Data basis banner)."
+        f"Evidence basis: {abstract_only_families} of {total_planning_families} families that "
+        "reached planning rest on abstract-only literature (see each dossier's Data basis banner)."
     )
 
 

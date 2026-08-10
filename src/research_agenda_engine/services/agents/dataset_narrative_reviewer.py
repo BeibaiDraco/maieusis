@@ -214,12 +214,25 @@ def review_dataset_narrative_fidelity(
     ]
     required_changes = clean_required_changes(content.required_changes)
     unfaithful = bool(content.unfaithful_claims or content.hallucination_findings)
+    # `required_changes` is deliberately NOT here. It was, and on the live corpus that single
+    # disjunct is the only thing this gate has ever done: across 19 runs the reviewer returned
+    # `accept` 19/19 with all three criteria passing, and the one run that also carried a
+    # required_change -- "Consider reformatting the temporal_structure field ... for readability
+    # (not a fidelity blocker)", the reviewer's own words -- was downgraded to `revise`, refused by
+    # the promoter, and reached the user as "this run did not have enough usable evidence", outcome
+    # class `scientific`, with an instruction to go change the papers and the dataset. Both were
+    # fine. A suggestion is not a finding, and a gate that cannot tell them apart is a coin flip on
+    # a whole paid run.
+    #
+    # Everything that IS a finding still blocks: a missing, failed, unknown or conflicting
+    # criterion, an unfaithful claim, an over-precise claim, a hallucination. The gate's actual job
+    # -- unsupported claims, over-precision, trust mishandling -- is untouched. What changed is that
+    # the reviewer may now say "accept, and here is a nit" and be believed on the accept.
     accept_blocked = bool(
         criterion_resolution.missing
         or criterion_resolution.failed
         or criterion_resolution.unknown
         or criterion_resolution.conflicts
-        or required_changes
         or unfaithful
         or content.too_precise_findings
     )

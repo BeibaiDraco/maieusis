@@ -9,11 +9,21 @@ result.
 
 ## The method in one minute
 
+**A stage nobody expects: questions get rewritten after prior-art review.** A variant the review
+holds back is removed and said so. But a variant it admits is often *reworded* first, to separate
+it from a prior that sits nearby — the demonstrations show this on seventeen of eighteen families,
+under the heading "Post-novelty revised proposal" in each family's reading guide. The gallery lists
+the question as first proposed; the reading guide shows all three versions, ending with the one
+that was actually planned. If a gallery question and a dossier question differ, that is why.
+
 1. **Reconstruct published question-forming moves.** Each source paper becomes
    a PaperCase. Source spans and relevant citation context support an
-   evidence-bound formation trace: published background → unresolved tension →
-   data opportunity → inferential move → question → possible scientific
-   consequence. This is a reconstruction of the published record, not a claim
+   evidence-bound formation trace with five sections: starting background →
+   unresolved gap → dataset opportunity → resulting question → scientific
+   consequence. The inferential move — the step where an available measurement
+   becomes a way to decide something — is not its own heading; it is written
+   into the dataset-opportunity section, which is where a trace explains why
+   *this* data could settle *that* tension. This is a reconstruction of the published record, not a claim
    about an author's private thought process.
 2. **Abstract moves that can transfer.** Independently reviewed traces across
    papers are compared to induce reusable question-forming patterns. The
@@ -86,8 +96,14 @@ remain explicit:
   cannot be renamed as verified evidence; and
 - a family, plan, or dossier cannot outrank the evidence that supports it.
 
-Novelty is a separate question. Maieusis v0.1.0 does not perform a product
-novelty search, so novelty is reported as `not_assessed`.
+Prior art is a separate question, and Maieusis reviews it. Every variant goes through a
+prior-art review that draws on a deterministic scholarly lane and an independent bounded
+web-search lane. A prior can only remove a variant once it resolves to a real scholarly
+identity, so a model's impression is never enough on its own, and every variant removed on
+prior-art grounds says so with its evidence where a reader can see it.
+
+What that review cannot do is certify novelty. No search proves absence, and the review states
+the scope and cutoff it worked within.
 
 ## From a proposed question to a plan—or a reason not to proceed
 
@@ -101,8 +117,7 @@ The proposing model does not certify answerability. After a family is visible:
 - every dialogue turn and evidence item is scoped to one family or variant;
 - bounded revision may clarify a construct or change an operationalization;
 - a material scientific change requires a new question version and renewed
-  literature and novelty review; because v0.1.0 has no product novelty-search
-  route, it must defer rather than accept a materially changed question; and
+  literature and prior-art review before the changed question can be accepted; and
 - when the dataset cannot support the distinction a question requires, the
   correct outcome is an evidence-backed rejection or deferment, not a smaller
   trivial question presented as equivalent.

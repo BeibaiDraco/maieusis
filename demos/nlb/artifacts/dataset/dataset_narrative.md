@@ -5,93 +5,92 @@
 
 ## Scientific purpose
 
-A scaled release of MC_Maze recordings intended for neural data analysis involving activity recorded from primary motor cortex (M1) and dorsal premotor cortex (PMd).
+The dataset supports study of neural population activity associated with delayed reaching, including comparisons between primary motor cortex (M1) and dorsal premotor cortex (PMd), across straight and curved reach trajectories around barriers.
 
 ## Population
 
-Neural recordings from M1 and PMd are represented. The supplied source does not state the number or species of recorded subjects.
+One rhesus macaque performing delayed center-out reaching tasks.
 
 ## Task / design
 
-The release is organized as a train/test dataset for the MC_Maze task or experiment, with 100 train trials and 100 test trials stated in the dataset description. Further task details are not provided in the supplied excerpt.
+Delayed center-out reaching around barriers, including both straight and curved reaches. The supplied excerpt does not provide a complete description of task events or experimental conditions.
 
 ## Recording modalities
 
-Neural array recordings from M1 and PMd; Sorted unit spiking times; Cursor position; Hand position; Eye position; Hand velocity calculated offline from hand position
+Sorted-unit spiking times; Cursor measurements; Hand-position measurements; Eye measurements; Hand-velocity measurements; Sorted unit spiking times; Cursor position; Hand position; Eye position; Hand velocity calculated offline from hand position
 
 ## Broad scale
 
-The scaled release contains 100 train trials and 100 test trials. Release-preparation metadata inspection reports recordings from both PMd and M1, with 142 sorted units in train and 107 held-in test units.
+A small, single-subject release with sorted-unit recordings from M1 and PMd. The scaled release is described as containing 100 training trials and 100 test trials; bounded metadata checks reported 142 training units and 107 held-in test units, but these counts do not establish trial-level coverage or unit-quality equivalence.
 
 ## Anatomical / spatial coverage
 
-Arrays cover primary motor cortex (M1) and dorsal premotor cortex (PMd). The source identifies the first digit of each unit ID as the authoritative region indicator: leading 1 denotes PMd and leading 2 denotes M1.
+Recordings include primary motor cortex (M1) and dorsal premotor cortex (PMd). The supplied documentation identifies these regions through the leading digit of unit IDs and describes a correction required for M1 electrode-table indices.
 
 ## Temporal / trial structure
 
-The data are divided into train and test splits, with 100 trials in each split according to the supplied dataset description. Session count, trial timing, and temporal sampling details are not stated.; Dataset release: DANDI:000140 / MC_Maze_Small; Train and test splits; Neural units or sorted units; M1 and PMd anatomical regions; Unit IDs and electrode metadata, subject to the documented M1 index correction
+The task includes a delayed reaching period and reach trajectories around barriers, with straight and curved reaches. Event timing and session structure are not specified in the supplied excerpt and require later verification.; Single rhesus macaque; Recordings organized by train and test releases; Sorted recording units nested within M1 and PMd regions; Behavioral measurements associated with delayed reaching trials
 
 ## Standardization
 
-The release has a pinned published version, 0.220113.0408, and a documented region-index and electrode-index conversion caveat. M1 stored electrode indices require a +96 correction when mapping to the electrode table; uncorrected electrode indices should not be used alone for regional assignment.
+The release contains sorted-unit spiking times and behavioral measurements. The documentation specifies a region-identification convention based on unit IDs and an M1 electrode-index correction; these mappings must be reconciled with unit, electrode, DANDI, and official benchmark documentation before region-specific use.
 
 ## Major variables
 
-- Neural activity from sorted units
-- Anatomical region identity for M1 versus PMd
-- Train/test split membership
-- Unit identity
-- Electrode metadata after applying the documented M1 correction
-- Sorted neural spiking activity
+- Neural spiking activity from sorted units
+- Cortical region: M1 or PMd
+- Reach trajectory type: straight or curved
+- Barrier-related reaching context
 - Cursor position
 - Hand position
-- Eye position
+- Eye measurements
 - Hand velocity
-- Delayed reaching behavior
-- Reach geometry, including straight and curved trajectories
-- M1 and PMd recording location
+- Training versus test release
+- Neural spiking activity
+- Eye position
+- Reaching trajectory type, including straight and curved reaches
+- Delayed center-out maze-reaching task structure
 
 ## Reuse opportunities
 
-- Comparative analyses of neural activity across M1 and PMd
-- Region-stratified analyses using the unit-ID region convention
-- Train/test benchmarking for neural representation or decoding methods
-- Reanalysis of the relationship between neural recordings and the MC_Maze task, subject to verifying task-specific fields and timing in the released data
-- Study relationships between cortical spiking activity and reaching behavior.
-- Compare neural dynamics associated with straight versus curved reaches.
-- Investigate preparatory or delay-period activity in M1 and PMd.
-- Relate neural activity to cursor, hand, eye, and derived hand-velocity measurements.
-- Develop or evaluate neural decoding and latent-dynamics analyses using the stated train/test task partition.
+- Study population-level neural dynamics during delayed reaching
+- Compare activity associated with M1 and PMd at a broad regional level
+- Relate neural activity to cursor, hand, eye, and hand-velocity measurements
+- Examine differences between straight and curved reaches or other broad task contexts
+- Develop or evaluate latent-variable models of neural population activity using the released neural and behavioral measurements
+- Study relationships between motor and premotor spiking activity and reaching behavior.
+- Examine neural representations associated with delayed movement preparation and execution.
+- Compare neural and behavioral dynamics across straight and curved maze-constrained reaches.
+- Develop or evaluate neural population analyses and movement-decoding approaches using paired spiking and kinematic measurements.
 
 ## Known high-level limitations
 
-- The supplied source does not state the number or species of subjects, the number of sessions, detailed trial timing, or behavioral and auxiliary measurement coverage.
-- The release is explicitly scaled to 100 train and 100 test trials, which may limit analyses requiring broader sampling.
-- A documented M1 electrode-index conversion error complicates direct interpretation of stored unit/electrode metadata; region assignment should use the authoritative unit-ID rule and the M1 +96 correction.
-- The source notes ordinary single-session limitations for analyses using the combined within-session M1+PMd population.
-- The supplied excerpt does not establish exact question-specific coverage or feasibility; those details require later branch-specific verification.
-- The supplied public excerpts do not state the number of sorted units, electrode channels, recording sessions, or session-to-session structure.
-- The dataset is explicitly limited to 100 train trials and 100 test trials, which may constrain analyses requiring broader sampling of task conditions.
-- The supplied excerpts do not specify detailed timing parameters, preprocessing procedures, missing-data handling, or exact coverage across recording sites.
-- The public description concerns a single macaque and therefore does not establish population-level generalizability.
-- Exact question-specific feasibility and coverage require later branch-specific inspection and planning.
+- The release represents one rhesus macaque, limiting population-level generalization.
+- The scaled release is small, and the supplied metadata checks do not establish trial-level coverage, unit-quality equivalence, or region-specific feasibility for a particular analysis.
+- M1 electrode indices contain a documented conversion error and require the specified correction before anatomical interpretation.
+- Region assignment and electrode metadata must be reconciled across unit IDs, electrode metadata, DANDI metadata, and official documentation.
+- Sessions, exact event timing, and detailed region-specific trial coverage are not stated in the supplied excerpt.
+- The supplied excerpt describes available measurements broadly but does not certify coverage for any specific future scientific question.
+- The public excerpt describes a release limited to 100 train trials and 100 test trials.
+- The supplied excerpts do not state the number of recording sessions, electrode channels, sorted units, or exact measurement-site coverage beyond M1 and PMd.
+- The excerpt describes the task and recorded variables but does not establish coverage for questions requiring other brain regions, subjects, tasks, or experimental conditions.
 
 ## Coarse scale facts
 
-- trials in train split: 100 train trials
-- trials in test split: 100 test trials
-- sorted neural units in train split: 72 PMd units and 70 M1 units, 142 total
-- sorted neural units in held-in test split: 52 PMd units and 55 M1 units, 107 total
-- recording regions: M1 and PMd
-- raw electrode-table region rows: 96 PMd rows and 96 M1 rows
-- public dataset identity and release hierarchy: DANDI:000140, MC_Maze_Small, published version 0.220113.0408
-- subjects_or_participants: 1 macaque
-- trials: 100 train trials and 100 test trials
-- recording_units: Sorted unit spiking times are provided; the number of units is not stated
-- measurement_sites_or_regions: M1 and PMd electrode-array recordings
-- task_structure: Delayed center-out reaching through a barrier-defined maze, including straight and curved reaches
-- behavioral_or_auxiliary_measurements: Cursor, hand, and eye position, plus hand velocity calculated offline
-- public_access_and_hierarchy: Publicly described as part of the Neural Latents Benchmark and hosted through the DANDI dataset record; data are divided into train and test trials
+- subjects or participants: 1 rhesus macaque
+- trials: 100 training trials and 100 test trials
+- recording units: Train: 72 PMd and 70 M1 units, 142 total; test held-in: 52 PMd and 55 M1 units, 107 total
+- measurement sites or regions: Raw electrode table has 96 PMd and 96 M1 rows
+- task or experimental structure: Delayed center-out reaches around barriers, including straight and curved reaches
+- behavioral or auxiliary measurements: Cursor, hand, eye, and hand-velocity measurements
+- public access mode and hierarchy: Public DANDI release, version 0.220113.0408, with train and test releases and official Neural Latents Benchmark documentation
+- subjects or participants: One macaque is described as performing the task.
+- trials or samples: 100 train trials and 100 test trials are provided.
+- recording units, channels, or sensors: Sorted unit spiking activity was recorded using electrode arrays; the number of units or channels is not stated.
+- measurement sites or regions: Two named cortical regions are covered: primary motor cortex (M1) and dorsal premotor cortex (PMd).
+- task or experimental structure: Delayed center-out reaching through a barrier-defined maze, yielding straight and curved reaches.
+- behavioral or auxiliary measurements: Cursor position, hand position, eye position, and hand velocity derived offline from hand position were recorded or calculated.
+- public access mode and hierarchy: The dataset is publicly described through the DANDI Archive and is identified as part of the Neural Latents Benchmark.
 
 ## Provenance
 
@@ -101,18 +100,17 @@ The release has a pinned published version, 0.220113.0408, and a documented regi
 
 ## Review authority
 
-Automated independent-AI fidelity gate dataset_narrative_fidelity_reviewer/v1 (provider anthropic, model claude-opus-4-8) returned accept; reviewer independent of generators ['cached-openai:gpt-5.6-luna'].
+Automated independent-AI fidelity gate dataset_narrative_fidelity_reviewer/v1 (provider anthropic, model claude-sonnet-5, session narrative_fidelity-review) returned accept; reviewer independent of generators ['cached-openai:gpt-5.6-luna']. The gate accepted while suggesting 1 non-blocking improvement(s); they are recorded on the persisted fidelity review in the reviewer's own wording and did not gate promotion.
 
 ## Data basis & limitations
 
 The local sample proves only what is present IN the sample. Absence of a feature in the sample is NOT absence in the full dataset; no joint-coverage across variables is proven; and a property the sample cannot resolve is recorded as insufficient_sample_evidence, never as a dataset mismatch.
-- The supplied source does not state the number or species of subjects, the number of sessions, detailed trial timing, or behavioral and auxiliary measurement coverage.
-- The release is explicitly scaled to 100 train and 100 test trials, which may limit analyses requiring broader sampling.
-- A documented M1 electrode-index conversion error complicates direct interpretation of stored unit/electrode metadata; region assignment should use the authoritative unit-ID rule and the M1 +96 correction.
-- The source notes ordinary single-session limitations for analyses using the combined within-session M1+PMd population.
-- The supplied excerpt does not establish exact question-specific coverage or feasibility; those details require later branch-specific verification.
-- The supplied public excerpts do not state the number of sorted units, electrode channels, recording sessions, or session-to-session structure.
-- The dataset is explicitly limited to 100 train trials and 100 test trials, which may constrain analyses requiring broader sampling of task conditions.
-- The supplied excerpts do not specify detailed timing parameters, preprocessing procedures, missing-data handling, or exact coverage across recording sites.
-- The public description concerns a single macaque and therefore does not establish population-level generalizability.
-- Exact question-specific feasibility and coverage require later branch-specific inspection and planning.
+- The release represents one rhesus macaque, limiting population-level generalization.
+- The scaled release is small, and the supplied metadata checks do not establish trial-level coverage, unit-quality equivalence, or region-specific feasibility for a particular analysis.
+- M1 electrode indices contain a documented conversion error and require the specified correction before anatomical interpretation.
+- Region assignment and electrode metadata must be reconciled across unit IDs, electrode metadata, DANDI metadata, and official documentation.
+- Sessions, exact event timing, and detailed region-specific trial coverage are not stated in the supplied excerpt.
+- The supplied excerpt describes available measurements broadly but does not certify coverage for any specific future scientific question.
+- The public excerpt describes a release limited to 100 train trials and 100 test trials.
+- The supplied excerpts do not state the number of recording sessions, electrode channels, sorted units, or exact measurement-site coverage beyond M1 and PMd.
+- The excerpt describes the task and recorded variables but does not establish coverage for questions requiring other brain regions, subjects, tasks, or experimental conditions.

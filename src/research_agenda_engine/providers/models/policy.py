@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import re
+from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import StrEnum
 
@@ -24,6 +25,48 @@ PRO_MODEL_IDS = {
     # gpt-5.6-terra / gpt-5.6-luna are standard-tier (the token heuristic already yields STANDARD).
     "gpt-5.6-sol",
 }
+
+
+# Declared model supersession, operator-directed 2026-07-25: the API reviewer/judge/scout role
+# moves from ``claude-opus-4-8`` to ``claude-sonnet-5``, and artifacts the retired model already
+# produced stay reusable under the successor. The relation is DIRECTIONAL — an artifact made by the
+# retired model is acceptable where its successor is configured, never the reverse — and it never
+# rewrites provenance: a receipt keeps naming the model that actually produced it, so a reader can
+# always see that a reused artifact predates the switch.
+SUPERSEDED_BY: dict[str, str] = {
+    "claude-opus-4-8": "claude-sonnet-5",
+}
+
+
+def model_identity_accepts(*, recorded: str, expected: str) -> bool:
+    """True when an artifact recorded as ``recorded`` may be reused under ``expected``.
+
+    ``recorded`` and ``expected`` are ``provider:model`` identities as written into receipts.
+    """
+
+    if recorded == expected:
+        return True
+    recorded_provider, _, recorded_model = recorded.partition(":")
+    expected_provider, _, expected_model = expected.partition(":")
+    if recorded_provider != expected_provider:
+        return False
+    return SUPERSEDED_BY.get(recorded_model) == expected_model
+
+
+def model_versions_accept(recorded: Mapping[str, str], expected: Mapping[str, str]) -> bool:
+    """Role-by-role reuse check that honors declared supersession.
+
+    Equality is still required for every role; supersession only widens what counts as equal for
+    a role whose retired model has a declared successor. A missing or extra role is a mismatch,
+    exactly as a dict comparison would treat it.
+    """
+
+    if set(recorded) != set(expected):
+        return False
+    return all(
+        model_identity_accepts(recorded=recorded[role], expected=expected[role])
+        for role in expected
+    )
 
 
 @dataclass(frozen=True)

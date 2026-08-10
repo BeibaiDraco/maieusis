@@ -4,15 +4,16 @@ The preflight body contains NO ``.send`` / ``.generate_structured`` / runner ``.
 call. It does cheap/static work plus, for the explicit product ``check`` command, one free OpenAlex
 quota probe: file existence, ``shutil.which`` + login-presence, exact dialogue-runtime imports,
 source-tree Git validation, CONSTRUCTING providers (construction is free — it proves the key is
-present + the model is tier-authorized; the paid call is only ``send``, which is never reached),
+present + the model is tier-authorized; paid ``send``/``research_structured`` calls are never reached),
 CONSTRUCTING the runner (validates the inspection runtime; never spawns), static id compares, a
 write-probe, and static estimates + an egress disclosure.
 
-Zero-paid is guaranteed structurally and TESTED: ``build_provider`` / ``build_runner`` are injectable so
-tests inject spies whose ``send`` / ``run`` raise; every path (happy + each failure) asserts the spy was
-never called. The OpenAlex probe is injectable and defaults off for non-check callers. Demo mode (no
-token API) resolves the API-agent providers to ``mock`` and does NOT require
-token-API keys — only the coding host is checked (F2).
+Zero-paid is guaranteed structurally and TESTED: ``build_provider`` /
+``build_novelty_web_provider`` / ``build_runner`` are injectable so tests inject spies whose
+``send`` / ``research_structured`` / ``run`` raise; every path (happy + each failure) asserts the
+spy was never called. The OpenAlex probe is injectable and defaults off for non-check callers. Demo
+mode (no token API) resolves the API-agent providers to ``mock`` and does NOT require token-API
+keys — only the coding host is checked (F2).
 
 This module carries no dataset-specific names; it is enforced by the dataset-agnostic guard.
 """
@@ -32,6 +33,10 @@ from ..providers.coding_agents.spawn_sandbox import default_lead_codex_home
 from ..providers.coding_agents.subprocess_utils import detect_repo_root, source_tree_digest
 from ..providers.models.factory import build_model_provider
 from ..providers.models.policy import ensure_model_allowed
+from ..providers.models.web_search_provider import (
+    build_novelty_web_search_provider,
+    require_strict_novelty_web_capability,
+)
 from ..schemas.maieusis_project_config import (
     CodingHost,
     ConfigDatasetAccessMode,
@@ -39,6 +44,7 @@ from ..schemas.maieusis_project_config import (
     ProviderModel,
 )
 from ..schemas.topic_literature import TopicSourceProfile
+from .dossier.development_review_dossier import _MAX_REVIEW_ARTIFACT_REATTEMPTS
 from .orchestration.paperbank_import import PaperBankImportError, validate_paperbank_import
 from .paper_ingest.external_lookup import ExternalLookupError, probe_openalex_quota
 from .retrieval.dataset_seed_retrieval import resolve_seed_link
@@ -52,6 +58,7 @@ _KEY_ENV = {
 }
 
 BuildProvider = Callable[..., object]
+BuildNoveltyWebProvider = Callable[..., object]
 BuildRunner = Callable[[MaieusisProjectConfig], object]
 Which = Callable[[str], str | None]
 OpenAlexProbe = Callable[[], None]
@@ -59,9 +66,16 @@ DialogueRuntimeProbe = Callable[[], None]
 SourceTreeProbe = Callable[[str | Path], object]
 DatasetSeedProbe = Callable[[str, str], list[object]]
 CodexVersionProbe = Callable[[str], str]
+ClaudeVersionProbe = Callable[[str], str]
 
 _MIN_TERRA_CODEX_VERSION = (0, 144, 4)
 _CODEX_VERSION_PATTERN = re.compile(r"\bcodex-cli\s+(\d+)\.(\d+)\.(\d+)\b")
+# The dual-host parity floor: the Claude Code version audited at the 2026-07-19 host takeover.
+_MIN_CLAUDE_CODE_VERSION = (2, 1, 201)
+_CLAUDE_VERSION_PATTERN = re.compile(r"\b(\d+)\.(\d+)\.(\d+)\b")
+# N-2 permits the initial scout plus at most one cite-bound ``-novelty-r1`` scout.  This is a
+# scientific/product bound, not a reflection of the generic pattern-revision setting.
+_NOVELTY_WEB_SCOUT_PASSES_PER_VARIANT = 2
 
 
 class PreflightCheck(BaseModel):
@@ -92,6 +106,7 @@ def run_preflight(
     config: MaieusisProjectConfig,
     *,
     build_provider: BuildProvider = build_model_provider,
+    build_novelty_web_provider: BuildNoveltyWebProvider = build_novelty_web_search_provider,
     build_runner: BuildRunner | None = None,
     which: Which = shutil.which,
     home: Path | None = None,
@@ -102,6 +117,7 @@ def run_preflight(
     dialogue_runtime_probe: DialogueRuntimeProbe | None = None,
     source_tree_probe: SourceTreeProbe | None = None,
     codex_version_probe: CodexVersionProbe | None = None,
+    claude_version_probe: ClaudeVersionProbe | None = None,
 ) -> PreflightReport:
     """Run the preflight over a validated config; return a report (never proceeds to a run)."""
     checks: list[PreflightCheck] = []
@@ -115,6 +131,32 @@ def run_preflight(
     usable = [pdf for pdf in pdfs if pdf.is_file() and pdf.stat().st_size > 0]
     add("paperbank.inbox_exists", inbox.exists(), f"PDF inbox {inbox}")
     add("paperbank.has_usable_pdf", bool(usable), f"{len(usable)} non-empty PDF(s) in {inbox}")
+    # The configured parser's system binary. Without this the preflight passed, the user approved a
+    # paid run, and the run then died in parsing.py on a missing binary -- after the money started.
+    # Preflight is the only place that costs nothing to fail in.
+    parser = config.paperbank.parser.strip().lower()
+    # Demo mode never reaches the parser -- verified by running the demo end to end against a
+    # pdftotext that exits non-zero if invoked; it is never called. Requiring the binary there
+    # would block the zero-cost on-ramp the documentation recommends as a first step.
+    if not config.is_demo and parser in {"poppler_text", "auto"}:
+        # Through the injected `which`, like every other executable probe here. Calling
+        # shutil.which directly made this check depend on whatever happens to be installed on the
+        # machine running the tests, which turned every hermetic preflight test red on a runner
+        # without Poppler.
+        pdftotext = which("pdftotext")
+        add(
+            "paperbank.parser_binary",
+            pdftotext is not None or parser == "auto",
+            (
+                f"parser {parser!r}: pdftotext {'found at ' + pdftotext if pdftotext else 'NOT on PATH'}"
+                + (
+                    ""
+                    if pdftotext
+                    else " -- install Poppler (brew install poppler / apt install poppler-utils)"
+                )
+            ),
+            warning=parser == "auto" and pdftotext is None,
+        )
     paperbank_import_ok = True
     if config.paperbank.import_from_run is not None:
         try:
@@ -248,12 +290,44 @@ def run_preflight(
     host = config.models.coding_host
     if not config.is_demo:
         if host == CodingHost.CLAUDE_CODE:
-            add("coding_host.installed", which("claude") is not None, "claude on PATH")
+            claude_executable = which("claude")
+            add("coding_host.installed", claude_executable is not None, "claude on PATH")
             add(
                 "coding_host.logged_in",
                 bool(os.getenv("CLAUDE_CODE_OAUTH_TOKEN")),
                 "CLAUDE_CODE_OAUTH_TOKEN",
             )
+            # Dual-host parity: mirror the Codex version floor with the takeover-audited
+            # Claude Code version. The probe is injectable for hermetic tests.
+            if claude_executable is None:
+                add(
+                    "coding_host.version",
+                    False,
+                    "Claude Code >=2.1.201 is required for the claude_code coding host",
+                )
+            else:
+                try:
+                    raw_version = (claude_version_probe or _probe_claude_version)(claude_executable)
+                    parsed_version = _parse_claude_version(raw_version)
+                    add(
+                        "coding_host.version",
+                        parsed_version >= _MIN_CLAUDE_CODE_VERSION,
+                        f"{raw_version.strip()} (claude_code requires Claude Code >=2.1.201)",
+                    )
+                except (
+                    OSError,
+                    ValueError,
+                    subprocess.SubprocessError,
+                    RuntimeError,
+                ) as exc:
+                    # RuntimeError covers sandbox/egress guards that intercept host
+                    # subprocess launches; an unverifiable version fails the check
+                    # (fail-closed) instead of crashing preflight.
+                    add(
+                        "coding_host.version",
+                        False,
+                        f"could not verify Claude Code >=2.1.201: {exc}",
+                    )
         else:
             codex_executable = which("codex")
             add("coding_host.installed", codex_executable is not None, "codex on PATH")
@@ -337,6 +411,16 @@ def run_preflight(
             "models.reviewer_independent", distinct, "owner and reviewer must be distinct providers"
         )
 
+    # N-2 stays entirely absent from default-off and demo reports.  Once explicitly enabled, every
+    # no-egress property (mode, capability, identity, hard reservation, key, tier) is checked before
+    # constructing its separate uncached provider seam.
+    if config.novelty.web_grounding.enabled:
+        _check_novelty_web_grounding(
+            add,
+            config,
+            build=build_novelty_web_provider,
+        )
+
     # --- Literature source profile — opt-in paid Elicit must FAIL CLOSED if forced without a key -----
     # Skipped in demo (topic retrieval is mock/injected there — no Elicit call). `public`/`auto` never
     # fail (auto honestly degrades to PUBLIC when ELICIT_API_KEY is absent); `elicit`/`hybrid` FORCE
@@ -389,15 +473,45 @@ def run_preflight(
         f"output_root {config.run.output_root}",
     )
 
-    # --- Explicitly unsupported controls -------------------------------------------------------------
-    # These knobs previously parsed while the fresh driver ignored them. Reject them instead of
-    # advertising a capability that cannot affect the scientific run.
+    # --- Capability truth ---------------------------------------------------------------------------
     add(
         "novelty.enabled",
-        not config.novelty.enabled,
-        "disabled (real novelty search not yet supported)"
-        if not config.novelty.enabled
-        else "enabled novelty is not yet supported by the product driver",
+        not (config.novelty.enabled and config.is_demo),
+        (
+            "enabled: evidence-driven novelty admission runs before shortlist/planning"
+            if config.novelty.enabled and not config.is_demo
+            else (
+                "disabled: this run cannot claim novelty-admitted planning"
+                if not config.novelty.enabled
+                else "subscription-only demo cannot run live novelty admission"
+            )
+        ),
+    )
+    add(
+        "novelty.literature_enabled",
+        not config.novelty.enabled or config.literature.enabled,
+        (
+            "literature retrieval enabled for novelty admission"
+            if config.literature.enabled
+            else "novelty admission requires literature.enabled=true"
+        ),
+    )
+    questioner_identity = (
+        config.models.questioner.provider.strip().lower(),
+        config.models.questioner.model.strip().lower(),
+    )
+    reviewer_identity = (
+        config.models.reviewer.provider.strip().lower(),
+        config.models.reviewer.model.strip().lower(),
+    )
+    add(
+        "novelty.independent_reviewer",
+        not config.novelty.enabled or questioner_identity != reviewer_identity,
+        (
+            "novelty reviewer is distinct from the Question Scientist"
+            if questioner_identity != reviewer_identity
+            else "novelty reviewer must not reuse the exact Question Scientist model identity"
+        ),
     )
     add(
         "run.shortlist_path",
@@ -462,6 +576,150 @@ def _check_api_provider(
         add(f"models.{role}", False, str(exc))
 
 
+def _check_novelty_web_grounding(
+    add: Callable[[str, bool, str], None],
+    config: MaieusisProjectConfig,
+    *,
+    build: BuildNoveltyWebProvider,
+) -> None:
+    """Validate the opt-in N-2 scout without sending a web or model request.
+
+    The strict capability lookup is deliberately performed before the factory seam.  That keeps an
+    unsupported adapter (currently OpenAI) from even constructing a client for a lane whose hard
+    tool-fee reservation cannot be enforced.
+    """
+
+    grounding = config.novelty.web_grounding
+    eligible_mode = config.novelty.enabled and not config.is_demo
+    add(
+        "novelty.web_grounding",
+        eligible_mode,
+        (
+            "enabled: strict, opt-in novelty web grounding is available in standard novelty mode"
+            if eligible_mode
+            else (
+                "novelty web grounding requires novelty.enabled=true"
+                if not config.novelty.enabled
+                else "subscription-only demo cannot run novelty web grounding"
+            )
+        ),
+    )
+    if not eligible_mode:
+        return
+
+    provider = grounding.scout.provider.strip().lower()
+    model = grounding.scout.model.strip()
+
+    try:
+        capabilities = require_strict_novelty_web_capability(provider)
+        capability_ok = True
+        add(
+            "novelty.web_grounding.strict_capability",
+            True,
+            (
+                f"{capabilities.provider_name}:{capabilities.tool_name} "
+                f"{capabilities.tool_version} enforces the hard use bound and reports a complete "
+                "direct-search action trace"
+            ),
+        )
+    except Exception as exc:
+        capability_ok = False
+        add("novelty.web_grounding.strict_capability", False, str(exc))
+
+    scout_model_ok = bool(provider and model)
+    add(
+        "novelty.web_grounding.scout_model",
+        scout_model_ok,
+        (
+            f"explicit scout identity {provider}:{model}"
+            if scout_model_ok
+            else "enabled novelty web grounding requires an explicit scout provider and model"
+        ),
+    )
+    questioner_identity = _effective_provider_model_identity(config.models.questioner)
+    scout_identity = (provider, model.lower())
+    distinct_from_questioner = scout_model_ok and scout_identity != questioner_identity
+    add(
+        "novelty.web_grounding.scout_independent",
+        distinct_from_questioner,
+        (
+            "web scout is distinct from the Question Scientist"
+            if distinct_from_questioner
+            else "novelty web scout must not reuse the effective Question Scientist model identity"
+        ),
+    )
+
+    try:
+        reservation = _novelty_web_tool_fee_reservation_micro_usd(config)
+        ceiling = grounding.hard_run_tool_spend_ceiling_micro_usd
+        reservation_ok = reservation <= ceiling
+        add(
+            "novelty.web_grounding.tool_fee_ceiling",
+            reservation_ok,
+            _novelty_web_tool_fee_description(config, reservation=reservation)
+            + (
+                ""
+                if reservation_ok
+                else " Worst-case reservation exceeds the configured hard ceiling."
+            ),
+        )
+    except Exception as exc:
+        reservation_ok = False
+        add("novelty.web_grounding.tool_fee_ceiling", False, str(exc))
+
+    # No client construction precedes all static gates.  In particular, an OpenAI configuration,
+    # a pro-gated scout, or an unfundable full run cannot create a web provider as a side effect.
+    if not (capability_ok and scout_model_ok and distinct_from_questioner and reservation_ok):
+        return
+
+    key_env = _KEY_ENV.get(provider)
+    if key_env is None:
+        # This is presently unreachable after the capability check, but keeps future adapters
+        # fail-closed if their provider/key policy is not registered here.
+        add("models.novelty_web_scout", False, f"unknown provider {provider!r}")
+        return
+    key_name, _model_env = key_env
+    if not os.getenv(key_name):
+        add(
+            "models.novelty_web_scout",
+            False,
+            f"missing {key_name} (load via runtime.env, not the config)",
+        )
+        return
+    try:
+        # Keep the ordinary pro-model authorization intact even when an injected test factory does
+        # not implement it itself.  The real novelty-specific factory independently preserves it.
+        ensure_model_allowed(
+            provider=provider,
+            model=model,
+            allow_pro_model=config.models.allow_pro_model,
+        )
+        build(
+            provider,
+            model=model,
+            allow_pro_model=config.models.allow_pro_model,
+        )  # CONSTRUCT only through the dedicated N-2 seam — never research_structured/send
+        add(
+            "models.novelty_web_scout",
+            True,
+            f"{provider}:{model} present + tier-authorized through the strict novelty web seam",
+        )
+    except Exception as exc:
+        add("models.novelty_web_scout", False, str(exc))
+
+
+def _effective_provider_model_identity(provider_model: ProviderModel) -> tuple[str, str]:
+    """Resolve a regular API role's model fallback solely for static identity comparison."""
+
+    provider = provider_model.provider.strip().lower()
+    configured_model = provider_model.model.strip()
+    if configured_model:
+        return provider, configured_model.lower()
+    env = _KEY_ENV.get(provider)
+    fallback_model = os.getenv(env[1], "") if env is not None else ""
+    return provider, fallback_model.strip().lower()
+
+
 def _probe_dialogue_runtime() -> None:
     """Import the exact optional runtime used by a real family dialogue server; open no socket."""
     import uvicorn
@@ -495,6 +753,25 @@ def _parse_codex_version(raw: str) -> tuple[int, int, int]:
     return int(match.group(1)), int(match.group(2)), int(match.group(3))
 
 
+def _probe_claude_version(executable: str) -> str:
+    """Read the local Claude Code CLI version without starting an agent or making a paid call."""
+    result = subprocess.run(
+        [executable, "--version"],
+        check=True,
+        capture_output=True,
+        text=True,
+        timeout=10,
+    )
+    return result.stdout.strip()
+
+
+def _parse_claude_version(raw: str) -> tuple[int, int, int]:
+    match = _CLAUDE_VERSION_PATTERN.search(raw.strip())
+    if match is None:
+        raise ValueError(f"unrecognized `claude --version` output: {raw.strip()!r}")
+    return int(match.group(1)), int(match.group(2)), int(match.group(3))
+
+
 def _build_default_runner(config: MaieusisProjectConfig) -> object:
     """Construct the public runtime's real per-family host without spawning a coding agent."""
     from .orchestration.runtime_factories import build_planner_host_factory
@@ -517,7 +794,10 @@ def _output_writable(output_root: Path) -> bool:
 def _estimates(config: MaieusisProjectConfig) -> dict[str, str]:
     families = config.run.max_families
     rounds = config.run.max_revise_rounds
-    per_family_reviews = 2 * (rounds + 1)
+    # A malformed review REPLY is re-asked without consuming a revise round, so those calls are
+    # real spend that the round arithmetic alone does not see. This line is a go/no-go before
+    # ignition, so it must state the true ceiling, not a floor.
+    per_family_reviews = 2 * (rounds + 1) * (1 + _MAX_REVIEW_ARTIFACT_REATTEMPTS)
     per_family_spawns = 1 + rounds
     fam = str(families)
     host = config.models.coding_host
@@ -526,7 +806,7 @@ def _estimates(config: MaieusisProjectConfig) -> dict[str, str]:
         if host == CodingHost.CLAUDE_CODE
         else "Codex has no synthetic turn cap; "
     )
-    return {
+    estimates = {
         "proposal_shape": (
             f"{families} families x {config.run.variants_per_family} variants requested per family"
         ),
@@ -549,6 +829,49 @@ def _estimates(config: MaieusisProjectConfig) -> dict[str, str]:
             f"{config.run.max_parallel_family_workers} families in parallel; no run-wide timeout"
         ),
     }
+    # Preserve the exact default-off estimate surface.  The extra estimate is meaningful only for
+    # the explicitly requested N-2 lane and names its narrow billing scope honestly.
+    if config.novelty.web_grounding.enabled:
+        reservation = _novelty_web_tool_fee_reservation_micro_usd(config)
+        estimates["novelty_web_tool_fee_reservation"] = _novelty_web_tool_fee_description(
+            config,
+            reservation=reservation,
+        )
+    return estimates
+
+
+def _novelty_web_tool_fee_reservation_micro_usd(config: MaieusisProjectConfig) -> int:
+    """Return the all-variant N-2 reservation, including the one permitted re-search path."""
+
+    grounding = config.novelty.web_grounding
+    return (
+        config.run.max_families
+        * config.run.variants_per_family
+        * _NOVELTY_WEB_SCOUT_PASSES_PER_VARIANT
+        * grounding.max_searches_per_scout
+        * grounding.web_tool_rate_micro_usd
+    )
+
+
+def _novelty_web_tool_fee_description(
+    config: MaieusisProjectConfig,
+    *,
+    reservation: int | None = None,
+) -> str:
+    """Render the fixed N-2 tool-fee reservation without implying a total spend cap."""
+
+    grounding = config.novelty.web_grounding
+    total = (
+        _novelty_web_tool_fee_reservation_micro_usd(config) if reservation is None else reservation
+    )
+    return (
+        f"{config.run.max_families} families x {config.run.variants_per_family} variants x "
+        f"{_NOVELTY_WEB_SCOUT_PASSES_PER_VARIANT} scout passes (initial + permitted novelty-r1) x "
+        f"{grounding.max_searches_per_scout} max searches x {grounding.web_tool_rate_micro_usd} "
+        f"micro-USD/search ({grounding.rate_card.value}) = {total} micro-USD; configured hard "
+        f"ceiling {grounding.hard_run_tool_spend_ceiling_micro_usd} micro-USD. This is a web-tool "
+        "fee only, not a total model-token cost ceiling."
+    )
 
 
 def _egress_disclosure(config: MaieusisProjectConfig) -> list[str]:
@@ -565,4 +888,12 @@ def _egress_disclosure(config: MaieusisProjectConfig) -> list[str]:
     resolved = resolve_topic_source_profile(config.literature.source_profile, elicit_api_key="")
     if resolved in _ELICIT_PROFILES:
         lines.append("Topic literature queries → Elicit semantic search (paid, opt-in source).")
+    if config.novelty.enabled and config.novelty.web_grounding.enabled:
+        scout = config.novelty.web_grounding.scout
+        lines.append(
+            "Redacted novelty-candidate projection → "
+            f"N-2 web scout {scout.provider.strip().lower()}:{scout.model.strip()} "
+            "(paid, opt-in direct web search; web-tool fee reservation only, not a total "
+            "model-token cost ceiling)."
+        )
     return lines

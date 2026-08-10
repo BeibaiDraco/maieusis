@@ -10,8 +10,16 @@ from pydantic import BaseModel, ValidationError
 from ..capture import (
     capture_enabled,
     capture_paid_leaf,
+    capture_paid_leaf_failure,
     capture_parse_failure,
     raw_response_body,
+)
+from ..models.base import (
+    ANTHROPIC_MAX_OUTPUT_TOKENS,
+    DEFAULT_EFFORT,
+    DEFAULT_THINKING,
+    partial_json_text,
+    reasoning_request_kwargs,
 )
 from ..models.policy import ModelPolicyDecision, ensure_model_allowed
 from .base import (
@@ -22,6 +30,7 @@ from .base import (
     ScientificAgentSessionError,
     ScientificAgentSessionSnapshot,
     ScientificAgentTranscriptRecord,
+    is_account_exhaustion_error,
     retry_on_transient,
     scientific_agent_payload_digest,
 )
@@ -103,7 +112,14 @@ class AnthropicScientificAgentProvider(ScientificAgentProvider):
         allow_pro_model: bool = False,
         system_prompt: str = "",
         client: Any | None = None,
+        thinking: str = DEFAULT_THINKING,
+        effort: str = DEFAULT_EFFORT,
     ) -> None:
+        # This is the seam where reasoning depth mattered most and was least visible: 105 of the
+        # 107 claude-sonnet-5 replies on the 2026-07-31 leg carried a thinking block, all of it on
+        # a vendor default nobody had chosen.
+        self._thinking = thinking
+        self._effort = effort
         resolved_model = model or os.getenv("ANTHROPIC_MODEL")
         if not resolved_model:
             raise ValueError("Set ANTHROPIC_MODEL or pass model=...")
@@ -149,6 +165,8 @@ class AnthropicScientificAgentProvider(ScientificAgentProvider):
             model_id=self.model_id,
             prompt_version=prompt_version,
             system_prompt=self._system_prompt,
+            thinking=self._thinking,
+            effort=self._effort,
         )
 
     def resume_session(
@@ -174,6 +192,12 @@ class AnthropicScientificAgentProvider(ScientificAgentProvider):
             transcript=snapshot.transcript,
             provider_session_id=snapshot.provider_session_id,
             provider_metadata=snapshot.provider_metadata,
+            # Config is truth and the snapshot is provenance (hard rule 9), so a resumed session
+            # keeps the provider's configured depth. Omitting these silently reverted every turn
+            # after the first to the module default -- the same silent-default defect this field
+            # exists to abolish, reintroduced one function below the fix.
+            thinking=self._thinking,
+            effort=self._effort,
         )
 
 
@@ -191,7 +215,11 @@ class AnthropicScientificAgentSession(ScientificAgentSession):
         transcript: list[ScientificAgentTranscriptRecord] | None = None,
         provider_session_id: str = "",
         provider_metadata: dict[str, str] | None = None,
+        thinking: str = DEFAULT_THINKING,
+        effort: str = DEFAULT_EFFORT,
     ) -> None:
+        self._thinking = thinking
+        self._effort = effort
         self._client = client
         self._branch_id = branch_id
         self._session_id = session_id
@@ -230,7 +258,7 @@ class AnthropicScientificAgentSession(ScientificAgentSession):
         payload_json = payload.model_dump(mode="json")
         request_kwargs: dict[str, Any] = {
             "model": self.model_id,
-            "max_tokens": 8192,
+            "max_tokens": ANTHROPIC_MAX_OUTPUT_TOKENS,
             "system": self._system_prompt,
             "messages": [
                 {
@@ -239,12 +267,14 @@ class AnthropicScientificAgentSession(ScientificAgentSession):
                 }
             ],
             "output_format": output_schema,
+            **reasoning_request_kwargs(self._thinking, self._effort),
         }
         # Bounded retry+backoff on transient API failures (429/timeout/connection/5xx). On
         # exhaustion this raises ScientificAgentInfrastructureError, which the orchestrator maps
         # to an infrastructure_incomplete terminal (never a scientific failed_validation).
         capturing = capture_enabled()
         fallback_output: T | None = None
+        capture_request: dict[str, Any] | None = None
         try:
             if capturing:
                 # Anthropic's `messages.parse` has no generated `with_raw_response.parse` facade in the
@@ -254,12 +284,13 @@ class AnthropicScientificAgentSession(ScientificAgentSession):
                     **request_kwargs,
                     "extra_headers": {"X-Stainless-Raw-Response": "true"},
                 }
+                capture_request = self._capture_request(payload, output_schema, raw_request_kwargs)
                 raw_response = _anthropic_parse_with_bounded_retries(
                     lambda: self._client.messages.parse(**raw_request_kwargs)
                 )
                 receipt = capture_paid_leaf(
                     "scientific_agents.anthropic.session_send",
-                    request=self._capture_request(payload, output_schema, raw_request_kwargs),
+                    request=capture_request,
                     response=raw_response_body(raw_response),
                     model=self.model_id,
                 )
@@ -282,6 +313,12 @@ class AnthropicScientificAgentSession(ScientificAgentSession):
                 )
             else:
                 kind = _anthropic_session_failure_kind(exc.last_error)
+                self._capture_failed_send(
+                    capture_request,
+                    exc.last_error,
+                    kind=kind,
+                    attempts=exc.attempts,
+                )
                 if kind is None:
                     raise
                 raise ScientificAgentSessionError(
@@ -291,15 +328,22 @@ class AnthropicScientificAgentSession(ScientificAgentSession):
                     last_error=exc.last_error,
                 ) from exc
         except ValidationError as exc:
+            self._capture_failed_send(
+                capture_request,
+                exc,
+                kind=ScientificAgentFailureKind.STRUCTURED_OUTPUT_INVALID,
+            )
             raise ScientificAgentSessionError(
                 ScientificAgentFailureKind.STRUCTURED_OUTPUT_INVALID,
                 provider_id=self.provider_id,
                 last_error=exc,
             ) from exc
-        except (TypeError, AssertionError):
+        except (TypeError, AssertionError) as exc:
+            self._capture_failed_send(capture_request, exc, kind=None)
             raise
         except Exception as exc:
             kind = _anthropic_session_failure_kind(exc)
+            self._capture_failed_send(capture_request, exc, kind=kind)
             if kind is None:
                 raise
             raise ScientificAgentSessionError(
@@ -311,6 +355,22 @@ class AnthropicScientificAgentSession(ScientificAgentSession):
             else:
                 if capturing:
                     response = raw_response.parse()
+                # A reply that ran out of room is not a malformed reply, and the response has
+                # said so all along -- nothing read it. This branch catches the shape with NO text
+                # block at all (2 of the 5 measured truncations): `parsed_output` is None and they
+                # landed in INVALID_RESPONSE, the same bucket as a garbled answer. The other 3
+                # carry a text block cut mid-JSON, which the SDK's post-parser rejects one line
+                # above -- they are named in the ValidationError handler below, which is the only
+                # place they can be reached.
+                if getattr(response, "stop_reason", None) == "max_tokens":
+                    raise ScientificAgentSessionError(
+                        ScientificAgentFailureKind.OUTPUT_TRUNCATED,
+                        provider_id=self.provider_id,
+                        last_error=ValueError(
+                            "reply stopped at the "
+                            f"{ANTHROPIC_MAX_OUTPUT_TOKENS}-token output ceiling"
+                        ),
+                    )
                 parsed = response.parsed_output
                 if parsed is None:
                     raise ScientificAgentSessionError(
@@ -321,10 +381,29 @@ class AnthropicScientificAgentSession(ScientificAgentSession):
                 output = output_schema.model_validate(parsed)
         except ValidationError as exc:
             capture_parse_failure(receipt, exc)
+            # 3 of the 5 measured truncations land HERE, not in the branch above: their reply
+            # carries a text block cut mid-JSON, so the SDK's post-parser raises before any
+            # `stop_reason` can be read off a parsed message. All three open with a COMPLETE
+            # `"decision"` field -- `{"decision":"accept",...` twice and `{"decision":"revise",...`
+            # once -- so calling them "structured output invalid" both misnames the cause and
+            # throws away a verdict the run already paid for.
+            #
+            # `raw_response` is still in scope on the capturing path (which is the path a live leg
+            # takes: launch.sh exports MAIEUSIS_CAPTURE_DIR), and its RAW body carries the
+            # stop_reason the parsed message never got to expose. Without capture there is no
+            # response object at all -- `messages.parse` raised inside the retry helper -- so the
+            # kind stays honest at STRUCTURED_OUTPUT_INVALID rather than guessing from the bytes.
+            truncated = False
+            if capturing:
+                body = raw_response_body(raw_response)
+                truncated = bool(isinstance(body, dict) and body.get("stop_reason") == "max_tokens")
             raise ScientificAgentSessionError(
-                ScientificAgentFailureKind.STRUCTURED_OUTPUT_INVALID,
+                ScientificAgentFailureKind.OUTPUT_TRUNCATED
+                if truncated
+                else ScientificAgentFailureKind.STRUCTURED_OUTPUT_INVALID,
                 provider_id=self.provider_id,
                 last_error=exc,
+                partial_output_text=partial_json_text(exc),
             ) from exc
         except Exception as exc:
             capture_parse_failure(receipt, exc)
@@ -394,7 +473,7 @@ class AnthropicScientificAgentSession(ScientificAgentSession):
         }
         request_kwargs: dict[str, Any] = {
             "model": self.model_id,
-            "max_tokens": 8192,
+            "max_tokens": ANTHROPIC_MAX_OUTPUT_TOKENS,
             "system": fallback_system,
             "messages": [
                 {
@@ -402,28 +481,45 @@ class AnthropicScientificAgentSession(ScientificAgentSession):
                     "content": json.dumps(fallback_payload, sort_keys=True, default=str),
                 }
             ],
+            # The recovery call keeps the session's stated reasoning depth. Letting it fall back to
+            # the vendor default would make the retry differ from the attempt it is recovering.
+            **reasoning_request_kwargs(self._thinking, self._effort),
         }
         receipt = None
+        capture_request: dict[str, Any] | None = None
         try:
             if capturing:
                 raw_request_kwargs = {
                     **request_kwargs,
                     "extra_headers": {"X-Stainless-Raw-Response": "true"},
                 }
+                capture_request = self._capture_request(payload, output_schema, raw_request_kwargs)
                 raw_response = self._client.messages.create(**raw_request_kwargs)
                 receipt = capture_paid_leaf(
                     "scientific_agents.anthropic.session_send_strict_json_recovery",
-                    request=self._capture_request(payload, output_schema, raw_request_kwargs),
+                    request=capture_request,
                     response=raw_response_body(raw_response),
                     model=self.model_id,
                 )
                 response = raw_response.parse()
             else:
                 response = self._client.messages.create(**request_kwargs)
-        except (TypeError, AssertionError):
+        except (TypeError, AssertionError) as exc:
+            self._capture_failed_send(
+                capture_request,
+                exc,
+                kind=None,
+                seam="scientific_agents.anthropic.session_send_strict_json_recovery",
+            )
             raise
         except Exception as exc:
             kind = _anthropic_session_failure_kind(exc)
+            self._capture_failed_send(
+                capture_request,
+                exc,
+                kind=kind,
+                seam="scientific_agents.anthropic.session_send_strict_json_recovery",
+            )
             if kind is None:
                 raise
             raise ScientificAgentSessionError(
@@ -484,6 +580,27 @@ class AnthropicScientificAgentSession(ScientificAgentSession):
             "wire": request_kwargs,
         }
 
+    def _capture_failed_send(
+        self,
+        request: dict[str, Any] | None,
+        error: BaseException,
+        *,
+        kind: ScientificAgentFailureKind | None,
+        attempts: int = 1,
+        seam: str = "scientific_agents.anthropic.session_send",
+    ) -> None:
+        if request is None:
+            return
+        capture_paid_leaf_failure(
+            seam,
+            request=request,
+            error=error,
+            provider=self.provider_id,
+            model=self.model_id,
+            failure_kind=kind.value if kind is not None else "unclassified",
+            attempts=attempts,
+        )
+
     def snapshot(self) -> ScientificAgentSessionSnapshot:
         return ScientificAgentSessionSnapshot(
             branch_id=self.branch_id,
@@ -498,6 +615,8 @@ class AnthropicScientificAgentSession(ScientificAgentSession):
 
 
 def _anthropic_session_failure_kind(exc: BaseException) -> ScientificAgentFailureKind | None:
+    if is_account_exhaustion_error(exc):
+        return ScientificAgentFailureKind.ACCOUNT_EXHAUSTED
     if isinstance(exc, _AnthropicGrammarCompilationTimeout):
         return ScientificAgentFailureKind.SERVER_ERROR
     name = type(exc).__name__

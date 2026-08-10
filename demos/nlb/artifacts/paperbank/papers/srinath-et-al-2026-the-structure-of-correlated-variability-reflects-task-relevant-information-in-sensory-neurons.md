@@ -4,53 +4,54 @@
 
 ## Question the system extracted
 
-How is task-relevant information coding in sensory neural populations related to correlated variability and behavior, and why is correlated variability reliably related to behavior if an optimal decoder can in principle ignore it?
+Why is correlated variability so reliably related to behavior if an optimal decoder need not be constrained by low-dimensional correlated variability, and does the structure of that variability preferentially reflect task-relevant sensory information?
 
 ## The scientific contrast
 
-Does correlated variability merely act as low-dimensional noise that can be ignored, or does its structure reflect circuit dimensions aligned with task-relevant sensory information and behavior?
+Whether correlated variability is merely harmful shared noise that sensory representations should avoid, or instead reflects circuit structure and aligns with information preferentially used to guide behavior.
 
 Competing explanations the paper weighed:
-- Correlated variability is shared noise that constrains sensory coding and should be reduced or avoided by task-relevant representations.
-- Correlated variability is low dimensional and can be ignored by an optimal decoder, so its behavioral relationship may not reflect task-relevant information.
-- Correlated variability arises from circuit structure and is preferentially aligned with task-relevant representations, allowing the relevant information to be read out or amplified along that axis.
+- Correlated variability is shared noise that impairs sensory coding and perceptual decisions; attention or arousal improves perception by reducing it.
+- Because correlated variability is low dimensional, an optimal decoder can ignore it, so its behavioral relationship may not reflect task-relevant information.
+- Correlated variability arises from functional circuit structure and preferentially aligns with task-relevant representations, potentially amplifying or preserving information used for behavior.
 
-What would tell them apart: If the circuit-structure account is correct, task-relevant stimulus representations should align with the correlated-variability axis and behavioral performance should improve for changes or features most aligned with that axis; a recurrent circuit model should also show selective amplification or improved readout for aligned information.
+What would tell them apart: If the circuit-structure account is correct, task-relevant stimulus representations should be more aligned with the correlated-variability axis than irrelevant representations, and behavioral performance should vary with that alignment across tasks and datasets.
 
 ## Background and motivation
 
-- Correlated neural variability is tightly linked to behavior and is associated with attention, learning, arousal or motivation, and visual-stimulus contrast.
-- Shared variability is often treated as noise because it can impair sensory coding and perceptual decisions, motivating the idea that attention or arousal improves perception by reducing shared noise.
-- Correlated variability is typically low dimensional, so an optimal decoder could in principle ignore it entirely; nevertheless, it is reliably related to behavior.
-- Signal encoding and correlated variability may jointly arise from cortical circuit structure, such that shared variability reflects the neural population subspace that guides behavior.
+- Correlated neural variability is reliably linked to behavior and is modulated by processes including attention, learning, arousal or motivation, and visual-stimulus contrast.
+- Shared variability can impair sensory coding and perceptual decisions under a noise-based account, yet it is often low dimensional enough that an optimal decoder could ignore it.
+- Attention can reduce correlated variability without substantially altering the amount of sensory information available from the neural population.
+- Relationships among shared variability, information coding, and behavior are complex and remain the subject of ongoing study and debate.
+- The same circuit connectivity that shapes signal propagation may also shape shared variability, making variability potentially informative about the information used to guide behavior.
 
 ## Why this question mattered
 
-Resolving the tension would clarify whether shared variability obscures sensory information or provides a window into the neural dimensions preferentially used to guide behavior. It would also connect population-coding observations with a mechanistic account of how cortical circuits organize and read out task-relevant information.
+Resolving the tension would clarify why shared variability is consistently related to behavior despite being theoretically ignorable by an optimal decoder. It would also determine whether correlated variability can provide a window into the neural dimensions and circuit computations that guide perceptual behavior.
 
 ## What the dataset offered (as the paper used it)
 
-The paper analyzes datasets from multiple tasks, including an orientation change detection task and a continuous curvature estimation task, and compares stimulus representations, correlated variability, and behavior.
+Analysis of several datasets, including an orientation change detection task and a continuous curvature estimation task, relating stimulus representations, correlated variability, and behavior.
 
-- Population: Rhesus monkeys performing visual perceptual and estimation tasks, with recordings from sensory neurons including visual cortical area V4.
-- Measurements: trial-to-trial correlated variability, the axis of correlated variability defined from population activity, task- or stimulus-related neural representations, behavioral performance and choices, alignment between stimulus representations and the correlated-variability axis, decoding and information measures
+- Population: Rhesus monkeys performing visual perceptual tasks; the paper also refers to datasets from multiple brain areas and tasks.
+- Measurements: Trial-to-trial shared variability and noise correlations, Principal components of baseline or spontaneous population activity, Alignment between stimulus representations and the correlated-variability axis, Stimulus-feature decoding and Fisher discriminability, Task performance, hit rates, choices, and curvature-estimation error
 
 ## Key citations used in forming the question
 
 Public citation details are represented by the paper context; internal citation identifiers are omitted from this gallery.
-
 ## Open uncertainties (unmet evidence)
 
-- The source spans indicate analysis of several previously published datasets but do not identify a single parent-dataset paper or provide a precise dataset-level reuse relationship.
-- The source packet does not explicitly state whether the analyzed datasets are public or private.
-- formation_trace evidence is inconsistent (e.g. binding source_span_ids outside evidence_span_ids); kept DRAFT.
-- The source packet does not identify a parent dataset paper, public-data status, or explicit dataset-release/reuse relationship; these fields are therefore left unsupported or empty.
+- The provided source spans do not establish an explicit parent dataset paper, dataset-release relationship, or whether the analyzed datasets are publicly available.
+- The parser packet is marked incomplete because abstract, methods, and references were not detected; full citation metadata and cited-work identities therefore remain unverified.
+- The source spans do not identify a parent dataset paper, dataset release, public/private status, or whether the data are reused from an earlier dataset; paper-type and dataset-relation classification should be verified from the full source or metadata.
+- The parser packet does not provide a complete title/author citation span; the citation field is provisional and should be verified from source metadata.
+- The source spans support the central question and rationale but do not provide a single contiguous passage stating the complete question in the extractor's synthesized wording; verify the question formulation against the full introduction or abstract.
 - extraction windows returned different scientific descriptions; the first is retained pending review.
-- The provided spans establish analysis of four datasets and reference original manuscripts, but do not identify a single parent-dataset paper or explicitly establish the exact dataset-reuse relation for each dataset; verify paper type and parent-dataset metadata from additional source spans.
-- The provided parser-owned source spans contain only fragmented reference-list entries and do not support extraction of the paper's dataset description, population, modalities, task or design, measurements, or dataset relation.
-- The provided parser-owned source spans do not support extraction of the paper's motivating scientific claims, unresolved tension, original scientific question, competing explanations, or discriminating observation.
-- The provided parser-owned source spans do not support extraction of the question-design epistemic move, why the dataset can answer the question, why the question is scientifically valuable, or novelty relative to prior work.
-- A source-backed formation_trace cannot be produced because no provided parser-owned source span establishes the background-to-opportunity-to-question rationale.
+- The provided spans establish analysis of four datasets and refer to related or original manuscripts, but do not identify a single parent dataset paper or fully establish the dataset-relation classification; verify the parent-dataset/reuse status from the complete paper and cited source records.
+- The source packet does not provide a complete contiguous span for the paper's full title, author list, or publication date; metadata fields remain provisional.
+- The provided parser window contains only partial reference-list spans and does not support extraction or verification of the paper's dataset description, dataset relation, scientific background, motivating claims, unresolved tension, original scientific question, question design, or scientific significance.
+- Paper type and parent-dataset or dataset-reuse status cannot be grounded from the provided parser-owned source spans.
+- A source-backed formation trace cannot be produced because no parser-owned spans support its required background, gap, dataset-opportunity, question, consequence, and significance fields.
 - parser-owned text was usable, but the parse completeness report recorded limitations; review before authority raise.
 
 ## If this looks wrong

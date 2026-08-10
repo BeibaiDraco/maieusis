@@ -33,6 +33,8 @@ from ...schemas.multi_family_dossier import (
     FamilyOutcomeAuditSidecar,
     MultiFamilyCoordinationMode,
     MultiFamilyDossierManifest,
+    ProviderWarningActor,
+    ProviderWarningReceipt,
     ReviewAuthority,
 )
 from ...schemas.question_family import QuestionFamily, QuestionFamilyShortlistManifest
@@ -120,9 +122,35 @@ _PUBLIC_PLAN_TEXT_REDACTIONS: tuple[re.Pattern[str], ...] = (
     re.compile(r"\bqfamily-branch-[A-Za-z0-9-]+\b", re.I),
     re.compile(r"\bqvariant-[A-Za-z0-9-]+\b", re.I),
     re.compile(r"\bqseed-[A-Za-z0-9-]+\b", re.I),
-    re.compile(r"\b(?:analysis-plan|evidence|message|context)-[A-Za-z0-9-]+\b", re.I),
     re.compile(r"\b(?:owner|planner|reviewer)-session-[A-Za-z0-9-]+\b", re.I),
 )
+#: REMOVED 2026-08-03, by operator ruling: `\b(?:analysis-plan|evidence|message|context)-[\w-]+\b`.
+#: Every other pattern here is anchored on a grammar that cannot occur in English -- `req_`, `sk-`,
+#: an `api_key:` assignment, an absolute path, `qfamily-branch-`, `qvariant-`, `qseed-`,
+#: `owner-session-`. That one alternated on three ORDINARY WORDS followed by a hyphen, so in
+#: scientific prose it matched the science.
+#:
+#: Measured on the surface it actually touches -- the rendered prose fields of 240 live plan drafts
+#: -- it fired 23 times on 5 distinct tokens, NONE of them an identifier: `evidence-backed` (9),
+#: `context-invariance` (6), `evidence-behavior` (3), `context-specific` (3),
+#: `context-conditioned` (2). Every one was replaced in the reader's sentence by
+#: "[internal reference omitted]". On the same surface the eight surviving patterns fire ZERO
+#: times, so this one did 100% of the tuple's work and none of its job.
+#:
+#: `evidence-backed` is this project's own words for its deliverable (AGENTS.md:18,
+#: "evidence-backed AnalysisPlans or honest rejection"). It was being deleted from the user's
+#: dossier. And it happened on the "Safely retained planner draft" path, whose entire purpose is to
+#: preserve science that failed strict validation -- the one place a damaged sentence costs most.
+#:
+#: The operator rule this lands under: deterministic code is a guard at a special juncture; it
+#: cannot make scientific judgements and must not play language games. Inferring "this is an
+#: internal reference" from the SHAPE OF A WORD A MODEL WROTE, then rewriting the reader's
+#: sentence on that inference, is the language game. AGENTS.md hard rule 11 already drew the line:
+#: lexical-vocabulary checks are warnings or agent-review inputs, never a literal boundary.
+#:
+#: If id leakage into the reader's page ever needs answering, the honest replacement is a
+#: membership test of rendered tokens against the run's OWN known id set -- a structural fact, and
+#: the kind of guard that belongs here -- not a second regex over English.
 
 _PLAN_SCALAR_FIELDS: tuple[tuple[str, str], ...] = (
     ("refined_question", "Refined question"),
@@ -351,6 +379,40 @@ def build_queued_family_record(
     )
 
 
+def build_provider_warning_receipt(
+    *,
+    actor: ProviderWarningActor | str,
+    stage: str,
+    exc: BaseException,
+    api_failures: int = 0,
+    bounded_retry_used: bool = False,
+) -> ProviderWarningReceipt:
+    """Build the typed provider-warning receipt from what a catch site already holds.
+
+    Only bounded tokens ever enter the receipt: enum values, exception class names, and provider
+    identifiers. Raw exception message text is never read — the receipt schema would reject it,
+    and this builder never offers it.
+    """
+
+    last_error = getattr(exc, "last_error", None)
+    kind = getattr(exc, "kind", None) or getattr(last_error, "kind", None)
+    failure_kind = str(getattr(kind, "value", "")).strip() or type(exc).__name__
+    provider_id = str(
+        getattr(exc, "provider_id", "") or getattr(last_error, "provider_id", "") or ""
+    ).strip()
+    attempts = getattr(exc, "attempts", None)
+    if not (isinstance(attempts, int) and not isinstance(attempts, bool) and attempts >= 1):
+        attempts = max(1, api_failures)
+    return ProviderWarningReceipt(
+        actor=ProviderWarningActor(actor),
+        stage=stage,
+        provider_id=provider_id,
+        failure_kind=failure_kind,
+        attempt_count=attempts,
+        bounded_retry_used=bounded_retry_used,
+    )
+
+
 def write_development_outcome_dossier(
     *,
     output_root: str | Path,
@@ -360,6 +422,7 @@ def write_development_outcome_dossier(
     status: FamilyDossierStatus,
     blockers: Iterable[str],
     human_review_authority: ReviewAuthority = ReviewAuthority.MISSING,
+    provider_warning: ProviderWarningReceipt | None = None,
 ) -> FamilyDossierOutputRecord:
     if status == FamilyDossierStatus.COMPLETED_DOSSIER_STACK:
         raise ValueError("development outcome writer cannot create completed dossier records")
@@ -394,6 +457,7 @@ def write_development_outcome_dossier(
         status=status,
         blockers=blocker_list,
         retained_plan_lines=retained_plan_lines,
+        provider_warning=provider_warning,
     )
     outcome_path.write_text(markdown, encoding="utf-8")
     audit_sidecar = FamilyOutcomeAuditSidecar(
@@ -408,6 +472,7 @@ def write_development_outcome_dossier(
         outcome_markdown_digest=stable_hash(markdown),
         blockers=blocker_list,
         human_review_authority=human_review_authority,
+        provider_warning=provider_warning,
     )
     dump_data(audit_sidecar, audit_path)
     return build_queued_family_record(
@@ -1037,6 +1102,7 @@ def _render_development_outcome_markdown(
     status: FamilyDossierStatus,
     blockers: list[str],
     retained_plan_lines: list[str],
+    provider_warning: ProviderWarningReceipt | None = None,
 ) -> str:
     lines = [
         f"# {family_title}",
@@ -1056,6 +1122,15 @@ def _render_development_outcome_markdown(
     lines.extend(retained_plan_lines)
     lines.extend(["## Retained Outcome And Review Basis", ""])
     lines.extend(f"- {blocker}" for blocker in blockers)
+    if provider_warning is not None:
+        retry_note = "yes" if provider_warning.bounded_retry_used else "no"
+        provider_note = provider_warning.provider_id or "unrecorded"
+        lines.append(
+            f"- Provider warning: actor `{provider_warning.actor.value}`, stage "
+            f"`{provider_warning.stage}`, provider `{provider_note}`, failure kind "
+            f"`{provider_warning.failure_kind}`, attempts `{provider_warning.attempt_count}`, "
+            f"bounded retry used `{retry_note}`."
+        )
     lines.extend(
         [
             "",

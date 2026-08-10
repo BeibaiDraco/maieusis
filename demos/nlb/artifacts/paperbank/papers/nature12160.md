@@ -1,54 +1,55 @@
-# Paper — Rigotti et al., “The importance of mixed selectivity in complex cognitive tasks”
+# Paper — Rigotti, Mattia; Barak, Omri; Warden, Melissa R.; Wang, Xiao-Jing; Daw, Nathaniel D.; Miller, Earl K.; Fusi, Stefano. “The importance of mixed selectivity in complex cognitive tasks.” Nature, 2013.
 
 - Review authority: `ai_reviewed` (automated unless expert)
 
 ## Question the system extracted
 
-What functional role does mixed selectivity in prefrontal-cortex neurons play during a complex object-sequence memory task, and does the dimensionality of the resulting neural representation support distributed information coding, computational capacity, and behavioral performance?
+What functional and computational role does mixed selectivity in prefrontal-cortex neurons play during a complex object-sequence memory task? Specifically, do mixed-selectivity populations encode task-relevant information that is not evident from classical single-neuron selectivity, provide high-dimensional representations with a larger repertoire of linear readouts, and vary with behavioral performance?
 
 ## The scientific contrast
 
-The paper contrasts specialized or pure selectivity and linear mixed selectivity with diverse nonlinear mixed selectivity and high-dimensional population representations.
+Distributed, diverse nonlinear mixed selectivity and high-dimensional population representations versus pure or linear selectivity focused on individual task aspects or simple combinations of those aspects.
 
 Competing explanations the paper weighed:
-- Task-relevant information may be encoded primarily by neurons with classical selectivity to individual task aspects.
-- Mixed selectivity may be explainable as linear combinations of aspect-related responses, producing lower-dimensional representations.
-- High dimensionality might arise from more orderly or pure-selectivity responses rather than from diverse nonlinear mixed selectivity.
-- Reduced dimensionality on error trials might reflect coding or memory failure, rather than a disruption of the nonlinear mixed-selectivity component.
+- The apparent mixed selectivity could be adequately characterized as pure selectivity to individual task aspects.
+- It could consist primarily of linear sums of aspect-related responses rather than nonlinear interactions.
+- High dimensionality could arise from more orderly responses or from task-irrelevant variability rather than diverse nonlinear mixed selectivity.
+- Behavioral errors could reflect failure to encode or remember cue identities, rather than a collapse in the dimensionality or consistency of the population representation.
 
-What would tell them apart: If nonlinear mixed selectivity has a functional role, task-relevant aspects should remain decodable after classical selectivity is removed, recorded PFC activity should support more classifications than pure-selectivity activity, and dimensionality should be higher on correct than on error trials. The paper reports these observations.
+What would tell them apart: If mixed selectivity has a functional population role, task-relevant aspects should remain decodable after classical selectivity is removed; recorded populations should support more implementable classifications than pure-selectivity populations; and representation dimensionality should be higher on correct than error trials while cue identities remain decodable in errors.
 
 ## Background and motivation
 
-- Single-neuron activity in PFC is tuned to mixtures of multiple task-related aspects, but mixed selectivity is highly heterogeneous, seemingly disordered, and difficult to interpret.
-- High-dimensional neural representations can allow simple readouts such as linear classifiers to implement a large set of input-output relations, whereas understanding such representations has been a major conceptual challenge.
-- Theoretical work motivates examining how machine-learning principles operate in neuronal circuits, and the paper links this motivation to recorded PFC population activity during a sequence-memory task.
-- The paper treats it as important to determine whether mixed selectivity carries distributed information about task-relevant variables and whether the associated high dimensionality has a functional role in behavior.
+- Single-neuron activity in PFC is tuned to mixtures of multiple task-related aspects, and this mixed selectivity is heterogeneous, seemingly disordered, and difficult to interpret.
+- Neurophysiology experiments are often analysed from a reverse-engineering perspective that seeks highly specialized components with distinct functional roles, but PFC neurons also show complex response properties that simultaneously reflect different parameters.
+- High-dimensional neural representations can allow simple readouts such as linear classifiers to implement a large set of input-output relations, and model circuits using such representations can generate rich dynamics and solve complex tasks.
+- The functional role of the commonly observed mixed selectivity in PFC and other cognitive brain structures remained a major conceptual challenge.
+- Information about a task-relevant aspect may be distributed across a population even when it is not present in individual cells, so single-cell classical selectivity may not capture the information available to a downstream readout.
 
 ## Why this question mattered
 
-Answering the question determines whether a commonly observed but difficult-to-interpret PFC response property contributes to cognitive computation. It also tests whether distributed high-dimensional representations provide computational capacity for complex task mappings and whether that capacity is related to successful behavior.
+Answering the question determines whether a common but hard-to-interpret PFC response property should be treated as functionally meaningful rather than as noise or an obstacle to reverse engineering. It also bears on how neural populations can support many task-dependent input-output mappings and how representational structure relates to successful cognitive behavior.
 
 ## What the dataset offered (as the paper used it)
 
-Monkeys remembered the identity and order of two objects presented sequentially, followed by a delay and either a recognition or recall test. Trials varied in task type and object cues.
+Monkeys remembered the identity and temporal order of two sequentially presented objects and then performed either recognition or recall. Trials varied in task type and in the identities of the first and second visual cues, with one-object and two-object delay epochs.
 
-- Population: Two monkeys; 237 lateral PFC neurons from area 46 were recorded.
-- Measurements: Single-neuron selectivity, Population decoding of task type and cue identities, Neural-representation dimensionality, Number of implementable binary classifications, Behavioral correctness and errors
+- Population: Two monkeys performing an object-sequence memory task; activity from 237 lateral PFC neurons in area 46 was analysed.
+- Measurements: single-neuron selectivity to task-relevant aspects, nonlinear mixed selectivity, population decoding accuracy for task type and cue identities, number of implementable binary classifications, neural-representation dimensionality, behavioral correctness
 
 ## Key citations used in forming the question
 
 Public citation details are represented by the paper context; internal citation identifiers are omitted from this gallery.
+- _(none recorded)_
 
 ## Open uncertainties (unmet evidence)
 
-- Parent-dataset bibliographic identity and public/private data status are not established by the parser-owned source spans.
-- The parser packet does not provide complete reference entries or citation contexts for the prior works cited as refs. 3–10 and 13–22.
-- formation_trace evidence is inconsistent (e.g. binding source_span_ids outside evidence_span_ids); kept DRAFT.
-- The provided source spans do not sufficiently support the exact experimental population, task protocol, or recording configuration.
-- The provided source spans do not identify a parent dataset paper or establish public/private dataset availability.
-- The provided source spans do not enumerate the paper's genuine competing explanations or explicitly state how each would be distinguished.
-- The provided source spans are fragmented and do not support a complete public formation trace connecting all background claims, dataset opportunity, and the original question.
+- The provided source spans identify the behavioral task as related to ref. 3 but do not provide the parent dataset paper's bibliographic identity or explicitly establish the dataset release/reuse relationship.
+- The provided parser packet does not expose a complete references section, so cited-work identities and citation-context evidence cannot be grounded from parser-owned spans.
+- The provided source spans do not support the paper's population, experimental task or design, complete measurement description, or parent-dataset/reuse relation.
+- The provided source spans do not contain enough continuous text to verify the paper's exact original scientific question and all competing explanations.
+- A formation trace cannot be grounded because the available spans do not provide the complete background-to-dataset-to-question progression.
+- The paper type is provisionally set to purpose_built, but its relation to any parent dataset is not grounded by the provided source spans.
 - extraction windows returned different scientific descriptions; the first is retained pending review.
 - parser-owned text was usable, but the parse completeness report recorded limitations; review before authority raise.
 

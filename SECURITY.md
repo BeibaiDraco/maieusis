@@ -33,7 +33,8 @@ for a secure transfer method if a private artifact is essential.
 - Run `maieusis check` before `maieusis run`; preflight performs no paid model
   calls.
 - Review provenance and authority labels before relying on a dossier; see the
-  [provenance guide](docs/PROVENANCE.md) for how Maieusis records them.
+  [provenance guide](https://github.com/BeibaiDraco/maieusis/blob/main/docs/PROVENANCE.md) for how
+  Maieusis records them.
 
 Scientific error, weak novelty, an unanswerable question, or a rejected family
 is not normally a software vulnerability. Report those as scientific-quality

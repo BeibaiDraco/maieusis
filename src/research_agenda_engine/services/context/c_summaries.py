@@ -88,13 +88,25 @@ def render_shortlist_summary(
     lines = [
         "# Shortlist (automated review)",
         "",
-        f"- Included by automated review: {len(included)} of {len(outcomes)} families",
+        (
+            "- Shortlisted by automated worthiness review: "
+            f"{len(included)} of {len(outcomes)} families"
+        ),
         "",
-        "## Included families (the automated review passed these — suggested reading, not approved)",
+        (
+            "## Shortlisted families (passed automated worthiness review — suggested reading, "
+            "not accepted planning dossiers)"
+        ),
         "",
     ]
     lines.extend(
         f"- {o.question_family_id} — {len(o.active_variant_ids)} active variant(s)"
+        + (
+            "; bounded prior-art review found no direct recap in its recorded search scope "
+            "as of its recorded search cutoff (no claim of novelty beyond that scope)"
+            if o.novelty_admission_id
+            else "; prior-art admission was not run"
+        )
         + (
             shortlist_evidence_basis_tag(basis_by_family[o.question_family_id])
             if o.question_family_id in basis_by_family
@@ -103,7 +115,7 @@ def render_shortlist_summary(
         for o in included
     )
     if not included:
-        lines.append("- _(none included)_")
+        lines.append("- _(none shortlisted)_")
     lines.extend(["", "## Not included (honestly listed)", ""])
     lines.extend(
         f"- {o.question_family_id} — `{o.label.value}`: {o.rationale}"
@@ -117,8 +129,9 @@ def render_shortlist_summary(
             "",
             "## Note",
             "",
-            "These labels are honest outcomes, not approvals. `run_incomplete` is an infrastructure "
-            "failure, not a scientific rejection. No question here is claimed to be novel.",
+            "These labels are honest outcomes, not planning acceptances. `run_incomplete` is an infrastructure "
+            "failure, not a scientific rejection. No question here is claimed to be novel. A "
+            "bounded prior-art review is not a global priority or novelty certification.",
             "",
         ]
     )
