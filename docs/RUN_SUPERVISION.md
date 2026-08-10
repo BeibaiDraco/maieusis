@@ -10,6 +10,46 @@ What matters is that you can always tell **which kind** of stop you are looking 
 about that distinction, because getting it wrong is the most damaging mistake available to a reader
 of these outputs.
 
+## This page, and the shepherd contract
+
+This page is for reading a run that stopped: what the outcome means and what to do next. The rules
+the driving agent works under — what it may repair, what it must record, and what repair may never
+reach — are on [shepherd mode](SHEPHERD_MODE.md).
+
+## The shepherd is part of the system, not a patch on it
+
+Maieusis is agent-operated: a live run is driven by a coding-agent session, not by a person watching
+a terminal. That session is the run's **shepherd**, and carrying the run through failure is one of
+its jobs — a designed one, not an emergency measure.
+
+This matters for how you read a run that needed help. A stopped family that was diagnosed and
+resumed is not a damaged run or a lesser result. It is the system doing what it was built to do. The
+backstop exists because real data and real services misbehave, and a design that pretends otherwise
+just fails you at hour two.
+
+What the shepherd owes you is not an unblemished run. It is a run whose history you can see: what
+stopped, what it did about it, and what that leaves the results able to support.
+
+### What bounded repair means in practice
+
+- Recovery re-enters the same run rather than starting a new one, and replaces only what it
+  re-runs: a resumed stage rewrites its own receipt and the run's `summary.md`, while stages it
+  reuses are left untouched. What is never rewritten is the reasoning — no intervention may edit a
+  dossier, a disposition, or an evidence record to make a run read better than it went.
+- Every intervention is recorded. Not as an apology — as part of the run's provenance, the same way
+  a lab notebook records a re-pipetted sample. Be precise about what "recorded" means here: a resume
+  writes its own receipt under `runs/<id>/receipts/` before it acts, and you can read it. A retry, a
+  corrected path, or a cleared quota leaves no machine trace, so it reaches you only because your
+  shepherd tells you. That part is a promise rather than a receipt — ask for it if it is missing.
+- No repair may weaken a provenance, evidence, identity, filesystem, confirmation, or execution
+  check, and none may turn a scientific rejection into an acceptance. **This is the line.** Repair
+  gets a run past infrastructure, never past a scientific verdict.
+- The shepherd reports two verdicts, never one — which is the rest of this page.
+
+The IBL demonstration carries a visible example: its reader pages were produced by a
+zero-provider-call resume of the same run on a later build, so that demonstration has two build
+identities. Its manifest says so rather than presenting a single clean lineage.
+
 ## The two questions, never merged into one
 
 Ask them separately, and expect separate answers:

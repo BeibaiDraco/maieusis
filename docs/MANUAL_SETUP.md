@@ -4,9 +4,9 @@
 
 **Want to see the machinery before you commit to any of this?** Set `mode: subscription_only_demo`
 in `maieusis.yaml`. Model providers resolve to mocks, no API key is used, and nothing is billed to
-a model account. You still need the coding host, the Maieusis clone, Poppler, PDFs and a dataset
-root — it drops the model spend, not the setup — and it demonstrates the workflow, not scientific
-quality.
+a model account. Preflight skips the checks demo mode does not use: you do **not** need Poppler, a
+coding-host login, or the Maieusis source clone. You still need source PDFs in the inbox, a dataset
+root, and a coding-host *name* in the config. It demonstrates the workflow, not scientific quality.
 
 This path is for users who want to prepare the project files and run the CLI
 themselves. Complete [installation](INSTALLATION.md) first.

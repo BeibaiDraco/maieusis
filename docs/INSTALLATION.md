@@ -2,6 +2,28 @@
 
 [Documentation home](INDEX.md)
 
+## Before you install: three things you cannot fix by reading further
+
+Decide these first. Each one on its own ends the attempt, and none of them is
+something the documentation can supply.
+
+- **A paid Codex or Claude Code subscription.** The Dataset Planner runs on it,
+  and that is a *separate bill* from your model API budget. A coding-host login
+  is not an API key, and an API key will not drive the planner.
+- **Two funded API providers.** Preflight requires the Question Owner and the
+  independent reviewer to sit on different providers, so a single account is not
+  enough. In practice that means one OpenAI and one Anthropic account with
+  credit on both.
+- **Roughly twelve to twenty source papers** you may lawfully use. The published
+  demonstrations used twenty for climate and twelve for the neuroscience
+  cohort. Fewer than about a dozen gives the pattern stage too little to
+  generalise from.
+
+**Your dataset does not need to be public.** An unpublished lab dataset is fully
+supported: leave `dataset.seed.link` empty and point `dataset.seed.docs` at your
+own local documentation files. A resolvable public link is one way to describe a
+dataset, not a requirement, and the shipped example's `link:` comment says so.
+
 ## What you need
 
 - Python 3.11, 3.12, or 3.13;

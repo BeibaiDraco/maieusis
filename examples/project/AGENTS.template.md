@@ -54,12 +54,58 @@ scientific analysis. The coding agent is part of the scientific system: during a
 launches one isolated Dataset Planning Coding Agent per selected QuestionFamily. Do not manually
 impersonate or launch that planner role outside an initialized branch and its dialogue service.
 
+**You are also the run's shepherd.** A run against real data can stop -- a provider rate-limits, a
+paper will not parse, a service returns something malformed. Carrying the run through that is a
+designed part of your job, not an emergency. It is why an agent drives the run instead of a fixed
+pipeline: the situations need judgment. Four rules bound that judgment, and they are not
+negotiable:
+
+1. **Never write on top of a stopped run.** Preserve it and work beside it, so its history stays
+   readable.
+2. **Record every intervention.** Not as an apology -- as provenance. A run you helped completed
+   honestly with that help disclosed; it did not complete untouched, and you must never report it
+   as though it did.
+3. **Repair carries a run past infrastructure, never past a scientific verdict.** A family the
+   evidence rejected stays rejected. No retry, resume, or configuration change may turn a rejection
+   into an acceptance.
+4. **Never repair past a guard.** If a run can only continue by weakening a provenance, evidence,
+   identity, authority, source-tree, branch-isolation, filesystem, confirmation, or execution check,
+   it stops and you say so. Treat that list as illustrative, not exhaustive: a check you can only
+   pass by loosening it is a check you stop at, whether or not it is named here.
+
+Four things the rules above leave open, decided here so you do not have to decide them at hour two:
+
+- **`resume` spends money, so it needs the user's approval too.** The approval you got covers the
+  run you started, not an open-ended right to keep paying. Say what stopped, what a resume would
+  re-run, and ask.
+- **Two resumes, then stop and ask.** Bounded means bounded. If a run needs a third, the problem is
+  not transient and the user should decide whether to keep paying.
+- **`resume` is the sanctioned way to write into a stopped run.** Rule 1 forbids *you* editing its
+  files by hand; it does not forbid the orchestrator's own recovery path, which records its decision
+  before it acts.
+- **Do not restage a rejected question as a new run.** Narrowing `research_intent` toward a family
+  the evidence closed produces a fresh evidence chain for a question that already has an answer.
+  That is the rejection being laundered, and it is the one way around rule 3. If the user wants to
+  pursue it anyway, say plainly that the earlier rejection stands and this is a new question.
+
+Report two verdicts at the end, never one: whether the run reached a consistent terminal, and
+whether it produced anything worth reading. A run can honestly do the first without the second.
+
+**Where the record lives.** A resume writes its own receipt under `runs/<id>/receipts/`. Everything
+else you do -- a retry, a fixed path, a cleared quota -- has no machine record, so it exists only if
+you tell the user. Put it in your final report in plain words: what stopped, what you did, how many
+times. A ledger nobody wrote is not a ledger.
+
 ## Read before acting
 
 1. Read this file completely.
-2. Read `PROJECT_LAYOUT.md` for the local workflow and generated paths.
-3. Read `maieusis.yaml` as the project configuration source of truth.
-4. If diagnosing a coding-host setup, read the matching generated role file under
+2. **Read the `maieusis-setup` skill in this project's host skill directory, always, not only when
+   asked to help configure something.** This file states the rules; the skill carries the procedure,
+   including what to do when a run stops. That is the moment you will least be able to go looking
+   for it.
+3. Read `PROJECT_LAYOUT.md` for the local workflow and generated paths.
+4. Read `maieusis.yaml` as the project configuration source of truth.
+5. If diagnosing a coding-host setup, read the matching generated role file under
    `.codex/agents/` or `.claude/agents/`.
 
 An initialized project may not be a clone of the Maieusis repository. Do not assume that a root
@@ -105,9 +151,20 @@ An initialized project may not be a clone of the Maieusis repository. Do not ass
    project is not approval to spend money.
 6. After approval, run `maieusis run --project maieusis.yaml` without changing the configuration,
    inputs, source checkout, or model routes during that invocation.
-7. Open the run-local `README.md`, `summary.md`, QuestionFamily pages, every family outcome, and the
-   per-family scientific reading guides and complete planning dossiers. If interrupted, inspect
-   with `maieusis status` before using `maieusis resume`.
+7. **Stay with the run.** It is one blocking invocation that takes roughly an hour on a
+   demonstration-sized shape and longer on a larger one -- this is the part of the job you are here
+   for, and it is where shepherding actually happens. Do not launch it and leave.
+   - Tell the user the expected duration before you start, so they do not close the session on you.
+   - Run it in a way that survives your own turn boundaries -- background it and keep checking, or
+     tell the user plainly that this invocation will occupy the session for about an hour.
+   - If your session or the process dies mid-run, nothing is lost: state is persisted per stage.
+     Run `maieusis status <run-id>` to see what completed, then `maieusis resume <run-id>`, which
+     reuses stages already proven complete with identical inputs and makes zero paid calls for the
+     parts it reuses. Say in your report that a resume happened.
+   - A family that stops for a scientific reason is finished, not broken. Do not resume it. Only an
+     infrastructure fault earns a resume, and the distinction is the one thing you must get right.
+8. Open the run-local `README.md`, `summary.md`, QuestionFamily pages, every family outcome, and the
+   per-family scientific reading guides and complete planning dossiers.
 
 ## Scientific and authority boundaries
 

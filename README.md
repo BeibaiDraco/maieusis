@@ -43,175 +43,61 @@ question should say so before you spend three months finding out.
 
 <p align="center"><em>Source papers, current literature, and a dataset narrative become distinct question families; each shortlisted family is planned against the real dataset and closes before execution.</em></p>
 
-## One workflow, three layers
-
-- **A local coding-agent host.** Serious use requires either Codex CLI or
-  Claude Code. The Dataset Planner works in an isolated, branch-scoped
-  workspace with read-only access to permitted dataset documentation, schemas,
-  metadata, code, and bounded samples. Sandboxing and access checks reduce
-  exposure; they are defense-in-depth, not a promise of perfect security.
-- **Remote scientific agents.** Frontier-model APIs support PaperBank,
-  question generation, Question Owner dialogue, and independent review.
-  Scientific API keys remain separate from coding-host subscription
-  credentials.
-- **A deterministic core.** Python orchestration validates typed outputs,
-  preserves source and evidence identity, isolates families, bounds retries
-  and budgets, enforces confirmation and execution firewalls, persists state,
-  and renders readable outcomes.
-
-Deterministic checks enforce boundaries and provenance; they do not establish
-scientific truth.
-
-**What v0.1.1 does not claim.** This is a research preview. Maieusis does not certify that a
-question is novel, important, or true; no search proves absence, and agreement between models is
-not evidence. It does not run the final analysis, search for significant effects, access a
-confirmation set — the held-back data you would use to test an answer, which no stage of Maieusis
-may see — or authorize a confirmatory claim. Every plan it produces says which of these
-limits apply to it, in its own dossier, rather than leaving you to infer them.
 
 ## Start here
 
-- **Run your own project:** use the [agent-guided setup](docs/AGENT_GUIDED_SETUP.md)
-  or [manual setup](docs/MANUAL_SETUP.md).
-- **See the scientific output first:** explore the
-  [demo gallery](demos/QUESTIONS.md) — eighteen question families across three datasets.
-- **Understand the method:** read the [method overview](docs/METHOD_OVERVIEW.md)
-  and [architecture](docs/ARCHITECTURE.md).
-- **Find a specific guide:** open the [documentation hub](docs/INDEX.md).
+- **Try it for free first:** set `mode: subscription_only_demo` and run the whole
+  workflow with mock providers and no API key. It shows the machinery, not
+  scientific quality.
+- **Run your own project:** [agent-guided setup](docs/AGENT_GUIDED_SETUP.md) is
+  the recommended route — your own Codex or Claude Code interviews you, fills in
+  the configuration, and refuses to spend without your approval.
+  [Manual setup](docs/MANUAL_SETUP.md) if you would rather edit the YAML
+  yourself, and [installation](docs/INSTALLATION.md) for the commands.
+- **See the scientific output first:** the [demo gallery](demos/QUESTIONS.md) —
+  eighteen question families across three datasets.
+- **Understand the method:** [method overview](docs/METHOD_OVERVIEW.md) and
+  [architecture](docs/ARCHITECTURE.md).
+- **Find a specific guide:** the [documentation hub](docs/INDEX.md).
 
-### Fastest route: ask a coding agent
+**Three things decide whether you can run this at all**, and none is fixable by
+reading further: a **paid** Codex or Claude Code subscription (a separate bill
+from your API budget), **two funded API providers** because owner and reviewer
+must differ, and **twelve to twenty source papers** you may lawfully use. Your
+dataset does *not* need to be public — an unpublished lab dataset is fully
+supported. [Installation](docs/INSTALLATION.md#before-you-install-three-things-you-cannot-fix-by-reading-further)
+covers all four, plus the system prerequisites and the clone that trips up most
+first runs.
 
-This is the recommended route, and the agent will interview you for what it
-needs. It still cannot install Poppler, log you into a coding host, or create
-your API keys — see [what must be in place first](#manual-route), which applies
-to both routes.
+### The fastest route
 
-After [installing Maieusis](docs/INSTALLATION.md), create a clean project
-directory and paste this into Codex or Claude Code:
+[Install Maieusis](docs/INSTALLATION.md), create a clean project directory, and paste this into
+Codex or Claude Code:
 
 ```text
 Help me set up Maieusis v0.1.1 in this clean project directory.
-1) Run `maieusis init`, then read AGENTS.md, CLAUDE.md, PROJECT_LAYOUT.md,
-   and maieusis.yaml.
+1) Run `maieusis init`, then read AGENTS.md, CLAUDE.md, PROJECT_LAYOUT.md, and maieusis.yaml.
 2) Help me place only lawfully obtained source-paper PDFs in papers/inbox.
 3) Configure lawful read-only access to my target dataset and its documentation.
-4) Set dataset.inspection_runtime.source_tree_root to a clean clone of the
-   Maieusis repository. This is NOT my dataset's code and NOT `git init` here;
-   it is how a run records the identity of the software that produced it. Clone
-   it with:
+4) Set dataset.inspection_runtime.source_tree_root to a clean clone of the Maieusis
+   repository. This is NOT my dataset's code and NOT `git init` here; it is how a run
+   records the identity of the software that produced it:
      git clone https://github.com/BeibaiDraco/maieusis.git ~/maieusis-source
-5) Configure Codex or Claude Code as the coding host. Keep coding-host
-   credentials separate from scientific API keys, and never put secrets in YAML.
+5) Configure Codex or Claude Code as the coding host. Keep coding-host credentials
+   separate from scientific API keys, and never put secrets in YAML.
 6) Edit maieusis.yaml without inventing dataset facts.
 7) Run `maieusis check` and resolve every zero-paid preflight error.
-8) Explain the configured models, estimated calls, and output locations, then
-   ask for my explicit approval before `maieusis run`.
-9) After the run, open summary.md and the per-family scientific dossiers.
-Do not execute the scientific analyses, inspect confirmation outcomes, or
-weaken a provenance, isolation, or safety check.
+8) Explain the configured models, estimated calls, and output locations, then ask for
+   my explicit approval before `maieusis run`.
+9) Stay with the run — it takes about an hour — and tell me afterwards whether it
+   reached a consistent terminal AND whether it produced anything worth reading.
+Do not execute the scientific analyses, inspect confirmation outcomes, or weaken a
+provenance, isolation, or safety check.
 ```
 
-### Manual route
-
-**First, three things you cannot fix by reading further.** Decide these before you install
-anything — each one on its own ends the attempt:
-
-- **A paid Codex or Claude Code subscription.** The Dataset Planner runs on it. This is a
-  *separate* bill from your model API budget, and a coding-host login is not an API key.
-- **Two funded API providers.** The Question Owner and the independent reviewer must sit on
-  different providers, which preflight enforces — so one account is not enough.
-- **Between roughly twelve and twenty source papers** you may lawfully use. The published
-  demonstrations used twenty (climate) and twelve (neuroscience).
-
-**Your dataset does not need to be public.** An unpublished lab dataset is fully supported: leave
-`dataset.seed.link` empty and point `dataset.seed.docs` at your own local documentation. A public
-link is one way to describe a dataset, not a requirement.
-
-**Then four things must be in place before the install.** Each fails `maieusis check` if missing,
-and the third is the most common first-run failure by a wide margin:
-
-1. **Poppler** on your PATH, for `pdftotext` — the default PDF parser needs it.
-   `brew install poppler`, or `apt install poppler-utils`. Preflight does not
-   check this, so a missing binary passes `maieusis check` and fails during the
-   paid run.
-2. **A coding host** — Codex or Claude Code, installed and logged in. It runs
-   the Dataset Planner. Its login is *not* an API key.
-3. **A clean clone of Maieusis itself**, for `source_tree_root`. Every run
-   records the identity of the software that produced it, and it needs a real
-   checkout to read that from. Running `git init` in your own project does not
-   work. Clone it once, anywhere outside your project:
-
-   ```bash
-   git clone https://github.com/BeibaiDraco/maieusis.git ~/maieusis-source
-   ```
-
-4. **Two API keys**, `OPENAI_API_KEY` and `ANTHROPIC_API_KEY`, in
-   `~/.config/maieusis/runtime.env` or exported. Owner and reviewer must sit on
-   different providers, which is why there are two.
-
-Then create the project directory *before* its virtual environment. Set
-`PYTHON` to an installed Python 3.11, 3.12, or 3.13 executable and confirm the
-reported version before continuing.
-
-```bash
-mkdir my-maieusis-project
-cd my-maieusis-project
-PYTHON=python3.11  # change to python3.12 or python3.13 when appropriate
-"$PYTHON" --version
-"$PYTHON" -m venv .venv
-source .venv/bin/activate
-python -m pip install --upgrade pip
-python -m pip install "maieusis[mcp,pdf,openai,anthropic]==0.1.1"
-maieusis init
-mkdir -p papers/inbox   # init does not create this
-# Add lawful PDFs under papers/inbox, then edit maieusis.yaml —
-# set dataset.seed.link, dataset_root, and source_tree_root.
-maieusis check --project maieusis.yaml   # no paid model calls
-maieusis run --project maieusis.yaml     # paid; run only after approval
-```
-
-Maieusis v0.1.1 is available from [PyPI](https://pypi.org/project/maieusis/0.1.1/).
-The [source-install route](docs/INSTALLATION.md#install-from-source) remains
-available for contributors. The current standard configuration uses distinct
-OpenAI and Anthropic API providers so Question Owner work and independent
-review do not share a provider. See [configuration](docs/CONFIGURATION.md)
-before the first paid run.
-
-### What a run actually costs
-
-Numbers from the climate demonstration on this page — 20 source PDFs, six question families, two
-variants each, one planner host:
-
-| | |
-| --- | --- |
-| Model calls, all roles | **219** (129 structured generation, 67 planner-dialogue turns, 18 prior-art scout calls, 5 other) |
-| Paid web searches | **45**, at $0.01 each under rate card `anthropic_direct_web_search_20250305` |
-| **Web-search tool fee — actually billed** | **$0.45** (IBL $0.62, NLB $0.57), against a $1.00 ceiling reserved before the run |
-| Free scholarly lookups (Crossref, OpenAlex) | 1,342 |
-| Coding-agent planner launches | 6, one per family |
-| Wall clock | hours, not minutes — the NLB run spent 32 minutes in family planning alone |
-
-The web-search fee is exact rather than estimated: the rate card is named, and every search a scout
-makes is counted against it in a receipt written during the run. Your own runs write those receipts
-into your run directory; the demonstration's receipts are internal operator records and are not
-published here.
-
-**Model token cost is the part we cannot state honestly, so we do not state it.** Maieusis does not
-meter token spend, and token prices differ per provider and change over time. The 219 calls above
-are the durable number — price them against your own provider's rates, and note that two of the
-shipped role pins are premium-tier. Read your provider's own dashboard for the real total; treat
-the fee ceiling as a bound on the search lane only, not on the run.
-
-`maieusis check` makes **no paid call** and prints the estimated calls, the planner launches, the
-external services that will be contacted, and the web-search fee reservation before you authorise
-anything. Run it first. If you want to see the machinery for nothing at all, set
-`mode: subscription_only_demo`, which substitutes mock providers and costs zero — it demonstrates
-the workflow, not scientific quality.
-
-**How to bound your first bill.** Set `run.max_families: 2` for the first paid run rather than
-changing the model pins, read your provider's dashboard afterwards, and scale from a number you
-measured instead of one you guessed. The shipped six-family shape is the one the demonstrations
-used, and it is what the cost table above describes.
+Maieusis v0.1.1 is on [PyPI](https://pypi.org/project/maieusis/0.1.1/). The
+[manual route](docs/MANUAL_SETUP.md) and the
+[source install](docs/INSTALLATION.md#install-from-source) are both supported.
 
 ## Why this is different
 
@@ -276,11 +162,6 @@ neither Maieusis nor its demos distribute the PDFs.
 
 ## Inputs, outputs, and inspectable artifacts
 
-A target dataset must provide lawful read-only access to documentation and
-enough local structure—such as schema, metadata, code, or bounded samples—for
-the Dataset Planner to evaluate whether a responsible analysis plan is
-possible.
-
 | You provide | Maieusis develops |
 | --- | --- |
 | Source-paper PDFs | PaperCases, citation decisions, formation traces, and question-forming patterns |
@@ -310,76 +191,54 @@ question it proposed, what the planner found in the data, and why each family ad
 Nothing is summarised for you: the rejections are there next to the plans. Source PDFs, raw model
 payloads, credentials, and private runtime state are excluded.
 
-- **[IBL Brain-Wide Map](demos/ibl/README.md)** — *When is shared trial-to-trial variability a
-  nuisance, a computational resource, or just the animal moving?* Six families, including whether
-  population geometry stays invariant or reorganizes across decision epochs, and whether
-  decision signals are broadly distributed or anatomically selective. Developed against the
-  International Brain Laboratory Brain-Wide Map, a standardized multi-laboratory collection of
-  brain-wide recordings from mice performing a sensory decision task
+- **Neuroscience — mouse decision-making.** The
+  **[IBL Brain-Wide Map](demos/ibl/README.md)**: brain-wide recordings from mice performing a
+  sensory decision task, pooled across many laboratories
   ([Nature paper](https://doi.org/10.1038/s41586-025-09235-0),
   [release guide](https://docs.internationalbrainlab.org/notebooks_external/2025_data_release_brainwidemap.html)).
-- **[NLB MC_Maze-S](demos/nlb/README.md)** — *Does the geometric form of a motor manifold mean
-  anything computationally, or does a more elaborate description merely fit better?* Six families,
-  including whether M1 and PMd share one population geometry or divide the work, and whether
-  co-variability matters by its alignment or by its magnitude. Developed against a pinned Neural
-  Latents Benchmark session: simultaneous recordings from macaque primary motor cortex (M1) and
-  dorsal premotor cortex (PMd) during delayed straight and curved reaches
+  *When is shared trial-to-trial variability a nuisance, a computational resource, or just the
+  animal moving?* Two variants pull against each other — task-aligned structure versus aggregate
+  magnitude, and decision organization versus embodied co-variation — and both reached independently
+  reviewed plans. Five sibling families ask, among other things, whether population geometry stays
+  invariant across decision epochs.
+  [Both variants, and what each outcome would mean](demos/ibl/artifacts/questions/question_families_detailed.md#family-002-task-relevance-of-structured-neural-co-variability) ·
+  [Proposal hypothesis versus inspected evidence](demos/ibl/artifacts/families/covariability-structure/dossier_detailed.md) ·
+  [the full record](demos/ibl/artifacts/families/covariability-structure/dossier.md)
+
+- **Neuroscience — macaque reaching.** A pinned **[NLB MC_Maze-S](demos/nlb/README.md)** session
+  from the Neural Latents Benchmark: simultaneous recordings from macaque primary motor cortex (M1)
+  and dorsal premotor cortex (PMd) during delayed straight and curved reaches
   ([benchmark paper](https://datasets-benchmarks-proceedings.neurips.cc/paper/2021/hash/979d472a84804b9f647bc185a877a8b5-Abstract-round2.html),
   [pinned DANDI dataset](https://doi.org/10.48324/dandi.000140/0.220113.0408)).
-- **[Climate — ERA5-derived stratospheric dynamics](demos/climate/README.md)** — *Is vertical
-  coupling in the polar stratosphere a propagating episode or a coherent mode spanning heights —
-  and is that distinction real or an artifact of how you represent it?* Six families, including
-  whether apparent persistence is memory or path dependence, and whether state occupancy or
-  within-state dynamics changed over four decades. Developed against a one-dimensional record of
-  wave activity, zonal winds, and eddy forcing at 60 degrees North, 97 heights, roughly four
-  decades. **Nothing in the system was adapted for atmospheric science.** The dataset is a
-  collaborator-supplied derived product and is not redistributed;
-  [the dataset notes](demos/climate/DATASET_NOTES.md) say so plainly.
+  *Does the geometric form of a motor manifold mean anything computationally, or does a more
+  elaborate description merely fit better?* Two variants pull against each other — a frozen
+  shared-geometry transfer test that refits nothing, and a nonlinear context-interaction test on
+  kinematically matched segments — and both reached independently reviewed plans.
+  [Both variants, and what each outcome would mean](demos/nlb/artifacts/questions/question_families_detailed.md#family-006-functional-meaning-of-motor-manifold-form) ·
+  [Proposal hypothesis versus inspected evidence](demos/nlb/artifacts/families/manifold-form-functional-meaning/dossier_detailed.md) ·
+  [the full record](demos/nlb/artifacts/families/manifold-form-functional-meaning/dossier.md)
 
-### IBL — when does shared neural variability matter for a decision?
+- **Climate science — the polar stratosphere.** An
+  **[ERA5-derived record](demos/climate/README.md)** of wave activity, zonal winds and eddy forcing
+  at 60 degrees North, across 97 heights and roughly four decades. **Nothing in the system was
+  adapted for atmospheric science.**
+  *Is vertical coupling a propagating episode or a coherent mode spanning heights — and is that
+  distinction real, or an artifact of how you represent it?* Two variants pull against each other —
+  an event-first lagged coupling test, and a continuous-mode robustness test — and both reached
+  independently reviewed plans. The dataset is a collaborator-supplied derived product and is not
+  redistributed; [the dataset notes](demos/climate/DATASET_NOTES.md) say so plainly.
+  [Both variants, and what each outcome would mean](demos/climate/artifacts/questions/question_families_detailed.md#family-005-propagating-episodes-versus-coherent-modes-of-vertical-coupling) ·
+  [Proposal hypothesis versus inspected evidence](demos/climate/artifacts/families/vertical-coupling-representations/dossier_detailed.md) ·
+  [the full record](demos/climate/artifacts/families/vertical-coupling-representations/dossier.md)
 
-Neural populations fluctuate together from trial to trial. Whether that shared variability is a nuisance, a task-aligned computational resource, or mostly a reflection of the animal's movement and posture is not settled by observing that it exists.
+All three carry the gallery's **Plan developed (provisional)** label — reviewed by a second model on
+a different provider rather than by a human expert, and never executed. Nothing on this page is a
+result.
 
-Maieusis developed two variants that pull in different directions: task-aligned structure versus aggregate magnitude, and
-decision organization versus embodied co-variation. Outcome: **Plan developed (provisional)** — both variants reached independently reviewed plans. No analysis was executed.
-
-**[Explore both variants, their competing explanations, and what positive, negative, or null
-outcomes would mean](demos/ibl/artifacts/questions/question_families_detailed.md#family-002-task-relevance-of-structured-neural-co-variability)** ·
-[See the study plan, including proposal hypothesis versus inspected evidence](demos/ibl/artifacts/families/covariability-structure/dossier_detailed.md) ·
-[Open the complete planning record](demos/ibl/artifacts/families/covariability-structure/dossier.md)
-
-### NLB — does the shape of a neural manifold mean anything?
-
-Motor population activity can be described as lying on a simple reusable surface or on a curved,
-context-dependent one. But a more elaborate geometric description can fit better and mean nothing,
-so complexity alone settles nothing about computation.
-
-Maieusis developed two variants that pull in different directions: a frozen shared-geometry transfer
-test that refits nothing, and a nonlinear context-interaction test on kinematically matched
-segments. Outcome: **Plan developed (provisional)** — both variants reached independently reviewed
-plans. No analysis was executed.
-
-**[Explore both variants, their competing explanations, and what positive, negative, or null
-outcomes would mean](demos/nlb/artifacts/questions/question_families_detailed.md#family-006-functional-meaning-of-motor-manifold-form)** ·
-[See the study plan, including proposal hypothesis versus inspected evidence](demos/nlb/artifacts/families/manifold-form-functional-meaning/dossier_detailed.md) ·
-[Open the complete planning record](demos/nlb/artifacts/families/manifold-form-functional-meaning/dossier.md)
-
-These three highlights are entry points, not a ranking. **Continue to the
-[complete gallery](demos/QUESTIONS.md) for all 18 families and all 36 variants,** including
-scientific background, competing explanations, assumptions, positive/negative/null interpretations,
-and the three families that closed as scientific rejections rather than plans.
-### Climate — vertical coupling in the polar stratosphere
-
-Anomalies at one height in the stratosphere are followed by anomalies at another. Whether that is a temporally ordered propagation during discrete episodes, or a single coherent mode spanning heights that only looks like propagation, is a genuine open question -- and which answer you get can depend on the diagnostic you chose.
-
-Maieusis developed two variants that pull in different directions: event-first lagged coupling test, and
-continuous-mode robustness test. Outcome: **Plan developed (provisional)** — both variants reached independently reviewed plans. No analysis was executed.
-
-**[Explore both variants, their competing explanations, and what positive, negative, or null
-outcomes would mean](demos/climate/artifacts/questions/question_families_detailed.md#family-005-propagating-episodes-versus-coherent-modes-of-vertical-coupling)** ·
-[See the study plan, including proposal hypothesis versus inspected evidence](demos/climate/artifacts/families/vertical-coupling-representations/dossier_detailed.md) ·
-[Open the complete planning record](demos/climate/artifacts/families/vertical-coupling-representations/dossier.md)
-
+These are entry points, not a ranking. **Continue to the [complete gallery](demos/QUESTIONS.md) for
+all 18 families and all 36 variants,** including scientific background, competing explanations,
+assumptions, positive/negative/null interpretations, and the three families that closed as
+scientific rejections rather than plans.
 
 ### And one that sounds right until you look at the task
 
@@ -404,12 +263,64 @@ it. That is the check a proposal stage cannot do for itself, and it is why the d
 **[Read the family, both variants, and the closure](demos/ibl/artifacts/families/decision-dynamics/dossier.md)** ·
 [See it in the gallery with the rest](demos/QUESTIONS.md)
 
+## One workflow, three layers
+
+- **A local coding-agent host.** Serious use requires either Codex CLI or
+  Claude Code. The Dataset Planner works in an isolated, branch-scoped
+  workspace with read-only access to permitted dataset documentation, schemas,
+  metadata, code, and bounded samples. Sandboxing and access checks reduce
+  exposure; they are defense-in-depth, not a promise of perfect security. That
+  same session also carries the run through failures under a written contract —
+  [the contract it works under](docs/SHEPHERD_MODE.md).
+- **Remote scientific agents.** Frontier-model APIs support PaperBank,
+  question generation, Question Owner dialogue, and independent review.
+  Scientific API keys remain separate from coding-host subscription
+  credentials.
+- **A deterministic core.** Python orchestration validates typed outputs,
+  preserves source and evidence identity, isolates families, bounds retries
+  and budgets, enforces confirmation and execution firewalls, persists state,
+  and renders readable outcomes.
+
+Deterministic checks enforce boundaries and provenance; they do not establish
+scientific truth.
+
+## A coding agent drives the run, under a contract
+
+Papers fail to parse. A provider rate-limits at hour two. A rigid pipeline answers by ending the run
+and you get nothing; most flexible systems absorb the problem quietly, and you get output you cannot
+audit. **Maieusis takes the third option: a coding agent drives the run, because judgment is exactly
+what these situations need** — under a written contract. It can diagnose a stop and resume what is
+safe to resume. It cannot write over the run that stopped, cannot repair past a guard, and cannot
+turn a scientific rejection into an acceptance: **repair gets a run past infrastructure, never past a
+scientific verdict.** That shepherd is your own coding-agent session, not a service we run, and
+`maieusis init` writes these rules into your project before it drives anything of yours. The IBL
+demonstration here was finished by a disclosed resume, and its manifest publishes two build
+identities rather than one clean lineage.
+
+The contract: [what a shepherd may repair, what it must record, and the three things repair may
+never do](docs/SHEPHERD_MODE.md). Reading a stopped run: [the two questions, the three honest
+terminal shapes, and how to tell a scientific "no" from a fault](docs/RUN_SUPERVISION.md) —
+`maieusis status <run-id>` makes no paid call.
+
 ## Trust, limits, and community
 
-An independently reviewed plan is not a result, and model agreement is not
-truth. Dataset inspection can expose feasibility problems, but cannot by
-itself establish novelty or importance. Human domain expertise remains
-valuable, especially before any downstream analysis is authorized.
+This is a research preview. An independently reviewed plan is not a result, and two models agreeing
+is not evidence — it is two models agreeing. Dataset inspection can expose feasibility problems but
+cannot establish novelty or importance, no search proves absence, and human domain expertise remains
+the thing that decides, especially before any downstream analysis is authorized.
+
+What Maieusis does instead of claiming otherwise: **every plan states its own limits, in its own
+dossier**, so you are never left inferring how much weight one can carry.
+
+**What a run costs.** The climate demonstration on this page — six question families, two variants
+each — took **219 model calls** and about an hour end to end; your wall clock depends mostly on your
+dataset. Paid web search is the one lane with an exact price, and it came to **$0.45** against a
+ceiling you set before the run. Token cost is not metered by Maieusis, so read it from your
+provider's dashboard rather than from us.
+
+`maieusis check` makes no paid call and prints what a run will do before you authorise it. To see
+the machinery for nothing, set `mode: subscription_only_demo`. To bound a first real bill, set
+`run.max_families: 2` and scale from what you measure.
 
 - [Method overview](docs/METHOD_OVERVIEW.md)
 - [When a run stops](docs/RUN_SUPERVISION.md)

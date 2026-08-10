@@ -2,8 +2,8 @@
 schema_version: 2
 distribution: maieusis
 version: 0.1.1
-tree_digest: 573d51e30be3374dcd37c81e6c402323e629ddc3ef67d06d4215efc702e49f51
-file_count: 463
+tree_digest: eb39874c10c9d137a94e78ae62830288d32f440381374e32e8939d7909059fe0
+file_count: 464
 projection_sources:
   - source: curated public contract tests
     destination: tests
@@ -80,7 +80,7 @@ files:
   - path: AUTHORS.md
     sha256: b21ae18339a47a2daee55dee21c152bcb42f3d2e06406bbf7006686f4ea39a6c
   - path: CHANGELOG.md
-    sha256: ae28afe20112c235d39e232e5da0d4ccf5db3e77fffe7adf0f7f2fbd3365bbc1
+    sha256: db51013ca38a9ad3a0b8c7e68cabeb61e85d273ab43663d15046d467a6d1ddf8
   - path: CITATION.cff
     sha256: 4b63be94323ffcf276539ed49d00e7007b5b69f5ee2691fa35aaf86fc5329cdf
   - path: CODE_OF_CONDUCT.md
@@ -96,7 +96,7 @@ files:
   - path: NOTICE
     sha256: ded3ee67a56e5408af5882247ffeb12f5b941924b41ca89a686b9cd4cb58bad8
   - path: README.md
-    sha256: 91ed8de6ed9dd430845f16dd856c65c8572d65480c03b025869698752867c4d1
+    sha256: d1d2d1382a3423b4d0bee15af960abc0525028e9e6b5f0ead83b3ee524a22440
   - path: SECURITY.md
     sha256: 361b53cb526af77d47515786a06bc7a4cee24cad38c914f924a79e1645e8ec6d
   - path: THIRD_PARTY_NOTICES.md
@@ -402,7 +402,7 @@ files:
   - path: demos/shared/paper_sources.yaml
     sha256: c9745cc42047c6349eeba799274cf1956b726d4abc92added0d94ac744cde0f7
   - path: docs/AGENT_GUIDED_SETUP.md
-    sha256: 05417edad8b957d62eafad20e1b79e264d4792ac961e07df3e7ffaee04aff6c1
+    sha256: 33843afedac7f6a39845833691f7a33450d7ec6df71483675963fd581848ba40
   - path: docs/ARCHITECTURE.md
     sha256: 23c9d53683715cc6c06a919889d0526cdb9a5410eab93b1a33f4a6c3cdd59297
   - path: docs/CITATION.md
@@ -410,25 +410,27 @@ files:
   - path: docs/CONFIGURATION.md
     sha256: f9dfdb430429db139b3cbac3686b0c6183741f8611360b5678ac0c98885a91c9
   - path: docs/INDEX.md
-    sha256: 213fdefca6d9d6777f6fb267b4571a089736911881a81cd527b0b357471fa36a
+    sha256: 4797e487050b1bd8c674928b57adff7a5ac663c77093d61df2898c9a9460d9ba
   - path: docs/INPUTS_AND_OUTPUTS.md
     sha256: 1d72cf8fa08dc560e968f3f963d5044e4efe3f4caf7454ff2c3b5af42a375aca
   - path: docs/INSTALLATION.md
-    sha256: 98fb2f15440331949bc4f9c25f763f01f383cca449e9ff5d19120d2193d9f628
+    sha256: 194e45130b4567b8dccca4770bc99063750c0c84c9413a3dd04277b479dd73b7
   - path: docs/LABELS.md
     sha256: 577116c59c2beca3c76e6603198e17e2011af1004fb545065704e25afcab5d2a
   - path: docs/LIMITATIONS.md
-    sha256: 945c39185e9de298ef5d04168812546f7c0ce1e3b5f6ebd60cdfdc53af45e28b
+    sha256: 63c555a040c239736b31b2f9e3380608d59ca8665a7d59ff685ab434171d956f
   - path: docs/MANUAL_SETUP.md
-    sha256: 12701395b7f499a2ef68f8efcc8f4d3d9c6dc0099a36629b8a7eac5b38e0f8bc
+    sha256: 2b15886fb93c55c04dc3b896dd86be43f4e1d54ed9875f8771be82dc044a61fe
   - path: docs/METHOD_OVERVIEW.md
     sha256: 9e6a381b4a8588df554de228393e36c9e37c9c9620ccbfb7e8afea4dda6dbc2b
   - path: docs/PROVENANCE.md
     sha256: 4971460a49561dba0680c1b3ccdbd62f9951b505ab07d4e8af9c311b6f8a94e2
   - path: docs/RUN_SUPERVISION.md
-    sha256: 56424b01dcceb7c46abf9846ba68739c740f9e510361b4f4c6acf1482c9120d7
+    sha256: e72a75c8f9762ffcba9d05f3a8e0af2ef348d17b90cfa528278571c1fda7a828
   - path: docs/SCANNED_PDFS.md
     sha256: 6842189163258affbf6920a4749c68129f1e4d4d4578f17fde3f64bae3ed6492
+  - path: docs/SHEPHERD_MODE.md
+    sha256: a12d14c82b5dabd4b61003ae111b33ff54a935a066d4320ad8549e98d55d9fc4
   - path: docs/TROUBLESHOOTING.md
     sha256: ff187ba60915ecb611c734482c8e59a6ed0647feaa730a5b097047fc3c4a2a0d
   - path: docs/assets/maieusis-paperbank-pattern-induction.png
@@ -452,11 +454,11 @@ files:
   - path: examples/maieusis.yaml
     sha256: e28cde2ff5e0190d46d189eb9ef37e8ad8ae8fabc9ef0ad5ecf85189466d98b6
   - path: examples/project/AGENTS.template.md
-    sha256: 51c78250e5c1d6c4aa13023b78b7d1cdca3dad0aada6a55a37aa3ac7cee805f9
+    sha256: ae78ff41019371bc0ec7e190f69f09aa26ea8fbe6d62e1e12977aec900326972
   - path: examples/project/CLAUDE.template.md
     sha256: 5ba39e02a35908fed82a2442a797b4d0fefe0aed8dc17bc2cecc0e5e12c9597e
   - path: examples/project/maieusis-setup.SKILL.md
-    sha256: f79d9626c266ee815376f018af00c463e5ec1b1f6b95783f3ca3cd36b6e4bd53
+    sha256: 14458ec11fdc361b3fea01972f63842c6ac7e8a9e3dc4992583c9cdaf40da078
   - path: examples/question_input.yaml
     sha256: d4093ace963ea24236da467b541bcbf4e03bd4265a37a1e620aedcec957d4f2b
   - path: examples/release/README.md

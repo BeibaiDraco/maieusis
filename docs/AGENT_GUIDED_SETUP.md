@@ -117,7 +117,9 @@ Depending on your choices, you may also need:
 
 ```text
 CLAUDE_CODE_OAUTH_TOKEN=...  # required when coding_host: claude_code
-ELICIT_API_KEY=...           # only for an opt-in Elicit literature profile
+ELICIT_API_KEY=...           # opt-in PAID Elicit lane. Setting this also switches
+                             # source_profile: auto to the paid lane -- leave it unset
+                             # unless you mean to spend.
 MAIEUSIS_ALLOW_PRO_MODEL=1   # only when you deliberately selected a gated model
 ```
 

@@ -61,9 +61,11 @@ analysis should proceed.
 - The public examples use two neuroscience datasets (the International Brain Laboratory
   Brain-Wide Map and Neural Latents Benchmark MC_Maze-S) and one atmospheric-science dataset (an
   ERA5-derived stratospheric record). They are worked examples, not limits on the intended scope.
-- The climate example carries a lower evidence ceiling than the two neuroscience examples, and its
-  dataset is a collaborator-supplied derived product that is not redistributed. Its
-  [dataset notes](../demos/climate/DATASET_NOTES.md) state both.
+- The IBL example is the only one whose topic literature passed independent review, so the climate
+  and NLB examples carry a lower evidence ceiling — `provisional_inspiration` rather than
+  `verified`. [Reading the labels](LABELS.md) explains what that ceiling does and does not limit.
+- The climate dataset is a collaborator-supplied derived product and is not redistributed;
+  [its dataset notes](../demos/climate/DATASET_NOTES.md) say so plainly.
 - Testing with researchers at different universities across climate science,
   physics, astronomy, finance, social science, and psychology is ongoing on
   datasets from their own fields.
@@ -111,7 +113,7 @@ prints a role-level version of this list before any paid call.
 | One fetch of your configured `dataset.seed.link` | that URL's host | no |
 | Dataset description, question families, variants, plans, reviews | the topic / owner / reviewer model APIs | yes |
 | A redacted prior-art projection, then public web searches | the novelty scout provider | yes |
-| Topic queries, only if `source_profile` is `elicit` or `hybrid` | Elicit (paid, opt-in, off by default) | yes |
+| Topic queries, when `source_profile` is `elicit` or `hybrid` — **or `auto` with `ELICIT_API_KEY` set** | Elicit (paid, opt-in, off by default) | yes |
 | The dataset **path** and the planning task | your local coding-agent host | host login |
 
 Two consequences worth stating plainly:

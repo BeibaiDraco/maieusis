@@ -31,7 +31,11 @@ matches what you want to do.
   while the original file stays the paper's identity.
 - [Reading the labels](LABELS.md): every label an artifact can carry, its permitted values, and
   what each one licenses you to conclude. Read this before judging any published plan.
-- [When a run stops](RUN_SUPERVISION.md): the three honest terminal shapes, and how to tell a
+- [Shepherd mode](SHEPHERD_MODE.md): the contract your own coding agent works under while it
+  drives a run — what it may repair, what it must record, and what repair may never reach.
+  Readable before you install anything.
+- [When a run stops](RUN_SUPERVISION.md): the two questions to ask, the three honest
+  terminal shapes, and how to tell a
   scientific rejection from an infrastructure fault.
 - [Limitations](LIMITATIONS.md): scientific, operational, and scope limits of
   the Research Preview.

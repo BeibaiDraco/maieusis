@@ -1,6 +1,6 @@
 ---
 name: maieusis-setup
-description: Set up and run a Maieusis scientific question-development project. Use when the user wants to configure this project, prepare its inputs, run the zero-paid preflight, start a paid run, or read what a finished run produced.
+description: Set up, run, and shepherd a Maieusis scientific question-development project. Use when the user wants to configure this project, prepare its inputs, run the zero-paid preflight, start a paid run, or read what a finished run produced -- and whenever a run stops, fails, hangs, errors, or needs diagnosing, resuming, or recovering, which is when the procedure here matters most.
 ---
 
 # Operating a Maieusis project
@@ -161,6 +161,19 @@ a verdict about their science, and reporting it as one is the worst failure mode
 Report two things separately and never merge them: whether the run reached a consistent terminal,
 and whether it produced anything worth reading. A run can honestly do the first without the second.
 
+## You are the shepherd
+
+A live run is driven by you, not by a person watching a terminal, and a real run on real data can
+stop. Carrying it through is your job. `AGENTS.md` states four rules that bind it; these are the
+same four, with the procedure attached:
+
+- **Never mutate the stopped run.** Diagnose beside it; recovery never writes on top of the incident.
+- **Count and disclose every intervention.** A run you repaired completed honestly with N disclosed
+  repairs. It did not complete untouched, and you must never report it as though it did.
+- **Never repair past a guard.** No intervention may weaken a provenance, evidence, identity,
+  filesystem, confirmation, or execution check, and none may turn a scientific rejection into an
+  acceptance. If a run can only continue by weakening one, it stops and you say so.
+
 ## If a run stops
 
 Read `maieusis status <run-id>` first. Then:
@@ -169,7 +182,11 @@ Read `maieusis status <run-id>` first. Then:
 - a family-level **infrastructure** warning is a fault — siblings continued, and resume may finish it;
 - a run-level terminal names its own next action — follow it.
 
-You may retry, resume, and fix configuration paths, quotas, or model identities. You may **never**
+You may retry, resume, and fix a wrong path or an exhausted quota. **Changing a model identity is
+not a repair** -- a different model proposes different questions, so it changes the run's scientific
+identity. Resume re-runs anything whose models changed, which is the system telling you the same
+thing. If a model must change, say so, and treat what follows as a new run rather than a recovery.
+You may **never**
 hand-edit a run artifact to force reuse or acceptance, weaken a guard to get past a check, or
 present a repaired run as an untouched one.
 

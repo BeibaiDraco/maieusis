@@ -5,7 +5,8 @@ Maieusis follows semantic versioning. This file records public releases.
 ## 0.1.1 — Maintenance (2026-08-07)
 
 A maintenance release. It corrects how evidence authority is earned, adds a
-prior-art review, and hardens the run machinery.
+prior-art review, defines how an agent-driven run is carried through failure,
+and hardens the run machinery.
 
 **An existing `0.1.0` project file loads unchanged and behaves as before.** The
 schema defaults did not move, so a configuration that does not mention prior-art
@@ -40,6 +41,20 @@ unchanged.
 
 ### Added
 
+- **A defined shepherd mode for live runs.** Maieusis is agent-operated: a run is
+  driven by a coding-agent session rather than by a person watching a terminal,
+  and a real run on real data can stop. `0.1.1` states what that session — the
+  run's shepherd — may and may not do when it does. Repair is allowed, bounded,
+  and disclosed; the stopped run is preserved unchanged and recovery happens
+  beside it; no intervention may weaken a provenance, evidence, identity,
+  filesystem, confirmation, or execution check, and none may turn a scientific
+  rejection into an acceptance. That last clause is the line: repair carries a run
+  past infrastructure, never past a scientific verdict. Shepherding is a designed
+  part of the system rather than a fallback, so a run that used it is not a lesser
+  run — the three published demonstrations were shepherded, one with a disclosed
+  same-run resume. See
+  [when a run stops](https://github.com/BeibaiDraco/maieusis/blob/main/docs/RUN_SUPERVISION.md);
+  the setup interview carries the same four rules to your own coding agent.
 - Opt-in prior-art review before shortlisting. A frontier model judges whether a
   proposed question is a direct recap of existing work, using both our own
   retrieval and — when separately enabled — its own bounded web search. A
