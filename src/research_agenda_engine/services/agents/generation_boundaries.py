@@ -72,12 +72,61 @@ SERIOUS_GENERATION_BOUNDARIES: dict[str, GenerationBoundaryPolicy] = {
             host_owned_fields=_HOST_IDS,
         ),
         GenerationBoundaryPolicy(
-            prompt_version="dataset_narrative_extractor/v4",
+            prompt_version="dataset_narrative_extractor/v5",
             failure_scope=GenerationFailureScope.STAGE,
             host_owned_fields=_HOST_IDS,
         ),
         GenerationBoundaryPolicy(
-            prompt_version="topic_evidence_brief_synthesizer/v4",
+            prompt_version="dataset_narrative_reviser/v1",
+            failure_scope=GenerationFailureScope.STAGE,
+            host_owned_fields=(
+                "scale_facts",
+                "source_refs",
+                "field_evidence_source_ids",
+                "dataset_narrative_id",
+                "dataset_id",
+                "review_status",
+                "prompt_version",
+                "provider_id",
+                "model_id",
+                "input_digest",
+                "source_packet_digest",
+                "dossier_digest",
+                "reviewed_at",
+                "expert_reviewer",
+                "review_notes",
+            ),
+        ),
+        GenerationBoundaryPolicy(
+            # Degrades rather than fails: a scope the model could not write falls back to
+            # deterministic keyword extraction over the same narrative, so no retry is bought here.
+            # SCOPE, not ARTIFACT: the derived scope decides what literature the whole dataset half
+            # searches, so a wrong one is not a bad artifact, it is a bad stage.
+            prompt_version="dataset_scope_deriver/v2",
+            failure_scope=GenerationFailureScope.STAGE,
+            bounded_retries=0,
+            host_owned_fields=(
+                "scope_id",
+                "prompt_version",
+                "provider_id",
+                "model_id",
+                "input_digest",
+                "output_digest",
+                "status",
+            ),
+        ),
+        GenerationBoundaryPolicy(
+            # Registered 2026-08-17: this generator shipped without a boundary and nothing noticed,
+            # because the registry is a declaration and an unregistered generator is only caught
+            # where `generation_boundary` is called. `test_every_service_prompt_version_is_bounded`
+            # now catches it from the service constants instead.
+            prompt_version="topic_source_selector/v1",
+            failure_scope=GenerationFailureScope.STAGE,
+            bounded_retries=0,
+            host_owned_fields=("source_record_id",),
+        ),
+        GenerationBoundaryPolicy(
+            prompt_version="topic_evidence_brief_synthesizer/v7",
             failure_scope=GenerationFailureScope.STAGE,
             bounded_retries=1,
             host_owned_fields=_HOST_IDS,
@@ -118,7 +167,7 @@ SERIOUS_GENERATION_BOUNDARIES: dict[str, GenerationBoundaryPolicy] = {
             ),
         ),
         GenerationBoundaryPolicy(
-            prompt_version="topic_field_state_synthesizer/v2",
+            prompt_version="topic_field_state_synthesizer/v3",
             failure_scope=GenerationFailureScope.STAGE,
             host_owned_fields=_HOST_IDS,
         ),

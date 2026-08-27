@@ -67,4 +67,4 @@ or data it contains. See `THIRD_PARTY_NOTICES.md` in the repository root.
 
 ---
 
-[Climate demo](README.md) · [All demo questions](../QUESTIONS.md)
+[Climate demo](README.md) · [All demo questions](../ALL_QUESTIONS.md)

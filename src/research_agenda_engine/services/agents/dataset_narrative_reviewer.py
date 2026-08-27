@@ -4,7 +4,13 @@ Mirrors ``plan_reviewer.py``: a ``ScientificAgentProvider`` session judges a can
 narrative against ALL FOUR source coarse-facts feeds (with their provenance URIs + trust ranks), and
 returns a structured accept / revise / reject with per-criterion assessments. The reviewer must be an
 INDEPENDENT provider/model from the generators (cross-provider), so a hallucinating generator cannot
-also bless its own narrative. Reject/revise are honest terminals — GF-2c runs no revise loop.
+also bless its own narrative.
+
+``reject`` is an honest terminal. ``revise`` no longer is: since 2026-08-12 a repairable ``revise``
+enters the bounded source-locked repair loop in ``narrative_sources/narrative_revision.py``, which
+re-asks the narrator model to rewrite the prose it wrote and returns the redraft to THIS gate. The
+old claim here -- "GF-2c runs no revise loop" -- was read as a statement that no loop was possible,
+which was never true: fusion is deterministic but the content it fuses is model-written.
 
 This module carries no dataset-specific names; it is enforced by the dataset-agnostic guard.
 """
@@ -33,7 +39,7 @@ from .reviewer_base import (
     build_scientific_reviewer_provider_from_env,
 )
 
-DATASET_NARRATIVE_FIDELITY_REVIEWER_PROMPT_VERSION = "dataset_narrative_fidelity_reviewer/v1"
+DATASET_NARRATIVE_FIDELITY_REVIEWER_PROMPT_VERSION = "dataset_narrative_fidelity_reviewer/v2"
 
 _TRUST_RANK: dict[SourceKind, int] = {
     SourceKind.USER_DESCRIPTION: 0,  # highest trust
@@ -164,7 +170,11 @@ def review_dataset_narrative_fidelity(
     generator_provider_ids: Sequence[str],
     review_guidance: str = "",
 ) -> DatasetNarrativeFidelityReview:
-    """Run the independent fidelity gate over the candidate + all four sources."""
+    """Run the independent fidelity gate over the candidate + every source that was actually present.
+
+    "All four sources" was never true of a run: v0.1 wires A and D only (`fusion` module docstring).
+    The reviewer sees the feeds in ``sources``, so it judges what the fuser really merged.
+    """
     source_views = [
         FidelitySourceView(
             source_kind=kind.value,

@@ -48,14 +48,15 @@ question should say so before you spend three months finding out.
 
 - **Try it for free first:** set `mode: subscription_only_demo` and run the whole
   workflow with mock providers and no API key. It shows the machinery, not
-  scientific quality.
+  scientific quality. [What demo mode needs and skips](docs/MANUAL_SETUP.md#manual-setup) —
+  no Poppler, no coding-host login, no source clone, but still your own PDFs and a dataset root.
 - **Run your own project:** [agent-guided setup](docs/AGENT_GUIDED_SETUP.md) is
   the recommended route — your own Codex or Claude Code interviews you, fills in
   the configuration, and refuses to spend without your approval.
   [Manual setup](docs/MANUAL_SETUP.md) if you would rather edit the YAML
   yourself, and [installation](docs/INSTALLATION.md) for the commands.
-- **See the scientific output first:** the [demo gallery](demos/QUESTIONS.md) —
-  eighteen question families across three datasets.
+- **See the scientific output first:** the [demo gallery](demos/ALL_QUESTIONS.md) —
+  twenty-four question families across four demonstrations of three datasets.
 - **Understand the method:** [method overview](docs/METHOD_OVERVIEW.md) and
   [architecture](docs/ARCHITECTURE.md).
 - **Find a specific guide:** the [documentation hub](docs/INDEX.md).
@@ -66,7 +67,7 @@ from your API budget), **two funded API providers** because owner and reviewer
 must differ, and **twelve to twenty source papers** you may lawfully use. Your
 dataset does *not* need to be public — an unpublished lab dataset is fully
 supported. [Installation](docs/INSTALLATION.md#before-you-install-three-things-you-cannot-fix-by-reading-further)
-covers all four, plus the system prerequisites and the clone that trips up most
+covers all three, plus the system prerequisites and the clone that trips up most
 first runs.
 
 ### The fastest route
@@ -95,8 +96,9 @@ Do not execute the scientific analyses, inspect confirmation outcomes, or weaken
 provenance, isolation, or safety check.
 ```
 
-Maieusis v0.1.1 is on [PyPI](https://pypi.org/project/maieusis/0.1.1/). The
-[manual route](docs/MANUAL_SETUP.md) and the
+This documentation describes Maieusis v0.1.1; releases are published to
+[PyPI](https://pypi.org/project/maieusis/), and the version badge above says which one is current.
+The [manual route](docs/MANUAL_SETUP.md) and the
 [source install](docs/INSTALLATION.md#install-from-source) are both supported.
 
 ## Why this is different
@@ -153,8 +155,11 @@ not remove it, and these demonstrations ship a
 drawing on both a deterministic scholarly lane and an independent bounded
 web-search lane. A prior can only remove a variant after it resolves to a real
 DOI or OpenAlex identity — a model's impression is not enough — and every
-variant removed on prior-art grounds says so, with its evidence, where you can
-read it.
+variant removed on prior-art grounds says so, with the priors it was measured
+against. Most say it on the variant's own line. Where a whole family closed at
+the gate, the disposition line reads simply *not shortlisted — deferred* and
+the priors are listed on the family's page instead; the evidence is published
+either way, one click further in the second case.
 
 What it cannot do is certify novelty: no search proves absence, and the final
 judgment stays with you. Users must obtain source papers lawfully;
@@ -176,92 +181,187 @@ meant, what the planner observed, and why a family advanced or stopped. Local
 runs also retain machine records needed for integrity and recovery. See the
 [complete run layout](docs/INPUTS_AND_OUTPUTS.md).
 
-## Explore the demos
+## What it produced
 
-> **Three worked demonstrations, in two very different fields.** Maieusis is for any scientific
-> discipline and any scientific dataset. A serious run still needs lawful, read-only access to
-> enough documentation, metadata, code, or representative data for the Dataset Planner to inspect.
-> We are testing it with researchers at different universities across
-> physics, astronomy, finance, social science, and psychology, using datasets from their own
-> fields. If you would like to join these scientific collaborations, contact
-> **Draco (Yunlong) Xu** at `dracoxu@uchicago.edu`.
+Four runs over three real datasets. Every question, and what happened to each:
 
-Each demonstration publishes its whole chain — the papers it read, the patterns it induced, every
-question it proposed, what the planner found in the data, and why each family advanced or stopped.
-Nothing is summarised for you: the rejections are there next to the plans. Source PDFs, raw model
-payloads, credentials, and private runtime state are excluded.
+| Dataset | Questions | Reached a plan | Closed |
+| --- | --- | --- | --- |
+| [Mice making decisions](demos/ibl/README.md) — IBL Brain-Wide Map, asked about *noise correlations* | 6 | 3 | 3 |
+| [The same recordings](demos/ibl-open/README.md) — IBL Brain-Wide Map, asked nothing | 6 | 5 | 1 |
+| [A monkey reaching](demos/nlb/README.md) — NLB MC_Maze-S | 6 | 5 | 1 |
+| [The polar stratosphere](demos/climate/README.md) — ERA5-derived | 6 | 5 | 1 |
 
-- **Neuroscience — mouse decision-making.** The
-  **[IBL Brain-Wide Map](demos/ibl/README.md)**: brain-wide recordings from mice performing a
-  sensory decision task, pooled across many laboratories
-  ([Nature paper](https://doi.org/10.1038/s41586-025-09235-0),
+**→ [Every question in one table](demos/ALL_QUESTIONS.md)** — the complete gallery: all 24 questions
+and all 48 versions, one row each, with what happened to it and a link into the run's own record.
+Nothing is left out of it, including the questions that went nowhere.
+
+Each run publishes its whole chain: the extracted record of each paper it read, the patterns it drew
+from them, every question it proposed, what the planner found when it opened the data, and why each
+question went forward or stopped. Nothing is summarised for you, and the refusals sit next to the
+plans. Source PDFs, raw model payloads, credentials and private runtime state are not published.
+
+> **Four worked demonstrations here, in two very different fields, and nothing in the system was
+> adapted for either one.** Maieusis works on any scientific discipline and any dataset you can give
+> the Dataset Planner lawful, read-only access to inspect: documentation, metadata, code, or
+> representative data. We are testing it now with researchers at several universities across climate
+> science, physics, astronomy, finance, social science, and psychology, on datasets from their own
+> fields. To join those collaborations, write to **Draco (Yunlong) Xu** at `dracoxu@uchicago.edu`.
+
+### The data behind each run
+
+- **Mice making decisions, recorded across the whole brain.** The
+  **[IBL Brain-Wide Map](demos/ibl/README.md)** pools Neuropixels recordings from mice performing one
+  standard visual decision task, repeated laboratory after laboratory
+  ([Nature 2025](https://doi.org/10.1038/s41586-025-09235-0),
   [release guide](https://docs.internationalbrainlab.org/notebooks_external/2025_data_release_brainwidemap.html)).
-  *When is shared trial-to-trial variability a nuisance, a computational resource, or just the
-  animal moving?* Two variants pull against each other — task-aligned structure versus aggregate
-  magnitude, and decision organization versus embodied co-variation — and both reached independently
-  reviewed plans. Five sibling families ask, among other things, whether population geometry stays
-  invariant across decision epochs.
-  [Both variants, and what each outcome would mean](demos/ibl/artifacts/questions/question_families_detailed.md#family-002-task-relevance-of-structured-neural-co-variability) ·
-  [Proposal hypothesis versus inspected evidence](demos/ibl/artifacts/families/covariability-structure/dossier_detailed.md) ·
-  [the full record](demos/ibl/artifacts/families/covariability-structure/dossier.md)
+  The repetition is the point: it lets a question separate what reproduces across laboratories from
+  what belongs to the laboratory that recorded it. This run was handed one declared topic — *noise
+  correlations*.
 
-- **Neuroscience — macaque reaching.** A pinned **[NLB MC_Maze-S](demos/nlb/README.md)** session
-  from the Neural Latents Benchmark: simultaneous recordings from macaque primary motor cortex (M1)
-  and dorsal premotor cortex (PMd) during delayed straight and curved reaches
+- **The same mice, asked nothing.** The **[open-mode run](demos/ibl-open/README.md)** is those
+  identical recordings, the same twelve papers, the same models, with the topic removed: it read the
+  dataset's own description and derived its own scope. The two runs produced twelve questions with no
+  family in common — not one shared title. Reading them side by side is the most direct evidence here
+  for what declaring a topic actually does.
+
+- **A monkey reaching, two motor areas recorded at once.** A pinned session of
+  **[NLB MC_Maze-S](demos/nlb/README.md)**, from the Neural Latents Benchmark, records macaque
+  primary motor cortex (M1) and dorsal premotor cortex (PMd) together during delayed straight and
+  curved reaches
   ([benchmark paper](https://datasets-benchmarks-proceedings.neurips.cc/paper/2021/hash/979d472a84804b9f647bc185a877a8b5-Abstract-round2.html),
-  [pinned DANDI dataset](https://doi.org/10.48324/dandi.000140/0.220113.0408)).
-  *Does the geometric form of a motor manifold mean anything computationally, or does a more
-  elaborate description merely fit better?* Two variants pull against each other — a frozen
-  shared-geometry transfer test that refits nothing, and a nonlinear context-interaction test on
-  kinematically matched segments — and both reached independently reviewed plans.
-  [Both variants, and what each outcome would mean](demos/nlb/artifacts/questions/question_families_detailed.md#family-006-functional-meaning-of-motor-manifold-form) ·
-  [Proposal hypothesis versus inspected evidence](demos/nlb/artifacts/families/manifold-form-functional-meaning/dossier_detailed.md) ·
-  [the full record](demos/nlb/artifacts/families/manifold-form-functional-meaning/dossier.md)
+  [the pinned DANDI dataset](https://doi.org/10.48324/dandi.000140/0.220113.0408)). The demo page
+  claims which electrode array covers which area, then ships
+  [a script that re-derives the mapping from the public data and fails loudly if we got it wrong](demos/nlb/verify_region_mapping.py).
 
-- **Climate science — the polar stratosphere.** An
-  **[ERA5-derived record](demos/climate/README.md)** of wave activity, zonal winds and eddy forcing
-  at 60 degrees North, across 97 heights and roughly four decades. **Nothing in the system was
-  adapted for atmospheric science.**
-  *Is vertical coupling a propagating episode or a coherent mode spanning heights — and is that
-  distinction real, or an artifact of how you represent it?* Two variants pull against each other —
-  an event-first lagged coupling test, and a continuous-mode robustness test — and both reached
-  independently reviewed plans. The dataset is a collaborator-supplied derived product and is not
-  redistributed; [the dataset notes](demos/climate/DATASET_NOTES.md) say so plainly.
-  [Both variants, and what each outcome would mean](demos/climate/artifacts/questions/question_families_detailed.md#family-005-propagating-episodes-versus-coherent-modes-of-vertical-coupling) ·
-  [Proposal hypothesis versus inspected evidence](demos/climate/artifacts/families/vertical-coupling-representations/dossier_detailed.md) ·
-  [the full record](demos/climate/artifacts/families/vertical-coupling-representations/dossier.md)
+- **Four decades of the polar stratosphere, on a system adapted for none of it.** Twenty
+  climate-dynamics papers and a source-backed description of an
+  **[ERA5-derived record](demos/climate/README.md)**: wave activity, zonal winds, and eddy forcing at
+  60 degrees North, on a 97-level column from the surface to 48 km, six-hourly, across roughly four
+  decades. Nothing in the system was adapted for atmospheric science. The data is a collaborator's
+  derived product and is not redistributed; [the dataset notes](demos/climate/DATASET_NOTES.md) say
+  so plainly.
 
-All three carry the gallery's **Plan developed (provisional)** label — reviewed by a second model on
-a different provider rather than by a human expert, and never executed. Nothing on this page is a
-result.
+### Four questions worth opening
 
-These are entry points, not a ranking. **Continue to the [complete gallery](demos/QUESTIONS.md) for
-all 18 families and all 36 variants,** including scientific background, competing explanations,
-assumptions, positive/negative/null interpretations, and the three families that closed as
-scientific rejections rather than plans.
+One from each run. Each was asked two ways on purpose: two framings of one question fail
+differently, and which one fails tells you where the problem is.
 
-### And one that sounds right until you look at the task
+**Does evidence accumulate along one fixed direction, or move through a sequence of states?**
+([mice, asked about noise](demos/ibl/artifacts/families/accumulation-geometry/dossier.md))
 
-The three above reached plans. This one did not, and it is the shortest way to see what the planner
-is actually for.
+Two accounts of the same behaviour. In one, activity slides along a single population axis that
+stays put across the trial. In the other, the population passes through a succession of distinct
+states, each briefly holding the decision. Trial-averaged firing looks much the same either way.
+What separates them is how activity co-varies from trial to trial — which is what this run was
+pointed at.
 
-The question: in a two-alternative visual discrimination, does the final pre-movement population
-state carry incremental information about the animal's **perceptual choice** as against its
-**movement direction**? Separating choice from movement in premotor activity is a real problem and
-a reasonable thing to ask. Nothing about the sentence is wrong.
+The accepted plan takes one shared-variability direction, estimated without reference to choice.
+It asks whether that direction holds across decision time and across sensory conditions, tracks
+accumulated evidence, and predicts choice and response time — after sensory features, action plans,
+elapsed time and movement are accounted for. Those four are what make a slow drift look like an
+accumulator.
 
-In this task the mouse reports its choice *by turning a wheel*. Wheel direction is therefore an
-almost deterministic encoding of choice, and the release documents no alternative report mapping.
-Conditioning on movement direction conditions on the choice report itself — the two things the
-question wants to hold apart are one thing. The variant closed as an **operationalization failure**,
-and the dossier says exactly that: the contrast "cannot preserve its intended contrast" for this
-dataset-task pairing.
+The sibling asked the same question from the sequence side, and did not survive the data. Its test
+needs the trial-by-trial sequence of evidence pulses; this release records one contrast value per
+trial. The Owner ruled that the available proxy would answer a different question, not a weaker
+version of this one.
 
-The question is not wrong in general. It is wrong *here*, and only a look at the task design shows
-it. That is the check a proposal stage cannot do for itself, and it is why the dataset planner exists.
+**Is shared variability aligned with the decision, or merely large?**
+([the same recordings, asked nothing](demos/ibl-open/artifacts/families/variability-geometry/dossier.md))
 
-**[Read the family, both variants, and the closure](demos/ibl/artifacts/families/decision-dynamics/dossier.md)** ·
-[See it in the gallery with the rest](demos/QUESTIONS.md)
+Shared trial-to-trial variability is usually summarised by its size. This question is about its
+direction. Variability lying along the population dimension that carries evidence limits what can
+be read out of the population; variability of the same magnitude lying elsewhere does not.
+
+So the plan asks whether the component aligned with an independently defined decision dimension —
+and specifically not with a movement dimension — predicts choice and response time on held-out
+trials. It has to beat three things: alignment with sensory evidence, movement covariates, and
+overall variability magnitude. The last of those is the question. Without it, a trial that is merely
+noisier cannot be told from a trial that is informatively noisy.
+
+Nothing told this run to look here. It read the dataset's own description, derived its own scope,
+and arrived at shared variability by itself. The run above was handed *noise correlations* as a
+topic and asked what accumulation geometry is; this one asked what shared variability is for. No
+family title appears in both.
+
+Its sibling was stopped at prior-art review, against work that had already run this alignment test
+in macaque V1.
+
+**Is preparation reusable across contexts, and is execution driven or autonomous?**
+([a monkey reaching](demos/nlb/artifacts/families/context-dependent-motor-dynamics/dossier.md))
+
+Motor cortex before a reach can be read two ways. Either preparation sets up an organisation that
+is the same whatever path follows, or it specifies the path. Both fit low-dimensional averaged
+activity, and geometry alone does not choose between them.
+
+The manipulation does. The same animal reaches straight when the workspace is clear and curves when
+a barrier is in the way.
+
+The preparatory plan asks whether the two share one population organisation with curvature-selective
+components laid on top, or whether preparation is entirely condition-general once the movements'
+covarying demands are separated. The execution plan asks a different thing of the same trials:
+whether curved-path dynamics track ongoing behavioural input more than straight-path dynamics do.
+Autonomy tested as a difference between conditions, rather than asserted of one.
+
+Splitting the trial is the point. Preparation and execution can answer in opposite directions, and a
+design that ran them together would report the average of the two. Both reached reviewed plans.
+
+**Is the vortex breakdown the same process run backwards?**
+([the polar stratosphere](demos/climate/artifacts/families/lifecycle-asymmetry-memory/dossier.md))
+
+A major weakening of the polar vortex has a descent and a recovery. If they are one process in two
+directions, the same wave–mean-flow pathways should govern both, reversed. If they are not, the
+recovery has a route of its own.
+
+The accepted plan asks exactly that: are the vertical circulation and wave–mean-flow pathways into
+weakening the time reverse of those out of it, or is the lifecycle reproducibly asymmetric? It is a
+question about the shape of a trajectory rather than about either end of it.
+
+The sibling went one step further and asked whether recovery carries dynamical memory of the forcing
+that preceded it. Prior-art review stopped it before any planner opened the data. Published work
+already attributes slow lower-stratospheric recovery to suppressed wave driving after the warming,
+and to radiative relaxation; a memory term would have to be separated from both first. The records
+it named are on the run's [prior-art page](demos/climate/artifacts/questions/prior_art.md).
+
+### Two questions it refused, for two different reasons
+
+The refusals are the part you cannot get from a system that shows you only what worked, and these
+two fail in opposite ways.
+
+**The dataset was missing a dimension.** A climate question asked whether rapid vortex weakening is
+driven by unusual wave forcing or by the vortex already being susceptible. Telling those apart means
+distinguishing a vortex that *splits* from one that is *pushed off centre* — two shapes. This record
+is a single circle of latitude with longitude already averaged away, and you cannot see a shape in a
+line. The planner named the missing construct and stopped, rather than substituting something
+adjacent that would have answered a different question.
+[Read the refusal](demos/climate/artifacts/families/precursor-susceptibility/dossier.md)
+
+**Nothing was missing; the design never pulls the two apart.** An NLB question asked whether
+preparatory activity carries the *shape* of an intended path, beyond the simpler features a reach can
+be described by. Every quantity it names is in the data. Then the planner looked at how the trials
+are built: every curved reach is a trial with barriers on the screen, every straight reach has none,
+and there is no curved reach without barriers and no barrier layout that yields a straight plan. So
+"planning a curved path" and "seeing a barrier" are the same trials, any separation you found could
+be either, and the question had already named the visible cue as an alternative it must rule out. The
+sibling version failed from the other side: separating route intention from execution needs two
+different intended routes performed with matching movements, and here the movement is almost entirely
+determined by the route, so those trials essentially do not exist.
+[Read the closure](demos/nlb/artifacts/families/trajectory-geometry-alternatives/dossier.md)
+
+Nothing in a dataset description tells you either of those. One is a dimension the recording does
+not have. The other is a dataset that holds every quantity the question names and still cannot
+separate the two accounts, because of how the trials were designed. Both are checks a proposal stage
+cannot perform on itself: they need something to open the data and look.
+
+### How to read any one of them
+
+Eighteen of the 24 produced a plan; the other six are on the page with the reason each one closed,
+and those reasons are not all the same kind. Twenty-three of the 24 also carry a reading guide, whose
+*proposal hypothesis versus inspected evidence* section sets what the proposal stage assumed beside
+what the planner actually found in the data. The twenty-fourth has none, and that is not an
+oversight: prior-art review closed it before any planner opened the data, so there is no inspected
+evidence to set anything beside. That comparison is the one this whole page is arguing for.
 
 ## One workflow, three layers
 
@@ -294,8 +394,9 @@ safe to resume. It cannot write over the run that stopped, cannot repair past a 
 turn a scientific rejection into an acceptance: **repair gets a run past infrastructure, never past a
 scientific verdict.** That shepherd is your own coding-agent session, not a service we run, and
 `maieusis init` writes these rules into your project before it drives anything of yours. The IBL
-demonstration here was finished by a disclosed resume, and its manifest publishes two build
-identities rather than one clean lineage.
+demonstration here carries three families that produced no plan for reasons that are not
+scientific — one provider outage and two that the run could not validate on the way back in — and
+they stay on the page with their causes named.
 
 The contract: [what a shepherd may repair, what it must record, and the three things repair may
 never do](docs/SHEPHERD_MODE.md). Reading a stopped run: [the two questions, the three honest
@@ -313,14 +414,20 @@ What Maieusis does instead of claiming otherwise: **every plan states its own li
 dossier**, so you are never left inferring how much weight one can carry.
 
 **What a run costs.** The climate demonstration on this page — six question families, two variants
-each — took **219 model calls** and about an hour end to end; your wall clock depends mostly on your
-dataset. Paid web search is the one lane with an exact price, and it came to **$0.45** against a
-ceiling you set before the run. Token cost is not metered by Maieusis, so read it from your
-provider's dashboard rather than from us.
+each — took **one hour and fifty-six minutes** end to end. The four demonstrations here ran between
+fifty minutes and just under two hours; your wall clock depends mostly on your dataset and on how
+deep the planner goes into it.
 
-`maieusis check` makes no paid call and prints what a run will do before you authorise it. To see
-the machinery for nothing, set `mode: subscription_only_demo`. To bound a first real bill, set
-`run.max_families: 2` and scale from what you measure.
+**Maieusis does not meter token cost**, so read that from your provider's dashboard rather than from
+us. Paid web search is the one lane with a hard ceiling: you set it before the run, preflight prints
+the reservation it will hold, and the run cannot exceed it.
+
+`maieusis check` prints what a run will do before you authorise it. It launches no coding agent and
+runs no stage, but it does send **one minimal request per configured provider** — a fraction of a
+cent — because a key that authenticates but cannot be billed should fail there rather than an hour
+into a paid run. To see the machinery for nothing at all, set `mode: subscription_only_demo`, which
+uses no provider. To bound a first real bill, set `run.max_families: 2` and scale from what you
+measure.
 
 - [Method overview](docs/METHOD_OVERVIEW.md)
 - [When a run stops](docs/RUN_SUPERVISION.md)

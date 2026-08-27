@@ -52,9 +52,22 @@ _CREDENTIAL = re.compile(
     r"\b(?:api[_-]?key|authorization|bearer)\s*[:=]\s*\S+)",
     re.IGNORECASE,
 )
+#: A private identifier is a private FIELD followed by an identifier-shaped VALUE. Both halves are
+#: required, and the value half is why: with `[A-Za-z0-9][A-Za-z0-9_.:-]*` as the value and the
+#: `_id` suffix optional, the ordinary English phrase `evidence: the` matched, and `_safe_text`
+#: below replaces the WHOLE statement with the omission notice. Measured on the 2026-08-14 NLB leg:
+#: five reviewed literature statements were deleted from the published questions page, one of them
+#: from the sentence "…is an open question in the visible evidence: the excerpt states the question
+#: and dimensionality-reduction approach but does not…".
+#:
+#: The value now has to look like an identifier — carry a digit, an underscore or a hyphen, or be a
+#: long hex run — which is the same shape test `presentation/privacy.py` applies for the same
+#: reason. `session_id: abc123` and `session: 7f3a9c21` still match; `evidence: the` does not.
 _PRIVATE_IDENTIFIER = re.compile(
     r"\b(?:provider|session|request|thread|branch|event|evidence|claim|context)"
-    r"(?:[_-]?id)?\s*[:=]\s*[A-Za-z0-9][A-Za-z0-9_.:-]*",
+    r"(?:[_-]?id)?\s*[:=]\s*"
+    r"(?=[A-Za-z0-9][A-Za-z0-9_.:-]*(?![A-Za-z0-9_.:-]))"
+    r"(?:[A-Za-z0-9_.:-]*[\d_:-][A-Za-z0-9_.:-]*|[0-9a-fA-F]{8,})",
     re.IGNORECASE,
 )
 _PRIVATE_IDENTIFIER_TOKEN = re.compile(

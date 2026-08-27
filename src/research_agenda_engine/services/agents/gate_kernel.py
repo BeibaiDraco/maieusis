@@ -340,17 +340,53 @@ def run_gate_with_revise_loop(
     ``revise`` after ``max_revise_rounds`` re-drafts, ``budget_exhausted`` is True and the final
     outcome stays ``revise`` — the caller records the honest ``revision_budget_exhausted`` terminal;
     the kernel never rewrites it to a reject.
+
+    **A redraft that changed nothing ends the loop without consuming a round.** Every host-side
+    redraft in this project repairs a specific named fault and returns the artifact untouched when
+    the reviewer asked for something else, so the loop was re-reviewing byte-identical input. That
+    was not a theoretical shape: in the published climate demo the only two identical request
+    payloads in the entire capture archive are the second fidelity review of
+    ``03-blackmon-et-al-1977`` (payload ``36777e97cef7fcbd``) and of ``20-shaw-miyawaki-2024``
+    (payload ``936e9184656d998e``, 95 seconds after the first) — both returned the same ``revise``,
+    and both papers were then recorded as having exhausted a revision budget. That record was false
+    and the second call was paid for. So the loop now compares the redrafted artifact against what
+    it handed the redraft, and on no change stops with ``redraft_unavailable`` set and
+    ``budget_exhausted`` clear: the reviewer asked for a change the host has no lawful repair for,
+    which is a different fact about the run than a budget running out.
+
+    Comparison is by ``stable_hash`` of the model dump, which is the same canonical form the
+    promotion binding uses, so "unchanged" here means exactly "the reviewer would be handed the same
+    artifact".
     """
     if max_revise_rounds < 0:
         raise ValueError("max_revise_rounds must be >= 0")
     current = artifact
     outcome = review(current)
     rounds = 0
+    redraft_unavailable = False
     while outcome.decision == GateDecision.REVISE and rounds < max_revise_rounds:
-        current = redraft(current, outcome)
+        revised = redraft(current, outcome)
+        if _gate_artifact_digest(revised) == _gate_artifact_digest(current):
+            redraft_unavailable = True
+            break
+        current = revised
         rounds += 1
         outcome = review(current)
-    budget_exhausted = outcome.decision == GateDecision.REVISE and rounds >= max_revise_rounds
-    return current, GateLoopResult(
-        final_outcome=outcome, rounds_used=rounds, budget_exhausted=budget_exhausted
+    budget_exhausted = (
+        outcome.decision == GateDecision.REVISE
+        and rounds >= max_revise_rounds
+        and not redraft_unavailable
     )
+    return current, GateLoopResult(
+        final_outcome=outcome,
+        rounds_used=rounds,
+        budget_exhausted=budget_exhausted,
+        redraft_unavailable=redraft_unavailable,
+    )
+
+
+def _gate_artifact_digest(artifact: object) -> str:
+    """Canonical digest of whatever a gate is looping over (a pydantic artifact in every caller)."""
+    if isinstance(artifact, BaseModel):
+        return stable_hash(artifact.model_dump(mode="json"))
+    return stable_hash(artifact)

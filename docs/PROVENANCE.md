@@ -7,6 +7,12 @@ is tied to the inputs, source evidence, models, prompts, review, implementation,
 and content identity that produced it. This makes a dossier inspectable; it
 does not make the dossier true.
 
+It also does not make the run repeatable. Everything below pins what went *in* — which bytes, which
+prompt version, which model at which effort. The model's output is not pinned, there is no seed, and
+two runs of one unchanged profile can propose different questions. [What a reproduction does and
+does not mean](LIMITATIONS.md#running-the-same-configuration-twice-does-not-reproduce-the-same-questions)
+sets out how far apart two such runs have actually been measured to fall.
+
 ## What Maieusis records
 
 Depending on the stage and artifact, a local run records:
@@ -118,8 +124,9 @@ outputs, and hidden audit files support integrity, diagnosis, and safe resume.
 They should not be substituted for the scientific narrative or published with
 credentials, restricted data, or raw provider traffic.
 
-The three public examples -- the climate, International Brain Laboratory (IBL) Brain-Wide Map, and
-Neural Latents Benchmark (NLB) MC_Maze-S demonstrations -- contain curated readable scientific
+The four public examples -- the climate demonstration, two International Brain Laboratory (IBL)
+Brain-Wide Map runs of the same recordings with and without a declared topic anchor, and the Neural
+Latents Benchmark (NLB) MC_Maze-S demonstration -- contain curated readable scientific
 products and sanitized inventories. They omit source PDFs, datasets,
 credentials, raw model traffic, provider session IDs, absolute local paths,
 hidden local audit files, and reviewer improvement notes addressed to the

@@ -1,4 +1,7 @@
-"""Promote + persist the four-source narrator's fused narrative under AUTOMATED authority.
+"""Promote + persist the narrator's fused narrative under AUTOMATED authority.
+
+The narrator is specified for four coarse sources and wired for two of them (A documentation and D
+user docs); see the `fusion` module docstring for what v0.1 actually feeds it.
 
 Closes the gap where ``gather_and_fuse_dataset_narrative`` returned in-memory and the CLI only printed
 it, so the Questioner context still read the legacy A-only reviewed narrative. Here the fused
@@ -15,9 +18,15 @@ not proposal-ready). The GF-2c adversarial fixture (a plausible-but-false narrat
 and fails closed through here.
 
 The one deliberate exception is a REVISE that names NOTHING -- no required change, no unfaithful
-claim, no over-precise finding, no hallucination, no failed criterion. There is no narrative revise
-loop, so such a verdict used to be run-fatal while carrying no actionable content; it is now
-promoted with an explicit warning in ``review_notes``. See ``_revise_that_names_nothing``.
+claim, no over-precise finding, no hallucination, no failed criterion. Such a verdict used to be
+run-fatal while carrying no actionable content; it is now promoted with an explicit warning in
+``review_notes``. See ``_revise_that_names_nothing`` and ``revise_is_survivable``.
+
+A revise that names something is a different case, and since 2026-08-12 it does not arrive here
+first: ``narrative_revision.run_narrative_fidelity_repair_loop`` re-asks the narrator model for a
+source-locked repair and returns it to the same independent gate, bounded by
+``config.run.max_revise_rounds``. This module sees only what that loop finally produced, and its
+answer to it is unchanged -- accept, or the survivable-revise exception, or fail closed.
 
 This module carries no dataset-specific names; it is enforced by the dataset-agnostic guard.
 """
@@ -35,6 +44,27 @@ from ..agents.promotion import assert_promoted_status_is_holdable
 from ..agents.reviewer_base import assert_reviewer_provider_independent
 from .fusion import source_locator
 from .narrator import NarratorResult
+
+
+class NarrativeFidelityNonAccept(ValueError):
+    """The independent fidelity gate itself judged the narrative and did not accept it.
+
+    The ONLY refusal in this module that is a statement about the SCIENCE. Every other refusal below
+    is the host declining to grant authority because a piece of machinery is missing or inconsistent
+    -- no review ran at all, the criterion sweep never finished, the reviewer shares a provider family
+    with a generator, there is no generator identity to attest, the fused candidate carries no
+    source_refs, or the stamped artifact cannot hold the status. In each of those the science was
+    never judged, so recording them as a scientific verdict is the misfiling
+    ``schemas/stage_receipt.py:22`` exists to forbid -- and it is not a cosmetic one:
+    ``docs/public/SHEPHERD_MODE.md`` rule 3 forbids repairing past a scientific verdict and
+    ``resume.py:233`` REUSES a scientific terminal instead of re-running it, so a host bug filed
+    scientific is unrescuable by design.
+
+    The caller therefore classifies on this TYPE, not on the review's decision word. Inferring it from
+    the decision was wrong in both directions: a missing review defaulted to ``reject`` and read as a
+    verdict nobody delivered, and a structural refusal that happened to follow a survivable ``revise``
+    inherited that word and read as one too.
+    """
 
 
 def _revise_that_names_nothing(review: object) -> bool:
@@ -57,9 +87,11 @@ def _revise_that_names_nothing(review: object) -> bool:
     times. It is kept because it costs nothing and a reviewer may yet emit it, not because it has
     ever caught anything.
 
-    There is no narrative revise loop anywhere in the project: `REVISE` has exactly one consumer,
-    the fail-closed raise below, so it was operationally identical to `REJECT`. A reviewer wanting
-    to say "accept, with a nit" had no word for it. Same shape as the plan reviewer's
+    When this was written there was no narrative revise loop anywhere in the project: `REVISE` had
+    exactly one consumer, the fail-closed raise below, so it was operationally identical to
+    `REJECT`. A reviewer wanting to say "accept, with a nit" had no word for it, and a reviewer
+    naming a real but fixable defect had no repairer -- the second half of that is what
+    `narrative_revision.py` now answers. Same shape as the plan reviewer's
     `missing_required_changes` (PR #107), one gate earlier and run-fatal instead of family-fatal.
 
     Deliberately narrow. `REJECT` stays fatal always; a `revise` that names ANY required change,
@@ -86,12 +118,53 @@ def _revise_that_names_nothing(review: object) -> bool:
     return bool(assessments) and all(getattr(item, "passed", False) for item in assessments)
 
 
+def revise_is_survivable(review: object) -> bool:
+    """A ``revise`` the run may carry at draft authority instead of dying on.
+
+    ``_revise_that_names_nothing`` requires an entirely empty finding set. Measured, that shape has
+    occurred 0 of 19 times in the capture archive and 0 of 2 in the 2026-08-12 live legs, so in
+    practice this gate had no survivable revise at all -- and when N2 was written it was the only
+    front-half gate with no revise loop and no drafter to receive a repair. ``required_changes``
+    therefore arrived at a gate structurally incapable of acting on it, and the run died over a
+    repair nobody could make. (That is fixed: ``narrative_revision.py`` now repairs a revise that
+    names something. This predicate keeps its job of deciding what may promote WITHOUT a repair, so
+    that the loop never spends a model call on a verdict already survivable.)
+
+    What killed two of five live legs on 2026-08-12 was a HOST field-map defect (fixed in N1): both
+    reviewers passed every criterion, named zero unfaithful claims and zero hallucinations, and
+    wrote a required change describing the mislabelling.
+    ``prompts/dataset_narrative_fidelity_reviewer/v2.md`` tells the model to "return `revise`
+    (fixable)" -- the word it is TOLD to use for something repairable.
+
+    So a ``revise`` survives when the reviewer's own fidelity findings are empty and every criterion
+    it assessed passed. What is genuinely a fidelity failure stays fatal: ``REJECT`` always, any
+    unfaithful claim, any hallucination finding, any failed or unassessed criterion. Only
+    ``required_changes`` and ``too_precise_findings`` -- a suggestion and a wording judgement, which
+    AGENTS.md rule 11 keeps soft -- become a cap rather than a kill.
+    """
+
+    if getattr(review, "decision", None) != DatasetNarrativeFidelityDecision.REVISE:
+        return False
+    fidelity_findings = list(getattr(review, "unfaithful_claims", []) or []) + list(
+        getattr(review, "hallucination_findings", []) or []
+    )
+    if fidelity_findings:
+        return False
+    if not getattr(review, "criterion_review_complete", False):
+        return False
+    assessments = list(getattr(review, "criterion_assessments", []) or [])
+    return bool(assessments) and all(getattr(item, "passed", False) for item in assessments)
+
+
 def promote_narrator_result_to_reviewed(result: NarratorResult) -> DatasetNarrative:
     """Earn ``AUTOMATED_REVIEWED`` from an accepted fidelity review, or raise (fail closed).
 
     Refuses to promote unless ALL hold: a review ran; its decision is ACCEPT, or a REVISE that
     names nothing at all (see ``_revise_that_names_nothing``); it carries real provenance; its
-    provider is independent of every generator; and the fused candidate has source_refs. On success
+    provider is independent of every generator; and the fused candidate has source_refs. Exactly one
+    of those refusals is a scientific verdict and it raises ``NarrativeFidelityNonAccept``; every
+    other refusal raises a plain ``ValueError`` and means the machinery, not the science, is at
+    fault. On success
     it returns a copy stamped with the automated verdict + the fused narrative's own provenance
     (fusion prompt marker, joined generator providers, source/input digests) plus a durable audit
     link to the review, and an explicit warning in ``review_notes`` when the verdict was not accept.
@@ -102,9 +175,13 @@ def promote_narrator_result_to_reviewed(result: NarratorResult) -> DatasetNarrat
             "cannot promote DatasetNarrative: no independent fidelity review was run "
             "(the narrative gate has no automated authority to grant — fail closed)"
         )
-    empty_revise = _revise_that_names_nothing(review)
+    # N2 (2026-08-12): a `revise` whose criteria all passed and whose fidelity findings are empty
+    # is carried at draft authority rather than ending the run. `_revise_that_names_nothing` stays
+    # as the stricter historical shape; `revise_is_survivable` is the one that can actually fire.
+    names_nothing = _revise_that_names_nothing(review)
+    empty_revise = names_nothing or revise_is_survivable(review)
     if review.decision != DatasetNarrativeFidelityDecision.ACCEPT and not empty_revise:
-        raise ValueError(
+        raise NarrativeFidelityNonAccept(
             "cannot promote DatasetNarrative: independent fidelity gate returned "
             f"{review.decision.value!r}, not accept — fail closed"
         )
@@ -161,7 +238,7 @@ def promote_narrator_result_to_reviewed(result: NarratorResult) -> DatasetNarrat
             f"{len(review.required_changes)} non-blocking improvement(s); they are recorded on the "
             "persisted fidelity review in the reviewer's own wording and did not gate promotion."
         )
-    if empty_revise:
+    if names_nothing:
         # Never a silent downgrade: the reader is told the verdict was not accept and that the
         # reviewer named nothing to repair, so they can judge the narrative themselves.
         narrative.review_notes += (
@@ -169,6 +246,22 @@ def promote_narrator_result_to_reviewed(result: NarratorResult) -> DatasetNarrat
             "over-precise finding, hallucination, or failed criterion, so the narrative was "
             "promoted with this warning rather than ending the run; see the persisted fidelity "
             "review for the reviewer's own wording."
+        )
+    elif empty_revise:
+        # The OTHER survivable shape, and it must not borrow the sentence above. N2 widened the
+        # predicate to `revise_is_survivable`, which promotes a revise that DID name required
+        # changes or over-precise findings as long as every criterion passed and no unfaithful
+        # claim or hallucination was found -- exactly the two live legs it was written for. The
+        # single note left behind then went on saying the reviewer named nothing, on artifacts
+        # whose own persisted review lists what it named. That is an invented fact in a provenance
+        # field, so each branch states only what actually happened.
+        narrative.review_notes += (
+            f" The gate returned revise while passing all {len(review.criterion_assessments)} "
+            "criteria it assessed and naming no unfaithful claim and no hallucination; its "
+            f"{len(review.required_changes)} required change(s) and "
+            f"{len(review.too_precise_findings)} over-precise finding(s) are recorded on the "
+            "persisted fidelity review in the reviewer's own wording, and the narrative was "
+            "promoted with this warning rather than ending the run."
         )
     assert_promoted_status_is_holdable(narrative, expected_gate="dataset_narrative_fidelity")
     return narrative

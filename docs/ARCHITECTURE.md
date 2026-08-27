@@ -18,7 +18,8 @@ flowchart TB
     end
     Proposal --> QS["Question Scientist"]
     QS --> VF["Visible QuestionFamilies and variants"]
-    VF --> S["Shortlist review"]
+    VF --> NA["Prior-art review: removes variants, rewords the rest"]
+    NA --> S["Shortlist review"]
     S --> B["One isolated branch per shortlisted family"]
     subgraph Branch["Isolated family branch"]
       O["Question Owner"] <--> P["Dataset Planner"]
@@ -73,6 +74,7 @@ set, or claim a result.
 | --- | --- | --- |
 | Lead coding-agent session | Correct operation of files, commands, tools, and visible workflow | Its own prose is not scientific evidence |
 | Question Scientist | Candidate families and scientifically distinct variants from the allowed proposal context | Cannot certify dataset feasibility, novelty, or truth |
+| Prior-art reviewer | That a candidate variant is, or is not, distinguishable from a resolved published prior; and the rewording that would distinguish it | Cannot establish that a question is novel — no bounded search proves absence — and cannot judge whether the dataset can answer it |
 | Question Owner | The scientific meaning that a family or variant must preserve | Cannot certify dataset facts without planner evidence |
 | Dataset Planner | Dataset-grounded operationalization and a non-executable analysis plan | Cannot execute the full analysis or silently change the question |
 | Independent reviewer | A separate critique of intent, grounding, controls, overclaim, and revision | Does not establish empirical truth or replace a human expert |

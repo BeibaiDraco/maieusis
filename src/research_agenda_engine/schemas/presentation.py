@@ -192,6 +192,12 @@ class PresentationAddonReceipt(BaseModel):
     # new invariant would trade a real artifact for a rule. The materializer guarantees the codes at
     # the construction site instead, and derives ``warning`` from them so the two cannot disagree.
     warning_codes: list[PresentationWarningCode] = Field(default_factory=list)
+    #: One line per page that threw: its label and the exception CLASS, nothing else. A
+    #: `page_render_failed` code alone says a page is missing without saying which or why, and on
+    #: the 2026-08-15 qualification set that cost a full investigation — three reading guides gone,
+    #: one code in the receipt, and the causes recoverable only by re-rendering every family by hand.
+    #: Defaulted so receipts written before this field stay loadable, exactly as `warning_codes` is.
+    render_failures: list[str] = Field(default_factory=list)
     started_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     ended_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
@@ -268,6 +274,10 @@ class PresentationAddonRecord(BaseModel):
     # Mirrored from the receipt so the README and the CLI can give cause-specific advice without
     # opening a second file. Same backward-compatibility reasoning as the receipt's copy.
     warning_codes: list[PresentationWarningCode] = Field(default_factory=list)
+    #: Mirrors the receipt's field. The manifest summary is what a reader opens first —
+    #: leaving the causes only in the receipt is why the 2026-08-15 investigation started
+    #: from a bare `page_render_failed` and needed a full re-render to get past it.
+    render_failures: list[str] = Field(default_factory=list)
 
     @field_validator("receipt_path")
     @classmethod

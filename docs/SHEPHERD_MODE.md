@@ -185,7 +185,7 @@ one.
 
 | The situation | The sanctioned path |
 | --- | --- |
-| An infrastructure fault stopped the run | `maieusis status <run-id>` first — it is read-only and makes no paid call — then `maieusis resume <run-id>` with your approval, at most twice |
+| An infrastructure fault stopped the run | `maieusis status <run-id>` first — it makes no paid call — then `maieusis resume <run-id>` with your approval, at most twice. `status` is read-only **except** on a run whose indexed artifacts no longer match their recorded digests: there it records the integrity failure, marks the run failed, and writes an interruption summary, rather than reporting a healthy run over mutated bytes. That is the one case where looking changes something, and it is the case where you would want it to |
 | A family closed for a scientific reason | Nothing. It is finished, not broken. Do not resume it |
 | The run would only continue by weakening a check | It stops, and your shepherd says so. That is the correct outcome, not a failure to try hard enough |
 | A model needs to change | Not a repair. `resume` re-runs anything whose models changed, and what follows is a new run rather than a recovery |

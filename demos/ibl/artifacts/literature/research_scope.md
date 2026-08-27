@@ -1,7 +1,7 @@
 # Research scope
 
 - Mode: `topic_conditioned`
-- Query terms: neural population geometry, dynamical systems models, neural dynamics, neural population code, neural co-variability, neural manifolds, representational geometry, neural circuit models
+- Query terms: noise correlations, perceptual decision-making, evidence accumulation, sensory evidence, neural decision variables, choice selectivity, movement-related activity, response time variability, neural population dynamics, representational geometry, mixed selectivity, distributed representations, brain-wide neural activity, inter-laboratory variability, behavioral reproducibility, spike sorting
 
 ## If this looks wrong
 

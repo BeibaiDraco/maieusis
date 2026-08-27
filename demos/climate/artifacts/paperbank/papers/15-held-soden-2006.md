@@ -1,49 +1,48 @@
-# Paper — Held, I. M., and B. J. Soden, 2006: Robust responses of the hydrological cycle to global warming. J. Climate, 19, 5686-5699.
+# Paper — Held, I. M., and B. J. Soden, 2006: Robust Responses of the Hydrological Cycle to Global Warming. Journal of Climate, 19, 5686–5699.
 
 - Review authority: `ai_reviewed` (automated unless expert)
 
 ## Question the system extracted
 
-Which aspects of the hydrological-cycle response to global warming are robust across climate models, how are they physically related to the increase in lower-tropospheric water vapor, and which responses depend on circulation changes or on whether warming is transient or equilibrated?
+Which aspects of the hydrological-cycle response to global warming are robust across climate models, and what simple physical arguments explain those robust responses?
 
 ## The scientific contrast
 
-Responses tightly constrained by the thermodynamic increase in lower-tropospheric water vapor versus responses that vary with model formulation, circulation, relative humidity, ocean adjustment, or transient versus equilibrium design.
+Responses tightly coupled to the robust increase in lower-tropospheric water vapor are contrasted with responses that vary across model formulations, circulation changes, relative-humidity changes, or transient versus equilibrium ocean adjustment.
 
 Competing explanations the paper weighed:
-- Hydrological changes may be primarily thermodynamic consequences of increased lower-tropospheric water vapor and Clausius-Clapeyron scaling.
-- Departures from simple thermodynamic scaling may arise from changes in atmospheric flow, relative humidity, convective mass exchange, cloud feedbacks, or model-specific formulations.
-- Differences in extratropical sensible-heat compensation may reflect equilibrium adjustment in slab-ocean experiments versus transient oceanic heat storage and transport in A1B simulations.
-- Observed or reanalysis circulation trends may reflect physical changes or artifacts associated with the representation of the tropical lapse rate.
+- Changes in hydrological variables may be primarily thermodynamic consequences of increased lower-tropospheric water vapor, or may depend substantially on changes in atmospheric flow and circulation.
+- The extratropical latent-heat transport increase may be compensated mainly by reduced sensible-heat transport in an equilibrated climate, whereas transient simulations may distribute compensation between sensible transport and differential oceanic heat storage and transport.
+- Apparent changes in tropical circulation and the Hadley cell may reflect redistribution of convection rather than a proportional change in total convective mass exchange.
+- The tropical lapse-rate response may remain close to a moist adiabat, as assumed by the paper, or observationally suggested lapse-rate trends may indicate that models are deficient and require the arguments to be revisited.
 
-What would tell them apart: A response should be considered robust when it is consistent across the AR4 models and is supported by simple physical arguments tied to lower-tropospheric water vapor; differences between transient and equilibrium simulations, and departures from thermodynamic predictions in individual models or regions, discriminate the roles of ocean adjustment and circulation.
+What would tell them apart: Cross-model consistency of hydrological responses, agreement with Clausius–Clapeyron-based physical predictions, and comparison of transient A1B/20C3M integrations with equilibrium 2 × CO2 slab-ocean responses distinguish robust thermodynamic consequences from formulation- and state-dependent dynamical responses.
 
 ## Background and motivation
 
-- There is considerable uncertainty in the magnitude of the temperature response to a given greenhouse-gas increase, but lower-tropospheric water vapor is expected to increase as the climate warms and several other responses are tightly coupled to that increase.
-- The Clausius-Clapeyron relation implies an approximately 7% increase in saturation vapor pressure for each 1-K increase in lower-tropospheric temperature, making it important to determine which climate responses are tightly coupled to this increase and which are not.
-- The global-mean precipitation or evaporation, representing the strength of the hydrological cycle, increases with warming much more slowly than Clausius-Clapeyron scaling; the model sensitivity is about 2% K−1 rather than roughly 7% K−1.
-- Because near-surface mixing ratio increases at approximately Clausius-Clapeyron rates while global-mean precipitation increases more slowly, the mass exchange between the boundary layer and free troposphere, including tropical convective mass flux, must decrease.
-- Increased lower-tropospheric water vapor produces increased horizontal moisture transport and an enhanced evaporation-minus-precipitation pattern, while the responses of sensible heat transport differ between equilibrium and transient warming experiments.
-- Some hydrological responses are consistent among AR4 models whereas others are not; consistent responses can be assessed without relying on the detailed formulation of each model, using simple physical arguments to support their plausibility.
+- The magnitude of the temperature response to a given increase in greenhouse gases remains uncertain, but lower-tropospheric water vapor is expected to increase as the climate warms and several responses coupled to that increase can therefore be predicted with nearly comparable confidence.
+- The global-mean hydrological cycle does not scale with Clausius–Clapeyron: across the AR4 models, precipitation increases with warming at roughly 2% K−1, substantially below the approximately 7% K−1 scaling of near-surface water vapor.
+- Because hydrological-cycle strength increases more slowly than lower-tropospheric mixing ratio, the mass exchange between the boundary layer and free troposphere, including tropical convective mass flux, must decrease as temperature rises.
+- Increasing lower-tropospheric water vapor should increase poleward moisture transport and amplify the spatial pattern of evaporation minus precipitation, while the response of extratropical sensible-heat transport depends on whether the climate response is transient or equilibrated.
 
 ## Why this question mattered
 
-Identifying robust responses clarifies which consequences of warming can be expected despite uncertainty in the magnitude of temperature change and model formulation. The resulting physical constraints help interpret changes in precipitation patterns, atmospheric circulation, moisture transport, drought and flood variability, and poleward energy transport, and can motivate observational tests of responses that models predict are already occurring.
+Separating robust responses from model-dependent ones identifies hydrological and circulation changes that can be understood and anticipated despite uncertainty in climate sensitivity. The physical arguments also support confidence in model-consistent responses and motivate observational studies to determine whether predicted changes are detectable.
 
 ## What the dataset offered (as the paper used it)
 
-Assess which hydrological-cycle responses to warming are robust across models and support those responses with simple physical arguments. The analysis compares 20C3M historical simulations, SRES A1B transient twenty-first-century simulations, and 2 × CO2 slab-ocean equilibrium responses.
+Compare hydrological and energy-cycle responses to warming across models and forcing configurations, including the transient SRES A1B and twentieth-century 20C3M scenarios and equilibrium 2 × CO2 slab-ocean simulations; observational and prescribed-sea-surface-temperature simulations are used for a water-vapor comparison.
 
-- Population: Global climate-system simulations, including 20 coupled climate models for the AR4 archive, with tropical-ocean satellite observations and GFDL model simulations for comparison
-- Measurements: surface air temperature, column-integrated water vapor, precipitation and evaporation, convective mass flux, horizontal moisture transport, evaporation minus precipitation, variance of hydrological anomalies, sensible and latent heat transport, atmospheric and oceanic energy transport, satellite microwave measurements of tropical-ocean column-integrated water vapor
+- Population: Coupled climate-model simulations contributing to the PCMDI/AR4 archive; the main archive analysis uses one realization from each of 20 models
+- Measurements: Global-mean surface air temperature, Column-integrated water vapor, Precipitation and evaporation, Convective mass flux, Horizontal and poleward moisture transport, Evaporation-minus-precipitation patterns and variance, Sensible and latent heat transport, Atmospheric and oceanic energy transport, Tropical spatial variance of convective mass flux
 
 ## Key citations used in forming the question
 
 Public citation details are represented by the paper context; internal citation identifiers are omitted from this gallery.
+
 ## Open uncertainties (unmet evidence)
 
-- parser-owned text was usable, but the parse completeness report recorded limitations; review before authority raise.
+- The source packet identifies the PCMDI/AR4 archive and its reuse, but does not identify a specific parent-dataset paper or establish public/private data availability.
 
 ## If this looks wrong
 

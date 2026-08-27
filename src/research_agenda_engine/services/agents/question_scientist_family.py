@@ -2,12 +2,21 @@ from __future__ import annotations
 
 import json
 import re
-from collections.abc import Callable
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Annotated, Any
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    ValidationError,
+    ValidatorFunctionWrapHandler,
+    WrapValidator,
+    model_validator,
+)
+from pydantic.json_schema import SkipJsonSchema
 
 from ...assets import resolve_asset
 from ...io import dump_data, load_model
@@ -56,14 +65,56 @@ from .question_scientist_ensemble import (
 
 QUESTION_SCIENTIST_FAMILY_PROMPT_VERSION = "question_scientist/v2"
 
+#: Reply-SHAPED first-call failures a second identical ask can plausibly fix, because the next
+#: sample is a different sample. Everything else is deliberately absent: `OUTPUT_TRUNCATED` cannot
+#: be fixed by replaying (same packet, same ceiling, same cut -- see `providers/models/base.py`),
+#: and the transport/auth/quota kinds are either already retried inside the adapter or are states a
+#: duplicate billed call cannot change. Re-asking those would be cost without recourse.
+_REASKABLE_FIRST_CALL_KINDS = frozenset(
+    {
+        StructuredModelFailureKind.STRUCTURED_OUTPUT_INVALID,
+        StructuredModelFailureKind.INVALID_RESPONSE,
+    }
+)
+
+
+#: The blocker kinds ``build_question_family_quality_report`` raises that are HOST machinery rather
+#: than a judgement about the science: the proposal firewall, the provenance allowlists, and the
+#: structural completeness checks on a family's own required fields. No model reviews a family at
+#: this seam -- these are deterministic predicates the host runs over the model's reply -- so a batch
+#: emptied by them was never scientifically judged, and recording it as a scientific verdict would
+#: make a host bug unrescuable (``schemas/stage_receipt.py:22``; ``resume.py:233`` reuses a
+#: scientific terminal instead of re-running it). Every kind that can currently reach BLOCKER
+#: severity is listed here; a kind that is NOT listed is treated as a verdict, which is the
+#: conservative direction for a reject.
+HOST_STRUCTURAL_FAMILY_BLOCKER_KINDS: frozenset[str] = frozenset(
+    {
+        QuestionFamilyQualityWarningKind.FIREWALL_CHECK.value,
+        QuestionFamilyQualityWarningKind.MISSING_PROVENANCE.value,
+        QuestionFamilyQualityWarningKind.UNALLOWED_PROVENANCE.value,
+        QuestionFamilyQualityWarningKind.WEAK_VARIANT_DISTINCTION.value,
+    }
+)
+
 
 class NoValidFamilies(Exception):
     """Stage-D family generation produced no family that passed the quality gates (every family was
     dropped for a blocker). An HONEST zero-families signal — the driver degrades to a stage-D
-    scientific terminal, never a bare whole-batch raise."""
+    terminal, never a bare whole-batch raise.
 
-    def __init__(self, message: str, *, processed_candidates: list[StageDProcessedCandidate]):
+    ``blocker_kinds`` names WHICH checks emptied the batch, so the driver can classify the terminal
+    from the cause instead of from the exception type. An empty ``blocker_kinds`` means no blocker
+    dropped anything, so nothing was judged at all."""
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        processed_candidates: list[StageDProcessedCandidate],
+        blocker_kinds: Sequence[str] = (),
+    ):
         self.processed_candidates = list(processed_candidates)
+        self.blocker_kinds = list(dict.fromkeys(blocker_kinds))
         super().__init__(message)
 
 
@@ -107,10 +158,88 @@ class _QuestionScientistSemanticOutputError(ValueError):
     """Schema-shaped model output violated a cross-object semantic invariant."""
 
 
+@dataclass(frozen=True)
+class _UnparsedFamilyCandidate:
+    """One family the generation-boundary mirror refused, kept IN PLACE of the parsed object.
+
+    The batch is a single structured parse, so before this existed one family the model rendered
+    badly failed the whole `families` list and every well-formed sibling died with it -- at
+    `max_families: 6`, six families riding on one all-or-nothing validation while the per-family
+    quality filter that would have dropped exactly one of them ran only after the parse succeeded.
+    Standing in for the family lets the siblings through and keeps the refusal nameable.
+    """
+
+    family_id: str
+    detail: str
+
+
+def _candidate_family_id(value: Any) -> str:
+    """The rejected family's own id when it supplied a usable one, else ``""``.
+
+    Model-authored text: bounded, because it becomes a diagnostic filename slug and a Stage-D
+    lineage id. Never the reason for the drop -- that is `_rejected_fields` output only.
+    """
+    if isinstance(value, Mapping):
+        raw = value.get("question_family_id")
+        if isinstance(raw, str):
+            return raw.strip()[:64]
+    return ""
+
+
+def _family_mirror_error(value: Any) -> ValidationError | None:
+    """The error the FAMILY mirror alone raises for ``value``, or None if it accepts it.
+
+    The tolerant annotation below is a union, so the wrap handler's own error also carries the
+    rejection member's complaints -- one `missing`/`unexpected_keyword_argument` per key of a
+    family payload -- which crowds the real cause out of the eight locations `_rejected_fields`
+    keeps. Re-running the mirror alone costs one validation on the FAILURE path only and names
+    our own schema.
+    """
+    try:
+        QuestionFamilyModelOutput.model_validate(value)
+    except ValidationError as exc:
+        return exc
+    return None
+
+
+def _tolerate_one_family(value: Any, handler: ValidatorFunctionWrapHandler) -> Any:
+    """Validate ONE family, turning a refusal into a named rejection instead of failing the list."""
+    try:
+        parsed = handler(value)
+    except ValidationError:
+        parsed = None
+    # A REPLY may never produce a rejection. The union's second member exists so this function has
+    # somewhere to put its own verdict, and it is two plain strings, so a payload shaped like it
+    # validates as one -- which would let the model author the text of a drop reason that travels
+    # into a diagnostic rationale and a provider error. Such a payload is just a family that is not
+    # a family, and it is refused here in our words.
+    if parsed is None or isinstance(parsed, _UnparsedFamilyCandidate):
+        error = _family_mirror_error(value)
+        return _UnparsedFamilyCandidate(
+            family_id=_candidate_family_id(value),
+            detail=(
+                _rejected_fields(error)
+                if error is not None
+                else "family payload does not describe a question family"
+            ),
+        )
+    return parsed
+
+
+#: A family slot that degrades to a named rejection instead of failing its siblings. The rejection
+#: member is `SkipJsonSchema`, so the JSON schema this output model sends to the provider stays
+#: BYTE-IDENTICAL to the strict `list[QuestionFamilyModelOutput]` it replaces: the model is asked
+#: for exactly what it was asked for before, and only our own parse became per-family.
+_TolerantFamilyCandidate = Annotated[
+    QuestionFamilyModelOutput | SkipJsonSchema[_UnparsedFamilyCandidate],
+    WrapValidator(_tolerate_one_family),
+]
+
+
 class _QuestionScientistFamilyModelOutput(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    families: list[QuestionFamilyModelOutput] = Field(default_factory=list)
+    families: list[_TolerantFamilyCandidate] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def require_family_candidates(self) -> _QuestionScientistFamilyModelOutput:
@@ -152,6 +281,7 @@ def generate_question_family_batch(
     context_subset_digest: str = "",
     on_family_dropped: Callable[[str, list[str]], None] | None = None,
     on_retry_failed: Callable[[str], None] | None = None,
+    on_first_call_reasked: Callable[[str], None] | None = None,
     on_valid_batch: Callable[[QuestionFamilyBatch], None] | None = None,
 ) -> QuestionFamilyBatch:
     if family_count < 1 or family_count > 20:
@@ -175,7 +305,7 @@ def generate_question_family_batch(
     system_prompt = _load_prompt(QUESTION_SCIENTIST_FAMILY_PROMPT_VERSION)
     input_digest = stable_hash(user_packet)
 
-    def _generate() -> QuestionFamilyBatch:
+    def _generate() -> tuple[QuestionFamilyBatch | None, list[StageDProcessedCandidate]]:
         try:
             output = provider.generate_structured(
                 system_prompt=system_prompt,
@@ -200,11 +330,19 @@ def generate_question_family_batch(
         except (TypeError, AssertionError):
             raise
         except (ValidationError, _QuestionScientistSemanticOutputError) as exc:
+            # Per-FAMILY rejections never reach here any more: the force step drops them one at a
+            # time. What is left is a genuinely batch-level invariant, and it keeps the finite
+            # provider-error shape that `_classify_stage_d_failure` knows how to file.
             raise StructuredModelProviderError(
                 StructuredModelFailureKind.STRUCTURED_OUTPUT_INVALID,
                 provider_id=provider.provider_id,
                 detail=_rejected_fields(exc),
             ) from exc
+
+    # N3: WHICH checks dropped candidates, not just how the drop read. `reason_codes` carries the
+    # human message; the driver needs the kind to tell a host structural refusal from a judgement
+    # about the science, and it must not have to pattern-match prose to do it.
+    quality_blocker_kinds: list[str] = []
 
     def _quality_filter(
         candidate_batch: QuestionFamilyBatch,
@@ -220,11 +358,13 @@ def generate_question_family_batch(
                 allowed_topic_pack_ids=user_packet.get("allowed_topic_pack_ids"),
                 allowed_dataset_context_ids=user_packet["allowed_dataset_context_ids"],
             )
-            blockers = [
-                warning.message
+            blocking_warnings = [
+                warning
                 for warning in report.warnings
                 if warning.severity == QuestionFamilyQualitySeverity.BLOCKER
             ]
+            blockers = [warning.message for warning in blocking_warnings]
+            quality_blocker_kinds.extend(warning.kind.value for warning in blocking_warnings)
             if blockers:
                 processed.append(
                     StageDProcessedCandidate(
@@ -245,39 +385,77 @@ def generate_question_family_batch(
             )
         return candidate_batch.model_copy(update={"families": clean_families}), processed
 
-    first_raw = _generate()
-    batch, processed = _quality_filter(first_raw)
+    def _attempt() -> tuple[QuestionFamilyBatch, list[StageDProcessedCandidate]]:
+        """One provider call: tolerant per-family parse, then the per-family quality filter.
+
+        Every family that does not survive either step leaves a drop record, so the two stages
+        report one continuous lineage and no candidate is silently lost.
+        """
+        raw, parse_dropped = _generate()
+        for dropped in parse_dropped:
+            if on_family_dropped is not None:
+                on_family_dropped(dropped.question_family_id, dropped.reason_codes)
+        if raw is None:
+            # NOT ONE family survived the generation boundary. That is a reply the schema refused,
+            # which is what it was before this change and what it must stay: a schema terminal a
+            # resume and a shepherd can act on, never a scientific verdict, because no gate judged
+            # anything here. Tolerance is for a batch with survivors; a batch with none is unusable.
+            raise StructuredModelProviderError(
+                StructuredModelFailureKind.STRUCTURED_OUTPUT_INVALID,
+                provider_id=provider.provider_id,
+                detail=_no_family_survived_detail(parse_dropped),
+            )
+        filtered, quality_processed = _quality_filter(raw)
+        return filtered, [*parse_dropped, *quality_processed]
+
+    # ONE bounded re-ask for the whole call, spent on whichever need arises first. The corpus's
+    # single whole-run Stage-D kill (nlb6 20260724T230141Z, `structured_output_invalid`) died on an
+    # unguarded first call while a re-ask sat further down this same function; the budget is where
+    # it always was, two provider calls, and now the first call can reach it.
+    reask_spent = False
+    try:
+        batch, processed = _attempt()
+    except StructuredModelProviderError as exc:
+        if exc.kind not in _REASKABLE_FIRST_CALL_KINDS:
+            raise
+        reask_spent = True
+        if on_first_call_reasked is not None:
+            on_first_call_reasked(exc.kind.value)
+        batch, processed = _attempt()
     if batch.families and on_valid_batch is not None:
         on_valid_batch(batch)
+    retained = len(batch.families)
     # D6(a): tolerate an under-count instead of raising for the whole batch. Allow AT MOST ONE bounded
     # re-ask when the model returned fewer families than requested; then proceed with whatever is valid.
-    if len(batch.families) < family_count:
-        try:
-            retry_raw = _generate()
-            retry, retry_processed = _quality_filter(retry_raw)
-        except (StructuredModelProviderError, StageDPromptBudgetError) as exc:
-            if not batch.families:
-                raise
-            if on_retry_failed is not None:
-                kind = (
-                    exc.kind.value
-                    if isinstance(exc, StructuredModelProviderError)
-                    else "prompt_budget"
-                )
-                on_retry_failed(kind)
-        else:
-            processed.extend(retry_processed)
-            if len(retry.families) > len(batch.families):
-                batch = retry
-        if on_family_dropped is not None and len(batch.families) < family_count:
+    if retained < family_count:
+        if not reask_spent:
+            try:
+                retry, retry_processed = _attempt()
+            except (StructuredModelProviderError, StageDPromptBudgetError) as exc:
+                if retained == 0:
+                    raise
+                if on_retry_failed is not None:
+                    kind = (
+                        exc.kind.value
+                        if isinstance(exc, StructuredModelProviderError)
+                        else "prompt_budget"
+                    )
+                    on_retry_failed(kind)
+            else:
+                processed.extend(retry_processed)
+                if len(retry.families) > retained:
+                    batch = retry
+                    retained = len(retry.families)
+        if on_family_dropped is not None and retained < family_count:
             on_family_dropped(
                 "shape",
-                [f"family undercount: requested {family_count}, got {len(batch.families)}"],
+                [f"family undercount: requested {family_count}, got {retained}"],
             )
     if not batch.families:
         raise NoValidFamilies(
             "QuestionFamilyBatch produced no family that passed the quality gates",
             processed_candidates=_unique_processed_candidates(processed),
+            blocker_kinds=quality_blocker_kinds,
         )
     return batch
 
@@ -1217,82 +1395,62 @@ def _force_question_family_batch(
     context_payload: QuestionScientistContextPayloadV2,
     provider_id: str,
     input_digest: str,
-) -> QuestionFamilyBatch:
+) -> tuple[QuestionFamilyBatch | None, list[StageDProcessedCandidate]]:
+    """Stamp the code-owned fields onto the model's families ONE FAMILY AT A TIME.
+
+    Returns the batch of families that survived the strict rebuild plus one drop record per family
+    that did not; ``None`` when no family survived, which is not a batch at all (the strict
+    `QuestionFamilyBatch` refuses an empty families list) and is the caller's honest-terminal case.
+
+    Nothing here is relaxed. Every family still faces the identical strict `QuestionSeed` /
+    `QuestionFamilyVariant` / `QuestionFamily` rebuild it faced before, and a duplicate id still
+    fails closed -- what changed is the BLAST RADIUS: the rejection now costs its own family
+    instead of the whole batch.
+    """
     families: list[QuestionFamily] = []
+    dropped: list[StageDProcessedCandidate] = []
     seen_family_ids: set[str] = set()
     seen_seed_ids: set[str] = set()
     seen_variant_ids: set[str] = set()
-    for family in output.families:
-        family_id = family.question_family_id.strip()
-        if family_id in seen_family_ids:
-            raise _QuestionScientistSemanticOutputError(
-                "Question Scientist family output contains duplicate family IDs"
-            )
-        seen_family_ids.add(family_id)
-        variants: list[QuestionFamilyVariant] = []
-        for variant in family.variants:
-            variant_id = variant.variant_id.strip()
-            if variant_id in seen_variant_ids:
-                raise _QuestionScientistSemanticOutputError(
-                    "Question Scientist family output contains duplicate variant IDs"
-                )
-            seen_variant_ids.add(variant_id)
-            # Deterministic fallback for an empty model-assigned seed id (code-stamped,
-            # never model-required); genuinely duplicated non-empty ids still fail closed.
-            seed_id = variant.question_seed_id.strip() or f"qseed-auto-{len(seen_seed_ids) + 1:03d}"
-            if seed_id in seen_seed_ids:
-                raise _QuestionScientistSemanticOutputError(
-                    "Question Scientist family output contains duplicate seed IDs"
-                )
-            seen_seed_ids.add(seed_id)
-            source_paper_case_ids = _source_paper_case_ids_for_patterns(
-                context_payload,
-                variant.seed.source_pattern_ids,
-            )
-            # Rebuild as the strict QuestionSeed (not model_copy): strict validators re-run
-            # with the code-stamped values, so a mirror instance can never leak downstream.
-            # Paper-case lineage is a code-owned projection of the selected pattern cards:
-            # the proposer chooses pattern IDs, but must not be trusted to repeat the redundant
-            # pattern -> formation trace -> PaperCase mapping without omissions or swaps.
-            seed = QuestionSeed.model_validate(
-                {
-                    **variant.seed.model_dump(mode="python"),
-                    "question_seed_id": seed_id,
-                    "source_paper_case_ids": source_paper_case_ids,
-                    "context_id": context_payload.context_id,
-                    "origin_provider_id": provider_id,
-                    "prompt_version": QUESTION_SCIENTIST_FAMILY_PROMPT_VERSION,
-                }
-            )
-            variants.append(
-                QuestionFamilyVariant.model_validate(
-                    {
-                        **variant.model_dump(mode="python"),
-                        "variant_id": variant_id,
-                        "question_seed_id": seed_id,
-                        "seed": seed,
-                    }
+    for ordinal, candidate in enumerate(output.families, start=1):
+        if isinstance(candidate, _UnparsedFamilyCandidate):
+            dropped.append(
+                _family_drop_record(
+                    candidate.family_id or f"unparsed-family-{ordinal:03d}",
+                    "family payload rejected at the generation boundary: " + candidate.detail,
                 )
             )
-        family_payload = family.model_dump(mode="python")
-        family_payload.update(
-            {
-                "question_family_id": family_id,
-                "variants": variants,
-                "context_id": context_payload.context_id,
-                "origin_provider_id": provider_id,
-                "prompt_version": QUESTION_SCIENTIST_FAMILY_PROMPT_VERSION,
-                "source_topic_pack_ids": (
-                    [context_payload.topic_literature.topic_pack_id]
-                    if context_payload.authority_ceiling
-                    == FrontHalfAuthorityCeiling.PROVISIONAL_INSPIRATION
-                    else []
-                ),
-                "authority_ceiling": context_payload.authority_ceiling,
-            }
-        )
-        families.append(QuestionFamily.model_validate(family_payload))
-    return QuestionFamilyBatch.model_validate(
+            continue
+        label = candidate.question_family_id.strip() or f"family-{ordinal:03d}"
+        try:
+            family, family_seed_ids, family_variant_ids = _force_one_family(
+                candidate,
+                context_payload=context_payload,
+                provider_id=provider_id,
+                seen_family_ids=seen_family_ids,
+                seen_seed_ids=seen_seed_ids,
+                seen_variant_ids=seen_variant_ids,
+            )
+        except (TypeError, AssertionError):
+            raise
+        except _QuestionScientistSemanticOutputError as exc:
+            # Our own fixed message, no model text: safe to record verbatim.
+            dropped.append(_family_drop_record(label, f"family rejected by strict rebuild: {exc}"))
+            continue
+        except ValidationError as exc:
+            dropped.append(
+                _family_drop_record(
+                    label, "family rejected by strict rebuild: " + _rejected_fields(exc)
+                )
+            )
+            continue
+        seen_family_ids.add(family.question_family_id)
+        seen_seed_ids |= family_seed_ids
+        seen_variant_ids |= family_variant_ids
+        families.append(family)
+    if not families:
+        return None, dropped
+    batch = QuestionFamilyBatch.model_validate(
         {
             "batch_id": f"question-family-batch-{stable_hash({'context': context_payload.context_digest, 'input': input_digest, 'families': [_family_identity_payload(family) for family in families]})[:12]}",
             "context_id": context_payload.context_id,
@@ -1304,6 +1462,126 @@ def _force_question_family_batch(
             "authority_ceiling": context_payload.authority_ceiling,
         }
     )
+    return batch, dropped
+
+
+def _no_family_survived_detail(dropped: list[StageDProcessedCandidate]) -> str:
+    """Why a reply yielded no usable family, in our own schema's identifiers.
+
+    Every reason here is `_rejected_fields` output or a fixed sentence of ours; the model-authored
+    family ids that label the per-family diagnostics are deliberately NOT repeated into a provider
+    error, which travels further and promises to be secret-free.
+    """
+    reasons = [reason for candidate in dropped for reason in candidate.reason_codes]
+    if not reasons:
+        return "no family candidate survived the generation boundary"
+    return f"no family survived the generation boundary ({len(reasons)} refused): " + "; ".join(
+        reasons[:8]
+    )
+
+
+def _family_drop_record(family_id: str, reason: str) -> StageDProcessedCandidate:
+    """One Stage-D lineage row for a family that never reached the quality filter.
+
+    `QUALITY_DROPPED` is the disposition on purpose: the family was dropped by a validation gate
+    and did not reach the shortlist, which is exactly what that disposition means downstream and
+    what keeps an all-dropped batch a `SCIENTIFIC_TERMINAL` with complete lineage rather than a
+    bare infrastructure crash. Which gate refused it is named in the reason code.
+    """
+    return StageDProcessedCandidate(
+        question_family_id=family_id,
+        disposition=StageDCandidateDisposition.QUALITY_DROPPED,
+        reason_codes=[reason],
+    )
+
+
+def _force_one_family(
+    family: QuestionFamilyModelOutput,
+    *,
+    context_payload: QuestionScientistContextPayloadV2,
+    provider_id: str,
+    seen_family_ids: set[str],
+    seen_seed_ids: set[str],
+    seen_variant_ids: set[str],
+) -> tuple[QuestionFamily, set[str], set[str]]:
+    """Rebuild ONE family strictly; the ids it claims are returned rather than registered.
+
+    The caller merges them only once the family survives, so a family that fails halfway does not
+    leave its half-registered variant and seed ids behind to collide with a later good family.
+    """
+    family_id = family.question_family_id.strip()
+    if family_id in seen_family_ids:
+        raise _QuestionScientistSemanticOutputError(
+            "Question Scientist family output contains duplicate family IDs"
+        )
+    family_seed_ids: set[str] = set()
+    family_variant_ids: set[str] = set()
+    variants: list[QuestionFamilyVariant] = []
+    for variant in family.variants:
+        variant_id = variant.variant_id.strip()
+        if variant_id in seen_variant_ids or variant_id in family_variant_ids:
+            raise _QuestionScientistSemanticOutputError(
+                "Question Scientist family output contains duplicate variant IDs"
+            )
+        family_variant_ids.add(variant_id)
+        # Deterministic fallback for an empty model-assigned seed id (code-stamped,
+        # never model-required); genuinely duplicated non-empty ids still fail closed.
+        seed_id = (
+            variant.question_seed_id.strip()
+            or f"qseed-auto-{len(seen_seed_ids) + len(family_seed_ids) + 1:03d}"
+        )
+        if seed_id in seen_seed_ids or seed_id in family_seed_ids:
+            raise _QuestionScientistSemanticOutputError(
+                "Question Scientist family output contains duplicate seed IDs"
+            )
+        family_seed_ids.add(seed_id)
+        source_paper_case_ids = _source_paper_case_ids_for_patterns(
+            context_payload,
+            variant.seed.source_pattern_ids,
+        )
+        # Rebuild as the strict QuestionSeed (not model_copy): strict validators re-run
+        # with the code-stamped values, so a mirror instance can never leak downstream.
+        # Paper-case lineage is a code-owned projection of the selected pattern cards:
+        # the proposer chooses pattern IDs, but must not be trusted to repeat the redundant
+        # pattern -> formation trace -> PaperCase mapping without omissions or swaps.
+        seed = QuestionSeed.model_validate(
+            {
+                **variant.seed.model_dump(mode="python"),
+                "question_seed_id": seed_id,
+                "source_paper_case_ids": source_paper_case_ids,
+                "context_id": context_payload.context_id,
+                "origin_provider_id": provider_id,
+                "prompt_version": QUESTION_SCIENTIST_FAMILY_PROMPT_VERSION,
+            }
+        )
+        variants.append(
+            QuestionFamilyVariant.model_validate(
+                {
+                    **variant.model_dump(mode="python"),
+                    "variant_id": variant_id,
+                    "question_seed_id": seed_id,
+                    "seed": seed,
+                }
+            )
+        )
+    family_payload = family.model_dump(mode="python")
+    family_payload.update(
+        {
+            "question_family_id": family_id,
+            "variants": variants,
+            "context_id": context_payload.context_id,
+            "origin_provider_id": provider_id,
+            "prompt_version": QUESTION_SCIENTIST_FAMILY_PROMPT_VERSION,
+            "source_topic_pack_ids": (
+                [context_payload.topic_literature.topic_pack_id]
+                if context_payload.authority_ceiling
+                == FrontHalfAuthorityCeiling.PROVISIONAL_INSPIRATION
+                else []
+            ),
+            "authority_ceiling": context_payload.authority_ceiling,
+        }
+    )
+    return QuestionFamily.model_validate(family_payload), family_seed_ids, family_variant_ids
 
 
 def _source_paper_case_ids_for_patterns(

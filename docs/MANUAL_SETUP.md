@@ -11,6 +11,15 @@ root, and a coding-host *name* in the config. It demonstrates the workflow, not 
 This path is for users who want to prepare the project files and run the CLI
 themselves. Complete [installation](INSTALLATION.md) first.
 
+**"Manual" means you write the configuration, not that you watch the run alone.** Maieusis is
+agent-operated by design: the dataset planner IS a coding-agent session, and a paid run that stops
+at hour two stops in a place you will not want to reason about from a scrollback buffer. Start the
+run from inside Codex or Claude Code in this directory even on this path, and give that session the
+[shepherd contract](SHEPHERD_MODE.md) — what it may repair, what it must record, and the line it may
+never cross, which is that repair carries a run past infrastructure and never past a scientific
+verdict. The [agent-guided route](AGENT_GUIDED_SETUP.md) differs from this page in who writes the
+YAML, not in whether an agent is present.
+
 ## 1. Scaffold a clean project
 
 From a directory outside the Maieusis source checkout:
@@ -117,9 +126,14 @@ Host- and feature-specific variables are conditional:
 
 ```text
 CLAUDE_CODE_OAUTH_TOKEN=...  # required when coding_host: claude_code
-ELICIT_API_KEY=...           # only for source_profile: elicit or hybrid
+ELICIT_API_KEY=...           # elicit, hybrid -- AND auto: see below
 MAIEUSIS_ALLOW_PRO_MODEL=1   # only for a deliberately selected gated model
 ```
+
+**`ELICIT_API_KEY` is not inert under `source_profile: auto`.** Setting the key is what switches
+`auto` onto the paid Elicit lane; leave it unset and `auto` stays on the free public sources. If you
+hold a key for another project and do not want this run billed against it, unset it for this run or
+write `source_profile: public` explicitly.
 
 A Codex/ChatGPT login is stored by the Codex CLI and is not an OpenAI API key.
 Keep every assignment on one line. Maieusis loads the user-level runtime file
@@ -142,9 +156,11 @@ placeholders for:
 
 Prior-art review is enabled in the shipped profile and is what `novelty` configures. Setting
 `novelty.enabled: false` turns it off and removes its paid web-search egress; the run then makes
-no statement about prior art at all.
+no statement about prior art at all. **Set `novelty.web_grounding.enabled: false` in the same
+edit** — the shipped profile turns both on, and a configuration with grounding enabled and
+admission disabled is refused as contradictory before anything runs.
 
-## 6. Preflight without paid calls
+## 6. Preflight
 
 ```bash
 maieusis check --project maieusis.yaml
@@ -154,11 +170,23 @@ maieusis check --project maieusis.yaml
 dataset inputs, checks configured provider credentials and coding-host
 installation/login indicators, tests the public dataset context route, and
 reports estimated model calls, planner launches, and external services. It
-makes no paid model or coding-agent call and does not authenticate by placing a
-provider request.
+launches no coding agent and runs no stage.
+
+It does send one minimal request per configured provider — `max_tokens: 1`, a single full stop for content — because an API key is not a balance: the check
+that matters is not whether the key is well-formed but whether the account behind it can pay, and
+that cannot be established without asking. Expect a fraction of a cent per provider. A first formal
+qualification attempt on this project died on an insufficient-credit error from exactly this probe,
+which is the failure it exists to move to the front.
 
 Treat every `FAIL` as a stop signal. Read warnings before deciding whether the
 resulting authority ceiling is acceptable.
+
+There is a second way to reach the preflight — `maieusis run --check-only` — and it is the weaker
+one. It runs the same checks the real run runs, stops before allocating a run directory, and prints
+a pass or the names of the failures. What it does **not** do is probe OpenAlex, and it prints
+neither the call estimates nor the egress disclosure. Use it to confirm that `run` itself would get
+past the gate; use `maieusis check` for the report you actually read before spending. Neither
+launches a coding agent or runs a stage.
 
 ## 7. Run and inspect
 

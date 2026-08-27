@@ -5,8 +5,11 @@
 # comments are worded for this host, so the files are not byte-identical -- compare the values, not
 # the bytes.
 #
-# The profiles under `examples/release/` are NOT a starting point. They are deliberately reduced
-# byte-qualification inputs used to prove the published package ran untouched.
+# The profiles under `examples/release/` are NOT a starting point. They are byte-qualification
+# inputs, pinned to that job: the sealer compares each one leaf by leaf against the profile it
+# recorded, so an edit makes a different candidate rather than a customised run. They are not
+# reduced -- same `max_families` and `variants_per_family` as this file -- because they ARE what
+# produced the published demonstrations.
 #
 # Secrets are NEVER stored here; this file holds only non-secret settings.
 #
@@ -24,10 +27,34 @@ mode: standard
 
 paperbank:
   inbox_dir: papers/inbox          # directory of source PDFs to extract (required)
+  # A SECOND dataset, or a second research intent, against papers you already paid to extract. Point
+  # it at a finished run and give the receipt digest that run recorded, and the paper half is reused
+  # instead of rebuilt. Three of the four published demonstrations did exactly this -- ibl-open and
+  # nlb both import IBL's bank; see `examples/release/ibl-open-cleanroom.yaml`. Leave it commented
+  # for a first run: there is nothing to import yet, and both keys are required together.
+  # import_from_run:
+  #   source_run_root: /absolute/path/to/the/finished/run/directory
+  #   expected_receipt_sha256: <64 lowercase hex digits, from that run's PaperBank receipt>
   extraction:
     provider: openai
     model: "gpt-5.6-luna"          # or set OPENAI_MODEL in runtime.env
   parser: poppler_text             # auto | docling | poppler_text; poppler_text needs pdftotext
+  # THE MOST SCIENTIFICALLY LOAD-BEARING LINE IN THIS BLOCK, and it is off by default. `false` reads
+  # citations with a regular expression; `true` sends a coding agent through each paper for the
+  # passages a citation actually participates in. Measured coverage: 5.7% against 91%. What is cited
+  # and why is what the PaperBank reconstructions are built from, so this changes the evidence behind
+  # every question the run writes.
+  #
+  # Two conditions before you turn it on. It needs continuous prose, so pair it with
+  # `parser: docling` -- true with poppler_text produces far less than it should and preflight will
+  # NOT stop you. And it launches a Claude Code agent during the paper half even if your planner
+  # host is Codex; be logged in, or the reader yields nothing and the run records that honestly.
+  #
+  # The published demonstrations ran BOTH ways, on purpose: climate used docling + true, and the
+  # three neuroscience runs used poppler_text + false. docs/CONFIGURATION.md says which is which and
+  # why it matters when you read them side by side.
+  # citation_contexts_by_agent: false
+  # citation_context_agent_parallel: 4
   evidence_mode: source_span
   max_workers: 4
   cited_literature: true
@@ -36,6 +63,12 @@ paperbank:
   min_local_reference_count: 10
   citation_prompt_char_budget: 180000
   crossref_mailto: you@example.org
+  # The remedy for the failure most likely to stop a first scientific run. When topic retrieval
+  # cannot build enough term pools it is a hard FAIL, and the error assumes you have set this: a
+  # plain-language name for your field, used to widen the search. It is empty by default. Set it
+  # BEFORE the failure rather than after -- unknown YAML keys are rejected, so adding a field on the
+  # failure path means getting its placement right under pressure. It belongs exactly here.
+  # research_field: "systems neuroscience"
   openalex_email: you@example.org
 
 dataset:
@@ -69,6 +102,7 @@ dataset:
 
 research_intent:
   mode: open           # open | topic_conditioned | seed_question
+  scope_derivation: auto
   topic_terms: []      # required for topic_conditioned; ignored entirely in open mode
   topic_description: ""
   seed_question: ""    # required for seed_question mode
@@ -100,7 +134,7 @@ models:
 literature:
   enabled: true                  # REQUIRED by preflight whenever novelty.enabled is true
   openalex_email: you@example.org
-  fulltext_enrichment: true
+  fulltext_enrichment: false  # abstract-only in v0.1: the OA lane has never enriched a record
   source_profile: public         # public | auto | elicit | hybrid (ELICIT_API_KEY is env-only)
 
 # Prior-art review. Enabled here because a run that skips it cannot say anything about whether the

@@ -835,6 +835,15 @@ class NoveltyPriorRecord(BaseModel):
     abstract_or_excerpt: str = ""
     evidence_digest: str
     retrieval_scores: dict[str, float] = Field(default_factory=dict)
+    #: Why this record holds its slot.  ``retrieval_scores`` is a token-overlap number that
+    #: saturates -- 458 of the 505 provider scores in run 20260806T190138Z-2249f35e were exactly
+    #: 1.0 -- so on its own it decided nothing and the list fell back to alphabetical order.  These
+    #: two record the ranked judgement the indexes themselves made: ``provider_best_rank`` is the
+    #: best (lowest) page position this record reached on any of the variant's queries per
+    #: provider, and ``rank_fusion_score`` is the reciprocal-rank sum across every query/provider
+    #: page that returned it, which is what the ordering actually breaks ties on.
+    provider_best_rank: dict[str, int] = Field(default_factory=dict)
+    rank_fusion_score: float = 0.0
     # Default retains every N-1 artifact.  A web-discovered source only gains this record shape
     # after one deterministic reconciliation, and carries the immutable receipt/lead/resolution
     # chain needed for offline replay.

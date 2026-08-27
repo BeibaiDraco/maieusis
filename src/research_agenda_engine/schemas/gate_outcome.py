@@ -185,10 +185,18 @@ class PromotionReceipt(BaseModel):
 
 
 class GateLoopResult(BaseModel):
-    """Result of a bounded revise-loop: the final earned outcome + whether the budget was exhausted."""
+    """Result of a bounded revise-loop: the final earned outcome + how the loop ended.
+
+    ``budget_exhausted`` and ``redraft_unavailable`` are mutually exclusive and describe two
+    different things. Exhaustion means every round ran and the reviewer still asked for a change.
+    ``redraft_unavailable`` means the host had no repair for what the reviewer asked, so the loop
+    stopped before spending a round — the earlier code could not tell them apart and reported the
+    second as the first, which cost a paid review call and stated something untrue in the record.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
     final_outcome: GateOutcome
     rounds_used: int = Field(ge=0)
     budget_exhausted: bool = False
+    redraft_unavailable: bool = False

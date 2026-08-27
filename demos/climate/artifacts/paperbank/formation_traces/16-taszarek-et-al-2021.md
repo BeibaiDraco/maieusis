@@ -4,26 +4,26 @@
 
 ## Starting background
 
-- Regional studies have documented changes in thunderstorm frequency and intensity, but the provided paper-local literature context leaves unclear whether these changes form a coherent global pattern.
-- Climate-change studies provide a competing expectation that warming-related increases in moisture and CAPE should make severe-thunderstorm environments more favorable, while the source paper notes uncertainty and mixed evidence, especially in the tropics.
-- Because direct observations of many convective hazards are sparse, prior work supports using ingredient-based environmental proxies to approximate climatological convective activity and severity.
+- Regional observations and analyses indicate that thunderstorm frequency or intensity has changed over recent decades, but the global meaning of these heterogeneous regional changes remains unclear.
+- Climate-change studies commonly anticipate more favorable severe-thunderstorm environments through increased moisture and instability, while also reporting substantial uncertainty and possible regional or mixed responses.
+- Because direct observations of many convective hazards are sparse, prior work uses physically motivated environmental ingredients as proxies for convective potential, initiation, and storm organization.
 
 ## Unresolved gap
 
-It remained unclear how favorable thunderstorm and severe-thunderstorm environments had changed globally during the historical period, whether those changes agreed with expectations for a warmer climate, and whether apparent reanalysis trends represented atmospheric changes or limitations of the reanalysis. Sparse and uneven sounding observations made this especially unresolved outside the mid-latitudes.
+It was unclear whether favorable convective environments had increased or decreased globally over the historical record, how historical regional patterns compared with warming-related projections, and which apparent trends were credible given the limitations of reanalysis and uneven observations. In particular, instability, convective initiation, and storm organization could change in different directions, while ERA5-derived trends might not agree with available sounding evidence.
 
 ## Dataset opportunity
 
-The newly available ERA5 reanalysis provides continuous global hourly atmospheric fields over 1979–2019 with improved spatial and vertical resolution, while quality-controlled rawinsonde profiles provide an independent but spatially limited observational comparison.
+The combination of a long, continuous, hourly global ERA5 record with improved spatial and vertical resolution and a long-term, quality-controlled but spatially limited rawinsonde record made it possible to construct a global historical climatology and compare reanalysis trends with observations.
 
-ERA5 makes it possible to construct a globally consistent, multidecadal climatology of environmental ingredients that could not be sampled adequately from direct hazard observations alone. Comparing its trends with rawinsonde-derived profiles provides a way to distinguish broad reanalysis patterns that are observationally supported from patterns requiring caution, while combining instability, precipitation, and wind-shear ingredients gives a more informative approximation of favorable convective environments than any single variable.
+ERA5 could provide the spatial and temporal continuity needed to examine global and regional changes that sparse storm observations cannot capture, while rawinsondes could provide an independent check on whether selected atmospheric-environment trends were plausible. Combining multiple environmental ingredients also allowed the analysis to distinguish atmospheric potential from initiation and storm organization rather than treating instability alone as a measure of thunderstorm occurrence.
 
 ## Resulting question
 
-What historical changes occurred from 1979–2019 in global, regional, and latitudinal environments favorable to thunderstorms and severe thunderstorms, and how do ERA5-derived trends compare with quality-controlled rawinsonde trends and with expectations for a warmer climate?
+What historical changes occurred in environmental conditions favorable for thunderstorms and severe thunderstorms across the globe, how do those changes compare with expectations for a warming climate, and how consistently are the ERA5-derived trends supported by quality-controlled rawinsonde observations?
 
 ## Scientific consequence
 
-Increasing, decreasing, or regionally contrasting trends would imply different interpretations of how warming, circulation, moisture, convective initiation, and vertical wind shear have shaped historical convective environments. Agreement between ERA5 and soundings would strengthen confidence in the corresponding trends; disagreement would identify limits on interpreting reanalysis-based changes, particularly for CAPE and modeled convective precipitation. Either outcome would also affect how historical conditions are used to contextualize future climate projections and potential impacts on rainfall, water availability, agriculture, and hazards.
+An increase, decrease, or mixed regional pattern would imply different relationships between warming, moisture, instability, convective initiation, and storm organization. Agreement between ERA5 and rawinsondes would strengthen confidence in the corresponding historical trends; disagreement would identify components or regions requiring caution and would prevent reanalysis changes from being treated straightforwardly as atmospheric change. Either outcome would inform how historical evidence should be interpreted alongside climate projections.
 
-The question connects an important but incompletely observed global hazard system to a long-term, spatially continuous environmental record while explicitly testing the credibility of that record against observations. Its value lies not only in estimating trends, but in showing how global coverage, physically motivated proxies, and an independent observational constraint can turn fragmented regional evidence into a qualified assessment of a broader climate-related scientific pattern.
+The question is scientifically valuable because it connects a globally consequential hazard to measurable atmospheric conditions while addressing a gap created by sparse direct observations and inconsistent regional evidence. Its value also lies in testing whether a high-resolution global reanalysis can support a physically interpretable historical comparison without obscuring uncertainty in the underlying proxies or observations.

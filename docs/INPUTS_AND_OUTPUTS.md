@@ -64,6 +64,14 @@ Start with these files in order:
 5. `families/<family-slug>/dossier.md` — the full plan, controls, estimands,
    and limits.
 
+**Items 1 and 2 exist only in your own run directory.** The published demonstrations do not carry
+a run `README.md` or a `summary.md`: those two narrate a live run — which stages ran, what state it
+reached, which products are currently valid — and a curated tree published months later would be
+narrating a run nobody can act on. What the demonstrations publish instead is the reader-facing
+half, items 3 through 5, plus the pages this project writes over them. So when another page here
+tells you to open `summary.md` first, it means the run on your machine; in a demonstration, start
+at [the questions page](../demos/ALL_QUESTIONS.md) or the run's own landing page.
+
 Both carry labels stating how much weight the work can bear;
 [reading the labels](LABELS.md) lists every one with its permitted values.
 
@@ -127,8 +135,23 @@ Each `maieusis run` creates a new run identity beneath `run.output_root`:
 │   └── artifacts/
 ├── receipts/
 ├── stage_outputs/
-└── artifacts/
+├── artifacts/
+├── corpus/                     # the reviewed context the proposal stage was given
+├── diagnostics/                # per-gate verdicts, including the ones that ACCEPTED
+├── presentation/               # the reader-facing add-on's own receipt
+├── imports/                    # present only when a stage was imported from another run
+├── <run-id>/branches/          # one isolated workspace per shortlisted family
+└── launch-<family>/            # one per launched planning branch
 ```
+
+The last three are worth knowing about before you go looking for something.
+
+`diagnostics/` holds a record for every gate that ran, and it records **accepts as well as
+refusals** — a gate that passed silently is a gate you cannot audit later. `<run-id>/branches/`
+repeats the run id inside the run directory; that is the branch workspace, not a second run, and
+every leg has one. `imports/` appears only when a stage was reused from an earlier run rather than
+recomputed, and it carries the source run id and the receipt digest that bound the reuse — its
+absence is how you know a stage was produced fresh.
 
 The compact pattern and question pages are useful for scanning. Their
 `*_detailed.md` companions add scientific background, interpretation, and

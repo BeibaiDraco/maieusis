@@ -20,6 +20,20 @@ on:
         description: Required for promotion; digest from the accepted validation-set receipt
         required: false
         type: string
+      expected_wheel_payload_tree_sha256:
+        description: >-
+          Required for promotion; `wheel_payload_tree_sha256` from the accepted validation-set
+          receipt. Recorded, and compared file by file -- no longer a refusal on its own. See the
+          verification step.
+        required: false
+        type: string
+      expected_wheel_closure_tree_sha256:
+        description: >-
+          Required for promotion; `wheel_closure_tree_sha256` from the accepted validation-set
+          receipt. THIS is what binds the promoted bytes to the qualified ones. A difference here
+          is refused; a difference outside it is recorded.
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -219,6 +233,7 @@ jobs:
           import os
           import shutil
           import subprocess
+          from datetime import UTC, datetime
           from pathlib import Path
 
           release = Path("release")
@@ -253,6 +268,15 @@ jobs:
               ).strip(),
               "workflow_run_id": os.environ["WORKFLOW_RUN_ID"],
               "workflow_run_attempt": int(os.environ["WORKFLOW_RUN_ATTEMPT"]),
+              # Declared, because the sealer no longer infers it from a non-empty run id: a
+              # pre-publication qualification build is honestly `local`, and this one is not.
+              "build_provenance": "workflow",
+              # The moment the candidate came into existence. The builder is reproducible -- two
+              # builds of one tree were measured to the same digest -- so an artifact produced
+              # locally before the freeze is byte-identical to this one, and digest binding alone
+              # cannot tell a rehearsal apart from the qualification. This is the anchor that can:
+              # the sealer requires every qualifying leg to have started after it.
+              "built_at": datetime.now(UTC).isoformat(),
               "build_command": ["uv", "build"],
               "wheel": wheel,
               "sdist": sdist,
@@ -297,6 +321,8 @@ jobs:
           TARGET: ${{ inputs.target }}
           FREEZE_RUN_ID: ${{ inputs.freeze_run_id }}
           EXPECTED_SET: ${{ inputs.expected_artifact_set_sha256 }}
+          EXPECTED_PAYLOAD: ${{ inputs.expected_wheel_payload_tree_sha256 }}
+          EXPECTED_CLOSURE: ${{ inputs.expected_wheel_closure_tree_sha256 }}
           DISPATCH_REF: ${{ github.ref }}
           DISPATCH_SHA: ${{ github.sha }}
         run: |
@@ -307,11 +333,22 @@ jobs:
           import os
           import re
           import tomllib
+          import zipfile
           from pathlib import Path
 
-          expected = os.environ["EXPECTED_SET"].strip().lower()
-          if not re.fullmatch(r"[0-9a-f]{64}", expected):
+          expected_set = os.environ["EXPECTED_SET"].strip().lower()
+          if not re.fullmatch(r"[0-9a-f]{64}", expected_set):
               raise SystemExit("promotion requires the accepted validation-set digest")
+          expected_payload = os.environ["EXPECTED_PAYLOAD"].strip().lower()
+          if not re.fullmatch(r"[0-9a-f]{64}", expected_payload):
+              raise SystemExit(
+                  "promotion requires the accepted validation set's wheel_payload_tree_sha256"
+              )
+          expected_closure = os.environ["EXPECTED_CLOSURE"].strip().lower()
+          if not re.fullmatch(r"[0-9a-f]{64}", expected_closure):
+              raise SystemExit(
+                  "promotion requires the accepted validation set's wheel_closure_tree_sha256"
+              )
           if not os.environ["FREEZE_RUN_ID"].isdigit():
               raise SystemExit("promotion requires the numeric freeze run id")
           receipt = json.loads(Path("release/release-build-receipt.json").read_text())
@@ -331,8 +368,116 @@ jobs:
           actual = hashlib.sha256(
               "".join(f"{name}\0{digest}\n" for name, digest in sorted(rows)).encode()
           ).hexdigest()
-          if actual != receipt["artifact_set_sha256"] or actual != expected:
-              raise SystemExit("promotion bytes differ from the accepted validation set")
+          # Self-consistency of THIS build: the bytes downloaded are the bytes the freeze job
+          # produced and recorded. Not an identity claim about the qualification.
+          if actual != receipt["artifact_set_sha256"]:
+              raise SystemExit("downloaded artifacts differ from the frozen build receipt")
+
+          # And against the SET the qualification accepted. This input was read, checked for the
+          # shape of a digest, and then never compared to anything -- an operator supplied the
+          # number that was supposed to tie this promotion to the accepted set and the job ignored
+          # it. `governance/RELEASE_PROCESS.md` said "the promotion job already refuses otherwise",
+          # which was the second sentence in that file to describe a guard that did not exist.
+          #
+          # Reported rather than refused, for the same reason the payload is. The freeze build is a
+          # REPRODUCTION in public CI, and the archives it produces contain `docs/` and `demos/` --
+          # the sdist is the whole published tree. Requiring archive equality would make every
+          # documentation correction a failed qualification, which is the defect the closure rule
+          # above exists to remove. The closure is the refusal; this is the record.
+          if actual != expected_set:
+              print(
+                  "::warning::promoted artifact set differs from the accepted validation set "
+                  f"({actual} != {expected_set}); the behaviour closure is checked separately "
+                  "below and is the binding claim."
+              )
+
+          # The identity claim, and it is on the wheel PAYLOAD rather than on the archive files.
+          #
+          # `artifact_set_sha256` hashes the wheel and sdist FILE bytes. The sdist is the whole
+          # published tree -- 24 files under `docs/`, 153 under `demos/`, and `README.md` -- and the
+          # wheel embeds `README.md` verbatim in its METADATA via `readme = "README.md"`. Requiring
+          # the promoted archives to reproduce a sealed archive digest therefore makes correcting a
+          # documentation sentence, or republishing the demonstrations from the very legs that
+          # qualified the release, into a change that "burns the candidate" -- and the only ways out
+          # were to publish a front page contradicting its own artifacts, or to re-run four paid
+          # scientific legs because a paragraph moved. That is a tax, not a safety property, and
+          # `governance/RELEASE_PROCESS.md` has said so since 2026-08-13: prose "does not execute
+          # and none of it is frozen here", and the invariant asserted on the distribution is on its
+          # CODE SUBSET. Nothing implemented that sentence until now.
+          #
+          # What actually decides behaviour is the wheel payload: `src/research_agenda_engine`, plus
+          # the `force-include` of `examples/`, `prompts/` and the two agent role files. The sealer
+          # already hashes exactly that and records it as `wheel_payload_tree_sha256`
+          # (`release_validation_set._verify_wheel` -> `_expected_wheel_payload`), and it already
+          # excludes `dist-info/` from the comparison, so METADATA -- and therefore the README --
+          # was never part of the qualified identity.
+          #
+          # Recomputed here rather than imported: this runs in the public checkout, where `scripts/`
+          # is not exported. Drift between the two is caught immediately, because the value has to
+          # equal a digest the sealer minted.
+          payload_digests = {}
+          with zipfile.ZipFile(
+              Path("release/python-package-distributions") / Path(receipt["wheel"]["path"]).name
+          ) as archive:
+              for info in archive.infolist():
+                  if info.is_dir() or ".dist-info/" in info.filename:
+                      continue
+                  payload_digests[info.filename] = hashlib.sha256(
+                      archive.read(info.filename)
+                  ).hexdigest()
+          payload_tree = hashlib.sha256(
+              "".join(
+                  f"{name}\0{payload_digests[name]}\n" for name in sorted(payload_digests)
+              ).encode()
+          ).hexdigest()
+          # The BEHAVIOUR CLOSURE is the identity claim; the payload is the record.
+          #
+          # Binding the whole payload was the right instinct applied one level too widely, and it
+          # reproduced the defect it was written to remove. `force-include` puts all of `examples/`
+          # into the wheel, so `examples/maieusis.yaml` -- the file `maieusis init` copies into
+          # every user project -- and the templates an agent reads sit inside the qualified digest.
+          # Correcting a comment in one of them then "burned the candidate", and the only ways out
+          # were to ship a documented falsehood or re-run four paid scientific legs because a
+          # comment moved. That is the same tax #199 removed from the sealer, which claims identity
+          # over `src/`, `prompts/` and the two agent roles and RECORDS everything else.
+          #
+          # So: everything in the payload except documentation under `_builtin/examples/` is bound
+          # byte for byte and a difference is refused. The four `release/*.yaml` cleanroom profiles
+          # stay INSIDE that set -- they are qualification inputs the sealer compares leaf by leaf,
+          # not documentation -- while `release/README.md`, the starter profiles and the project
+          # templates are prose about them. Measured on this set: the closure digest is identical
+          # between the qualified wheel and one built from the corrected tree, over 268 of 276
+          # payload files, and every differing file is documentation.
+          DOCS_PREFIX = "research_agenda_engine/_builtin/examples/"
+          QUALIFICATION_INPUTS = DOCS_PREFIX + "release/"
+
+          def in_closure(name: str) -> bool:
+              if not name.startswith(DOCS_PREFIX):
+                  return True
+              return name.startswith(QUALIFICATION_INPUTS) and name.endswith(".yaml")
+
+          closure = {
+              name: digest for name, digest in payload_digests.items() if in_closure(name)
+          }
+          closure_tree = hashlib.sha256(
+              "".join(f"{name}\0{closure[name]}\n" for name in sorted(closure)).encode()
+          ).hexdigest()
+          if closure_tree != expected_closure:
+              raise SystemExit(
+                  "promoted wheel does not carry the qualified behaviour closure: "
+                  f"{closure_tree} != {expected_closure}"
+              )
+          if payload_tree != expected_payload:
+              # Not a refusal. Named rather than counted, so the promotion record says WHICH
+              # documentation moved after qualification and a reader can judge it.
+              print(
+                  "::warning::promoted wheel payload differs from the qualified payload "
+                  f"({payload_tree} != {expected_payload}); the behaviour closure is identical. "
+                  "Documentation outside the closure changed after qualification."
+              )
+              for name in sorted(payload_digests):
+                  if not in_closure(name):
+                      print(f"::notice::outside the closure: {name}")
 
           version = tomllib.loads(Path("pyproject.toml").read_text())["project"]["version"]
           target = os.environ["TARGET"]

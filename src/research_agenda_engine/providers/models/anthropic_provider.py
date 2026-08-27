@@ -20,6 +20,7 @@ from .base import (
     StructuredModelFailureKind,
     StructuredModelProvider,
     StructuredModelProviderError,
+    is_account_exhaustion_error,
     partial_json_text,
     reasoning_request_kwargs,
 )
@@ -203,6 +204,12 @@ class AnthropicProvider(StructuredModelProvider):
 
 
 def _anthropic_failure_kind(exc: Exception) -> StructuredModelFailureKind | None:
+    # Anthropic reports an empty balance as a plain 400 `BadRequestError`, which matches no name
+    # below, so this function returned None and the caller re-raised the SDK exception RAW. Nothing
+    # downstream catches `anthropic.BadRequestError`, so it left the typed provider boundary
+    # altogether and would have surfaced as an unhandled traceback instead of a run terminal.
+    if is_account_exhaustion_error(exc):
+        return StructuredModelFailureKind.ACCOUNT_EXHAUSTED
     name = type(exc).__name__
     if name in {"AuthenticationError", "PermissionDeniedError"}:
         return StructuredModelFailureKind.AUTHENTICATION

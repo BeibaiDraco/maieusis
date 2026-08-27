@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+from collections.abc import Sequence
 from datetime import UTC, date, datetime
 from enum import StrEnum
 from pathlib import Path
@@ -31,6 +32,7 @@ from ...schemas.scientific_context import (
 from ...schemas.topic_literature import TopicSourceRecord, TopicSourceTable
 from ..agents.promotion import assert_promoted_status_is_holdable
 from ..retrieval.generic_topic_lanes import (
+    DATASET_REUSE_QUERY_LANE,
     GENERIC_REQUIRED_LANES,
     GENERIC_SCOPE_TERM_QUERY_LANE,
     GENERIC_TOPIC_EVIDENCE_QUERY_PLAN_VERSION,
@@ -40,6 +42,7 @@ from ..retrieval.topic_sources import (
     R5_TOPIC_EVIDENCE_QUERY_PLAN_VERSION,
     TopicSourceHarvester,
     build_r5_topic_evidence_query_plan,
+    generic_topic_evidence_protocol_version,
 )
 from .dataset_narrative import ContextReviewStatus
 from .evidence_requests import (
@@ -51,8 +54,8 @@ from .review_gates import (
     gate_topic_evidence_review_item,
 )
 
-TOPIC_EVIDENCE_BRIEF_SYNTHESIZER_PROMPT_VERSION = "topic_evidence_brief_synthesizer/v4"
-TOPIC_FIELD_STATE_SYNTHESIZER_PROMPT_VERSION = "topic_field_state_synthesizer/v2"
+TOPIC_EVIDENCE_BRIEF_SYNTHESIZER_PROMPT_VERSION = "topic_evidence_brief_synthesizer/v7"
+TOPIC_FIELD_STATE_SYNTHESIZER_PROMPT_VERSION = "topic_field_state_synthesizer/v3"
 
 REQUIRED_TOPIC_EVIDENCE_LANES = [
     "geometry_theory_methods",
@@ -68,6 +71,20 @@ REQUIRED_TOPIC_EVIDENCE_LANES = [
     "live_tensions_and_limitations",
 ]
 
+#: The headings the field-state synthesizer must write, one section each.
+#:
+#: These MUST between them cover every dimension in ``GENERIC_REQUIRED_LANES``, because the
+#: independent reviewer grades ``generic_lane_coverage`` and ``field_state_complete`` against those
+#: dimensions while the synthesizer is asked only for these headings. The two lists were written by
+#: different concerns at different times and drifted: for eleven headings' worth of runs, three
+#: graded dimensions -- competing explanations/confounds, boundary conditions/generalization, and
+#: dataset/resource reuse -- had NO heading to be written into. Evidence serving only those
+#: dimensions therefore had nowhere to go and was dropped silently: measured across all 23 retained
+#: review packets (three datasets, six sets), 15%-50% of every corpus was cited by no section, no
+#: claim and no diagnostic, and the climate d3p6 leg exhausted its revision budget on
+#: ``field_state_complete`` naming exactly that evidence ("never bind or discuss the retrieved
+#: ENSO/QBO/snow-cover evidence cards"). ``test_field_state_sections_cover_every_graded_dimension``
+#: pins the correspondence so the two lists cannot drift apart again.
 TOPIC_FIELD_STATE_REQUIRED_SECTIONS = [
     "Scope and non-claims",
     "Why the field is unsettled now",
@@ -75,12 +92,35 @@ TOPIC_FIELD_STATE_REQUIRED_SECTIONS = [
     "Theoretical progress",
     "Experimental progress",
     "Analysis methods and inference limits",
+    "Competing explanations and confounds",
+    "Boundary conditions and generalization",
     "Convergences across subfields",
     "Dissociations and live tensions",
     "Close priors / already answered questions",
+    "Dataset and resource reuse",
     "Gaps that could generate QuestionSeeds",
     "Evidence quality and provenance notes",
 ]
+
+#: Which graded dimension each required heading answers. Every value is a member of
+#: ``GENERIC_REQUIRED_LANES``; headings that serve no single dimension (scope statement, provenance
+#: notes, cross-cutting synthesis) map to ``None`` and are excluded from the coverage guard.
+TOPIC_FIELD_STATE_SECTION_DIMENSIONS: dict[str, str | None] = {
+    "Scope and non-claims": None,
+    "Why the field is unsettled now": "unresolved_tensions",
+    "Background priors and core constructs": "background_core_constructs",
+    "Theoretical progress": None,
+    "Experimental progress": None,
+    "Analysis methods and inference limits": "methods_measurement_limits",
+    "Competing explanations and confounds": "competing_explanations_confounds",
+    "Boundary conditions and generalization": "boundary_conditions_generalization",
+    "Convergences across subfields": None,
+    "Dissociations and live tensions": "unresolved_tensions",
+    "Close priors / already answered questions": "close_prior_already_answered",
+    "Dataset and resource reuse": "dataset_resource_reuse",
+    "Gaps that could generate QuestionSeeds": "open_gaps",
+    "Evidence quality and provenance notes": None,
+}
 
 
 class TopicSourceAbstractStatus(StrEnum):
@@ -670,7 +710,12 @@ def build_topic_evidence_brief_draft_bundle(
     source_table: TopicSourceTable | None = None,
     retrieval_protocol: str = R5_TOPIC_EVIDENCE_QUERY_PLAN_VERSION,
     scope: ResolvedResearchScope | None = None,
-    max_prompt_chars: int = 250_000,
+    # Raised with the kept-record count, because a budget that silently trims is the failure the
+    # raise exists to avoid. Measured 2026-08-19 with 64 records: the brief packet was 251,691 chars
+    # against a 250,000 budget and the compactor trimmed 51 fields -- a corpus enlarged on paper and
+    # cut before it reached the model. The consolidation gate already runs at 1,000,000, so this is
+    # well inside what the product does elsewhere.
+    max_prompt_chars: int = 400_000,
 ) -> TopicEvidenceBriefDraftBundle:
     source_table = source_table or _harvest_topic_sources(
         intent,
@@ -678,7 +723,9 @@ def build_topic_evidence_brief_draft_bundle(
         scope=scope,
     )
     r5_source_table = build_r5_topic_source_table(source_table)
-    local_brief = build_local_topic_evidence_brief(intent=intent, source_table=source_table)
+    local_brief = build_local_topic_evidence_brief(
+        intent=intent, source_table=source_table, scope=scope
+    )
     local_evidence_groups = build_local_topic_evidence_groups(source_table)
     # Q1: cards carry the SCOPE-DRIVEN off-topic decision (no hardcoded domain list); the same scope
     # feeds the gate's claim-supporting view so gate + compiler agree on what is on-topic.
@@ -687,6 +734,10 @@ def build_topic_evidence_brief_draft_bundle(
     field_state_user_packet = {
         "prompt_version": TOPIC_FIELD_STATE_SYNTHESIZER_PROMPT_VERSION,
         "research_intent": intent.model_dump(mode="json"),
+        "resolved_scope": {
+            "terms": list(scope.terms) if scope is not None else list(intent.topic_terms),
+            "declared_by_user": list(intent.topic_terms),
+        },
         "required_sections": TOPIC_FIELD_STATE_REQUIRED_SECTIONS,
         # These are semantic review dimensions, not query labels. Generic v2 source cards carry only
         # truthful scope-term acquisition lineage; the model must judge dimensions from the evidence.
@@ -742,10 +793,42 @@ def build_topic_evidence_brief_draft_bundle(
     user_packet = {
         "prompt_version": TOPIC_EVIDENCE_BRIEF_SYNTHESIZER_PROMPT_VERSION,
         "research_intent": intent.model_dump(mode="json"),
+        "resolved_scope": {
+            "terms": list(scope.terms) if scope is not None else list(intent.topic_terms),
+            "declared_by_user": list(intent.topic_terms),
+        },
         "allowed_source_record_ids": [record.source_record_id for record in source_table.records],
         "source_records": [_record_payload(record) for record in source_table.records],
         "r5_lane_source_table": r5_source_table.model_dump(mode="json"),
-        "field_state_status": "draft_not_supplied_to_brief_synthesizer",
+        # The INDEX, never the prose. The field-state draft is unreviewed model output, so its
+        # synthesis must not cross into another model's input and be paraphrased as though it had
+        # earned authority -- that rule stays. But the draft also groups the SAME source records
+        # this drafter already holds, by scientific dimension, and those groupings are pointers
+        # rather than findings. Withholding them made the two artifacts unable to agree while the
+        # same independent reviewer grades them together: measured 2026-08-19 across two datasets
+        # and ten reviewer draws each, first-draft briefs carried zero `already_answered` claims in
+        # 20 of 20 draws, while the draft's own close-prior section named source-backed close
+        # priors from the same packet, and the reviewer -- correctly -- called the contradiction.
+        "field_state_status": "draft_synthesis_withheld_dimension_index_supplied",
+        # Each entry carries the graded dimension it answers. Supplying the headings and the eight
+        # dimension names as two unrelated lists reproduced, inside one packet, the drift this card
+        # exists to remove: the drafter had to map fourteen English headings onto eight dimension
+        # keys by reading them, and the prompt was reduced to string-matching "close-prior heading"
+        # to find one. A section that answers no single dimension carries an empty string.
+        "field_state_dimension_index": [
+            {
+                "section_id": section.section_id,
+                "heading": section.heading,
+                "semantic_dimension": (
+                    TOPIC_FIELD_STATE_SECTION_DIMENSIONS.get(section.heading) or ""
+                ),
+                "source_record_ids": list(section.source_record_ids),
+            }
+            for section in field_state_draft.sections
+        ],
+        # Still empty, and still correct: nothing reviews the field state before this step, so no
+        # field-state claim has review authority to lend. The slot is kept so that a future
+        # reviewed field state has somewhere to arrive.
         "reviewed_field_state_claims": [],
         # These are semantic drafting dimensions. They are deliberately not acquisition labels.
         "required_lanes": list(GENERIC_REQUIRED_LANES),
@@ -815,8 +898,20 @@ def build_local_topic_evidence_brief(
     *,
     intent: ResearchIntent,
     source_table: TopicSourceTable,
+    scope: ResolvedResearchScope | None = None,
 ) -> TopicEvidenceBrief:
-    topic_terms = intent.topic_terms or source_table.topic_terms or ["systems neuroscience"]
+    # THE RESOLVED SCOPE FIRST. `intent.topic_terms` is what the user typed -- one anchor on the
+    # neuroscience legs -- while the corpus below it was retrieved for the resolved scope, which
+    # adds the terms derived from the dataset's own description. Declaring the anchor as the brief's
+    # scope published `canonical_scope: "noise correlations"` for a dossier built from eighteen
+    # terms' literature, and the reviewer holds the brief to the resolved scope it is shown: it read
+    # the narrow declaration against the wide content and called it a contradiction.
+    topic_terms = (
+        (list(scope.terms) if scope is not None and scope.terms else [])
+        or intent.topic_terms
+        or source_table.topic_terms
+        or ["systems neuroscience"]
+    )
     return TopicEvidenceBrief(
         brief_id=f"topic-evidence-local-{stable_hash({'terms': topic_terms, 'records': [record.source_record_id for record in source_table.records]})[:12]}",
         topic_terms=topic_terms,
@@ -1568,9 +1663,8 @@ def build_r5_topic_source_table(source_table: TopicSourceTable) -> R5TopicEviden
         table_id=f"r5-topic-source-table-{stable_hash({'source_table': source_table.table_id, 'records': [record.model_dump(mode='json') for record in records]})[:12]}",
         query_plan_id=source_table.query_plan_id,
         protocol_version=(
-            GENERIC_TOPIC_EVIDENCE_QUERY_PLAN_VERSION
-            if source_table.query_plan_id.startswith("generic-topic-evidence-plan-v2-")
-            else R5_TOPIC_EVIDENCE_QUERY_PLAN_VERSION
+            generic_topic_evidence_protocol_version(source_table.query_plan_id)
+            or R5_TOPIC_EVIDENCE_QUERY_PLAN_VERSION
         ),
         records=records,
         lane_coverage=lane_coverage,
@@ -1632,7 +1726,7 @@ def build_source_evidence_cards(
             exclusion_reason = "fulltext_rights_unverified"
         elif not record.can_support_claims:
             exclusion_reason = "title_or_metadata_only"
-        tags = _topic_record_subfield_tags(authority_record)
+        tags = _topic_record_subfield_tags(authority_record, scope)
         contribution = _topic_record_key_contribution(authority_record)
         cards.append(
             SourceEvidenceCard(
@@ -1649,7 +1743,9 @@ def build_source_evidence_cards(
                 abstract_or_excerpt=authority_record.abstract_or_snippet,
                 why_included=_topic_record_inclusion_reason(authority_record, tags),
                 key_contribution=contribution,
-                claims_or_gaps_supported=_topic_record_supported_claims(authority_record, tags),
+                claims_or_gaps_supported=_topic_record_supported_claims(
+                    authority_record, tags, scope
+                ),
                 can_support_claims=can_support,
                 quality_flags=[
                     *record.source_quality_flags,
@@ -1822,6 +1918,26 @@ def _force_field_state_draft(
         # Content-wise a no-op: evidence_requests below is always replaced with the
         # code-built list; the flag records that the model emitted unknown request ids.
         flags.append("field_state_dropped_unknown_evidence_requests:" + ",".join(unknown_requests))
+    # Repair before strict construction: state which supplied evidence the synthesis did not use.
+    # A record the synthesizer was handed and then never cited leaves NO trace otherwise, so a
+    # silent drop and a deliberate exclusion are indistinguishable in the artifact -- and the
+    # reviewer, which can see both the source summaries and the sections, reads the difference as
+    # evidence hidden rather than evidence declined ("this omission is not flagged anywhere in
+    # source_quality_diagnostics, so material retrieved evidence is silently missing from the
+    # narrative", climate d3p6 round 2, the round that exhausted the revision budget).
+    #
+    # This sentence is mechanical and therefore always literally true: it counts citations, and it
+    # says nothing about whether the omission was scientifically right. That distinction is exactly
+    # what the 2026-08-14 legs got wrong when a deterministic diagnostic asserted dimensions were
+    # "unresolved" from acquisition labels -- a false scientific claim that cost three runs their
+    # authority. Judging the omission remains the reviewer's; disclosing it is the host's.
+    uncited = _uncited_claim_supporting_records(sections, source_cards)
+    if uncited:
+        claim_supporting_total = sum(1 for card in source_cards if card.can_support_claims)
+        flags.append(
+            f"field-state coverage: {len(uncited)} of {claim_supporting_total} claim-supporting "
+            f"records are cited by no field-state section: " + ", ".join(uncited)
+        )
     sanitized = field_state.model_copy(
         update={
             "field_state_id": field_state.field_state_id.strip()
@@ -1839,7 +1955,87 @@ def _force_field_state_draft(
         },
         deep=True,
     )
+    assert_field_state_sources_accounted(sanitized)
     return sanitized, flags
+
+
+def _uncited_claim_supporting_records(
+    sections: Sequence[TopicFieldStateSection],
+    source_cards: Sequence[SourceEvidenceCard],
+) -> list[str]:
+    """Claim-supporting record ids that no section cites, in source-table order.
+
+    Only claim-supporting cards count. A metadata-only or off-topic card is handed to the
+    synthesizer as explicitly unusable, so its absence from the sections is the system working.
+    """
+
+    cited = {source_id for section in sections for source_id in section.source_record_ids}
+    return [
+        card.source_record_id
+        for card in source_cards
+        if card.can_support_claims and card.source_record_id not in cited
+    ]
+
+
+def field_state_dimension_representation_statements(
+    field_state: TopicFieldStateDraft | None,
+    brief: TopicEvidenceBrief,
+) -> list[str]:
+    """Host observations: a graded dimension the field state evidenced and the brief does not cite.
+
+    The second hop of the same narrowing. Closing sources -> field_state gave the confounds,
+    boundary-conditions and reuse evidence a section to live in; it did nothing about
+    field_state -> brief, and six reviewer draws on the repaired climate packet failed on exactly
+    that, naming the section: *"Reconcile the brief's claims array with the field_state's 'Competing
+    explanations and confounds' section so no field-state-synthesized dimension with eligible
+    sources is silently dropped from the brief."*
+
+    These lines are COUNTS, never verdicts. A brief is a distillation and is not required to claim
+    everything the field state discusses; whether dropping a whole evidenced dimension was right for
+    this scope is a scientific judgement, and the reviewer is the one holding both artifacts. The
+    host's job is only to make the drop visible, which is why this rides ``host_readiness_facts`` --
+    the channel whose prompt contract already states these are observations that are neither an
+    automatic pass nor an automatic fail.
+    """
+
+    if field_state is None:
+        return []
+    claimed = {source_id for claim in brief.claims for source_id in claim.source_record_ids}
+    statements: list[str] = []
+    for section in field_state.sections:
+        dimension = TOPIC_FIELD_STATE_SECTION_DIMENSIONS.get(section.heading)
+        if dimension is None or not section.source_record_ids:
+            continue
+        if any(source_id in claimed for source_id in section.source_record_ids):
+            continue
+        statements.append(
+            f"The field state's {section.heading!r} section cites "
+            f"{len(section.source_record_ids)} supplied records; no brief claim cites any of them."
+        )
+    return statements
+
+
+def assert_field_state_sources_accounted(field_state: TopicFieldStateDraft) -> None:
+    """Every claim-supporting card is cited by a section, or named as uncited in the diagnostics.
+
+    Reads ONLY the finished artifact -- its own ``sections``, ``evidence_cards`` and
+    ``source_quality_diagnostics`` -- never the caller's working variables. A post-condition that
+    re-derives its answer from the same map that produced the result cannot fail, and this
+    repository has shipped one that could not (the first cross-feed scale-fact guard, 2026-08-21).
+    Deleting the disclosure above must make this raise; ``test_field_state_accounting_guard_is_not_
+    vacuous`` mutation-proves that it does.
+    """
+
+    uncited = _uncited_claim_supporting_records(field_state.sections, field_state.evidence_cards)
+    if not uncited:
+        return
+    disclosed = " ".join(field_state.source_quality_diagnostics)
+    undisclosed = [source_id for source_id in uncited if source_id not in disclosed]
+    if undisclosed:
+        raise ValueError(
+            "TopicFieldStateDraft leaves claim-supporting records unaccounted: they are cited by "
+            "no section and named in no source_quality_diagnostic: " + ", ".join(undisclosed)
+        )
 
 
 def _validate_field_state_draft(
@@ -1919,8 +2115,29 @@ def _title_is_secondary_publication_artifact(title: str) -> bool:
     )
 
 
-def _topic_record_subfield_tags(record: R5TopicSourceRecordEvidence) -> list[str]:
+def _topic_record_subfield_tags(
+    record: R5TopicSourceRecordEvidence,
+    scope: ResolvedResearchScope | None = None,
+) -> list[str]:
+    """Which of THIS RUN'S scope terms the record's own text carries.
+
+    Scope-driven, for the same reason the off-topic classifier beside it is: the hardcoded
+    neuroscience keyword table below decides nothing about relevance, but it does decide the English
+    written onto every evidence card, and that English reaches the field state, the reviewer and the
+    published artifact. `check_dataset_agnostic.py` documents this function as deferred tech debt
+    judged "non-crashing"; measured 2026-08-19 on a stratospheric-dynamics packet it put
+    neuroscience vocabulary on 31 of 59 cards -- "wave geometry" matched the `geometry` token -- and
+    the independent reviewer raised it as an integrity concern in two of ten draws. Non-crashing is
+    not the same as harmless once the words are published.
+
+    The run's own scope terms are domain vocabulary by construction, so no table can be wrong about
+    a dataset it was not written for. A record with no scope supplied is a legacy artifact and keeps
+    the historical labels so its cards stay readable.
+    """
+
     text = " ".join([record.title, record.abstract_or_snippet]).lower()
+    if scope is not None:
+        return [term for term in scope.terms if term.strip() and term.lower() in text]
     tags: list[str] = []
     if any(token in text for token in ["caudoputamen", "striatum", "basal ganglia"]):
         tags.append("cp_region")
@@ -1994,8 +2211,19 @@ def _topic_record_key_contribution(record: R5TopicSourceRecordEvidence) -> str:
 def _topic_record_supported_claims(
     record: R5TopicSourceRecordEvidence,
     tags: list[str],
+    scope: ResolvedResearchScope | None = None,
 ) -> list[str]:
     supported: list[str] = []
+    if scope is not None:
+        # `tags` are this run's own scope terms, so the sentence is written from them rather than
+        # from a table of another field's nouns.
+        if DATASET_REUSE_QUERY_LANE in record.lane_ids:
+            supported.append("prior use of this dataset or an equivalent resource")
+        if tags:
+            supported.append(f"evidence bearing on {', '.join(tags[:4])}")
+        if not supported and record.can_support_claims:
+            supported.append("background evidence for the resolved research scope")
+        return supported
     if "ibl_bwm" in tags:
         supported.append("public dataset reuse or dataset context")
     if "movement_body_state" in tags:
@@ -2017,7 +2245,10 @@ def _topic_record_supported_claims(
     if "generalization" in tags:
         supported.append("cross-session/lab generalization")
     if not supported and record.can_support_claims:
-        supported.append("background evidence for coding geometry")
+        # Domain-neutral. The neuroscience phrase this replaces was the DEFAULT, so on any dataset
+        # whose text matched none of the tokens above it was written onto every usable card: 31 of
+        # 59 on the 2026-08-19 climate packet.
+        supported.append("background evidence for the resolved research scope")
     return supported
 
 

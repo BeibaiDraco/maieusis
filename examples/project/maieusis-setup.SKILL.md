@@ -1,6 +1,6 @@
 ---
 name: maieusis-setup
-description: Set up, run, and shepherd a Maieusis scientific question-development project. Use when the user wants to configure this project, prepare its inputs, run the zero-paid preflight, start a paid run, or read what a finished run produced -- and whenever a run stops, fails, hangs, errors, or needs diagnosing, resuming, or recovering, which is when the procedure here matters most.
+description: Set up, run, and shepherd a Maieusis scientific question-development project. Use when the user wants to configure this project, prepare its inputs, run preflight, start a paid run, or read what a finished run produced -- and whenever a run stops, fails, hangs, errors, or needs diagnosing, resuming, or recovering, which is when the procedure here matters most.
 ---
 
 # Operating a Maieusis project
@@ -37,7 +37,7 @@ money.
   is a real result and it is often the most useful thing a run produces, but it is not the plan the
   user was hoping for.
 - **There is no stage selector.** The supported surface is five commands that run the chain end to
-  end. `maieusis run --check-only` stops after the zero-paid preflight, and `maieusis resume`
+  end. `maieusis run --check-only` stops after preflight, and `maieusis resume`
   re-enters an existing run and reuses stages already proven complete. Neither is a way to run just
   one stage.
 - **Externally supplying a shortlist or naming specific families is refused by preflight**, on
@@ -71,9 +71,10 @@ invent a dataset fact.
    Then set `dataset.inspection_runtime.source_tree_root` to that absolute path. Do not skip this
    and hope preflight passes; it will not, and the user will have spent an hour first.
 4. Which coding host is installed and logged in.
-5. `pdftotext` on PATH if the parser is `poppler_text`, which is the default. Preflight does not
-   check this, so a missing binary passes `maieusis check` and fails during the run. Check it
-   yourself.
+5. `pdftotext` on PATH if the parser is `poppler_text` or `auto`. Preflight DOES check this and
+   fails on a missing binary, so you do not have to pre-empt it — but a `docling` parser needs the
+   Docling package importable instead, which preflight checks separately. Know which parser the
+   configuration names before you go looking for the wrong dependency.
 
 ## Ask for what is missing, one group at a time
 
@@ -86,9 +87,14 @@ one before it.
    redistribute them.
 3. **Dataset.** Identifier, link or readable documentation files, the read-only local root, the
    inspection runtime, and at least one allowed inspection resource.
-4. **Research intent.** `open`, `topic_conditioned`, or `seed_question`. In `open` mode the topic
-   fields do not affect scope at all — scope is inferred from reviewed patterns and the dataset
-   narrative — so do not let a user believe topic terms are being honored there.
+4. **Research intent.** `open`, `topic_conditioned`, or `seed_question`, plus `scope_derivation`
+   (`auto` / `augment` / `never`). In `open` mode the topic fields do not affect scope at all — the
+   search terms are derived from the reviewed dataset narrative, by a model under the default
+   `auto` and by keyword extraction under `never` — so do not let a user believe topic terms are
+   being honored there. Terms a user DOES write are honored outright in the other two modes and are
+   never rewritten; `augment` keeps them first and lets the model add to them. Tell a user who
+   cares which literature is searched that the derived terms, and the reason for each, are written
+   to `corpus/context/topic_evidence/sources/research_intent.derived_scope.yaml` in every run.
 5. **Models and host.** Seven API roles, the planner host and its model, and the reasoning effort
    (required for Codex). The Owner and the independent reviewer must sit on **different providers**;
    preflight enforces it.
@@ -122,10 +128,19 @@ Edit `maieusis.yaml`. Before running anything, verify:
   scout times ten thousand must not exceed the ceiling;
 - no secret appears anywhere in the file.
 
-## Run the zero-paid preflight
+## Run preflight
 
-`maieusis check --project maieusis.yaml` makes no paid model or coding-agent call. It does make
-network requests, including one fetch of the dataset link, so it is zero-*paid*, not zero-network.
+`maieusis check --project maieusis.yaml` launches no coding agent and runs no stage. It is **not
+free**: it sends one minimal request per configured provider — `max_tokens: 1`, a single full stop
+for content — because an API key that authenticates but cannot be billed should fail here rather
+than an hour into a paid run. A fraction of a cent per provider, and the only spend `check` makes.
+
+**`0.1.1` prints `Preflight OK — no paid calls made.` on success, and that line is wrong.** It
+predates the balance probe and ships inside the release's wheel, so it cannot be corrected without
+rebuilding the bytes the release was qualified on. Do not repeat it to your user. Tell them what
+this paragraph says instead.
+
+It also makes unpaid network requests, including one fetch of the dataset link.
 
 Resolve every failure by fixing the input. **Never** resolve one by weakening a provenance,
 evidence, identity, filesystem, authority, confirmation, or execution guard. If a check cannot be
@@ -170,9 +185,14 @@ same four, with the procedure attached:
 - **Never mutate the stopped run.** Diagnose beside it; recovery never writes on top of the incident.
 - **Count and disclose every intervention.** A run you repaired completed honestly with N disclosed
   repairs. It did not complete untouched, and you must never report it as though it did.
-- **Never repair past a guard.** No intervention may weaken a provenance, evidence, identity,
-  filesystem, confirmation, or execution check, and none may turn a scientific rejection into an
-  acceptance. If a run can only continue by weakening one, it stops and you say so.
+- **Repair carries a run past infrastructure, never past a scientific verdict.** A family the
+  evidence rejected stays rejected. No retry, resume, or configuration change may turn a rejection
+  into an acceptance. This is the rule the other three exist to protect, and it is the one a
+  well-meaning agent breaks first: a rejection looks like a problem to solve, and it is a result.
+- **Never repair past a guard.** If a run can only continue by weakening a provenance, evidence,
+  identity, authority, source-tree, branch-isolation, filesystem, confirmation, or execution check,
+  it stops and you say so. Treat that list as illustrative rather than exhaustive: a check you can
+  only pass by loosening it is a check you stop at, whether or not it is named here.
 
 ## If a run stops
 

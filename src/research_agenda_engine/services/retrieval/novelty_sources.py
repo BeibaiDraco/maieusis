@@ -34,6 +34,14 @@ class NoveltySearchHit:
     query_id: str
     response_digest: str
     retrieval_score: float
+    #: 1-based position on the provider's OWN relevance-ordered result page, and the raw score it
+    #: ordered by.  Both OpenAlex (``relevance_score``) and Crossref (``score``) return a search
+    #: page already sorted by their own ranker; until 2026-08-12 this repository asked for neither
+    #: and re-sorted the page on a token-overlap number that saturates, discarding the only
+    #: discriminating judgement either index had made.  ``0`` means "not from a ranked page" --
+    #: a single-entity resolution, not a search result -- and never means "ranked last".
+    relevance_rank: int = 0
+    provider_relevance: float = 0.0
 
 
 class NoveltyLeadResolutionMethod(StrEnum):
@@ -270,7 +278,10 @@ class OpenAlexNoveltySearchProvider:
             "search": query,
             "per-page": str(self.max_results),
             "select": (
-                "id,display_name,publication_year,doi,primary_location,abstract_inverted_index,ids"
+                "id,display_name,publication_year,doi,primary_location,abstract_inverted_index,"
+                # ``relevance_score`` is only populated when the request carries ``search``; it is
+                # the number OpenAlex itself ordered this page by.
+                "ids,relevance_score"
             ),
         }
         if self.email:
@@ -285,7 +296,7 @@ class OpenAlexNoveltySearchProvider:
         response_digest = stable_hash(raw)
         query_tokens = _tokens(query)
         hits: list[NoveltySearchHit] = []
-        for item in raw.get("results") or []:
+        for position, item in enumerate(raw.get("results") or [], start=1):
             title = str(item.get("display_name") or item.get("title") or "").strip()
             if not title:
                 continue
@@ -307,6 +318,8 @@ class OpenAlexNoveltySearchProvider:
                     query_id=query_id,
                     response_digest=response_digest,
                     retrieval_score=_overlap(query_tokens, _tokens(f"{title} {abstract}")),
+                    relevance_rank=position,
+                    provider_relevance=_optional_float(item.get("relevance_score")),
                 )
             )
         return hits, response_digest
@@ -330,7 +343,10 @@ class CrossrefNoveltySearchProvider:
         params = {
             "query": query,
             "rows": str(self.max_results),
-            "select": "DOI,title,abstract,published,issued,URL,author",
+            # ``score`` is Crossref's own relevance number for this query, and the order it
+            # returned the page in.  Asking for it costs nothing and is the only judgement
+            # Crossref makes about which of its 8 rows answers the term.
+            "select": "DOI,title,abstract,published,issued,URL,author,score",
         }
         if self.email:
             params["mailto"] = self.email
@@ -342,7 +358,7 @@ class CrossrefNoveltySearchProvider:
         query_tokens = _tokens(query)
         items = ((raw.get("message") or {}).get("items") or []) if isinstance(raw, dict) else []
         hits: list[NoveltySearchHit] = []
-        for item in items:
+        for position, item in enumerate(items, start=1):
             raw_titles = item.get("title") or []
             title = str(raw_titles[0] if raw_titles else "").strip()
             if not title:
@@ -362,6 +378,8 @@ class CrossrefNoveltySearchProvider:
                     query_id=query_id,
                     response_digest=response_digest,
                     retrieval_score=_overlap(query_tokens, _tokens(f"{title} {abstract}")),
+                    relevance_rank=position,
+                    provider_relevance=_optional_float(item.get("score")),
                 )
             )
         return hits, response_digest
@@ -473,6 +491,11 @@ def _crossref_resolution_hit(
         query_id=query_id,
         response_digest=response_digest,
         retrieval_score=1.0,
+        # A one-shot identity reconciliation is not a ranked search page, so there is no position
+        # and no relevance number to record.  Stated rather than defaulted: a web-resolved prior
+        # must not silently acquire a rank it never competed for.
+        relevance_rank=0,
+        provider_relevance=0.0,
     )
 
 
@@ -576,6 +599,21 @@ def _optional_int(value: object) -> int | None:
         return int(value)
     except (TypeError, ValueError):
         return None
+
+
+def _optional_float(value: object) -> float:
+    """A provider's own relevance number, or 0.0 when it did not send one.
+
+    A missing score must not be mistaken for a low one: the ordering treats the page POSITION as
+    the ranked signal and keeps this value for the audit trail only, so a provider that stops
+    returning a score degrades to position order rather than to a silent zero-relevance verdict.
+    """
+    if not isinstance(value, (str, int, float)) or isinstance(value, bool):
+        return 0.0
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return 0.0
 
 
 def _crossref_year(item: dict[str, Any]) -> int | None:

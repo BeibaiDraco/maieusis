@@ -29,7 +29,7 @@ from .review_gates import (
     gate_dataset_narrative_review_item,
 )
 
-DATASET_NARRATIVE_EXTRACTOR_PROMPT_VERSION = "dataset_narrative_extractor/v4"
+DATASET_NARRATIVE_EXTRACTOR_PROMPT_VERSION = "dataset_narrative_extractor/v5"
 
 DATASET_NARRATIVE_REQUIRED_EVIDENCE_FIELDS = [
     "scientific_purpose",
@@ -325,7 +325,7 @@ def build_dataset_narrative_draft_bundle(
 ) -> DatasetNarrativeDraftBundle:
     """DEPRECATED: the legacy A-only single-model draft → human-review-pack path.
 
-    The serious product path is now the four-source narrator
+    The serious product path is now the fusing narrator
     (``services/narrative_sources/narrator.py``) → independent-AI fidelity gate →
     ``narrative_persistence.promote_narrator_result_to_reviewed`` (automated-default authority). This
     draft-bundle + review-pack surface is retained only as a compatibility/provenance surface for the
@@ -380,8 +380,8 @@ def build_dataset_narrative_draft_bundle(
     gpt_narrative = _force_draft(gpt_narrative, source_packet)
     # GF-2c removed this draft bundle's old in-process dataset-specific "local narrative" track; the
     # deprecated bundle is now an A-source-only draft (the recommended narrative IS the extractor
-    # draft). Source B is the generic agent path, and the serious four-source fusion + fidelity gate is
-    # the new narrator. local_narrative mirrors the draft so the legacy bundle + human-review-pack
+    # draft). Source B is the generic agent path (unwired in v0.1), and the serious fusion + fidelity
+    # gate is the new narrator. local_narrative mirrors the draft so the legacy bundle + human-review-pack
     # surface stays intact.
     recommended = gpt_narrative.model_copy(
         update={

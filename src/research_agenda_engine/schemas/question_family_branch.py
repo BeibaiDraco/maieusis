@@ -316,6 +316,32 @@ class QuestionFamilyInspectionEvidence(BaseModel):
         return self.variant_id == variant_id
 
 
+#: Fields excluded from an inspection evidence record's IDENTITY, because the host stamps them and a
+#: re-read of the same planner file cannot reproduce them.
+_EVIDENCE_IDENTITY_EXCLUDED_FIELDS: frozenset[str] = frozenset({"created_at"})
+
+
+def inspection_evidence_identity_digest(evidence: QuestionFamilyInspectionEvidence) -> str:
+    """Canonical "is this the same evidence?" digest — everything scientific, minus ``created_at``.
+
+    A replan re-reads the planner's own evidence files while the branch already holds the copies
+    round 0 recorded, so the same evidence is loaded twice and compared. ``created_at`` carries
+    ``default_factory=datetime.now``, and the planner-authored file omits the field, so the second
+    reading stamps LOAD time: on the three families this killed, the round-0 copies read
+    ``2026-08-12T01:13:47Z`` and the re-reads of the very same files read ``2026-08-13T00:46:10Z``.
+    Measured across all ten conflicting ids in those three branches, ``created_at`` was the ONLY
+    differing field — no finding, source digest, method or limitation differed anywhere.
+
+    So a full-model comparison answers a question nobody asked. This answers the real one: two
+    records share an id and describe the same inspection. Every scientific and provenance field
+    stays in the digest, so a planner that changes a finding, a source digest or a limitation under
+    an id it already used is still a conflict, and still fails closed.
+    """
+    return stable_hash(
+        evidence.model_dump(mode="json", exclude=set(_EVIDENCE_IDENTITY_EXCLUDED_FIELDS))
+    )
+
+
 class QuestionFamilyBranch(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 

@@ -10,13 +10,16 @@ note: 'The 20 source inputs for the climate demonstration. Each DOI is an acquis
   works lost to a parse failure rather than to any judgement about their science.'
 final_screen:
   source_input_count: 20
-  accepted_paper_case_count: 13
-  excluded_count: 7
-  reviewed_formation_trace_count: 12
+  accepted_paper_case_count: 18
+  excluded_count: 2
+  reviewed_formation_trace_count: 9
   reviewed_pattern_count: 8
-  note: 'Three exclusions were parse failures: 09-lorenz-hartmann-2001, 12-charlton-polvani-2007, and
-    19-rousi-et-al-2022 could not be turned into the structured record the review stage requires. That
-    is a processing outcome and not an assessment of those papers.'
+  note: 'Neither exclusion is a judgement about the paper''s science. One was refused because a
+    citation the run selected as important carried no passage tying it to the paper, which the review
+    calls fabricating participation in question formation. The other was refused because its
+    key-citation list came back empty while the case''s own prose named eight prior works; the
+    reviewer records that as an incompleteness gap rather than a fabrication. The paper bank carries
+    the full reasoning for both.'
 papers:
 - filename: 01-wallace-gutzler-1981.pdf
   title: Teleconnections in the Geopotential Height Field during the Northern Hemisphere Winter

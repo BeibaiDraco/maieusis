@@ -10,7 +10,11 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from ...assets import resolve_asset
 from ...io import dump_data
 from ...provenance import sha256_file, stable_hash
-from ...providers.models.base import StructuredModelProvider
+from ...providers.models.base import (
+    TRANSIENT_FAILURE_KINDS,
+    StructuredModelProvider,
+    StructuredModelProviderError,
+)
 from ...schemas.gate_outcome import GateDecision, GateOutcome
 from ...schemas.scientific_context import TopicEvidenceBrief
 from ...schemas.topic_evidence_inquiry import (
@@ -22,6 +26,9 @@ from ...schemas.topic_evidence_inquiry import (
 from ..agents.topic_evidence_reviewer import TopicEvidenceTurnInput
 
 TOPIC_EVIDENCE_TERMINAL_INQUIRY_PROMPT_VERSION = "topic_evidence_terminal_inquiry/v1"
+
+#: One clear budget, matching the extraction lane's shape. Three attempts, transient kinds only.
+TERMINAL_INQUIRY_MAX_ATTEMPTS = 3
 
 
 class TopicEvidenceTerminalInquiryError(ValueError):
@@ -113,11 +120,27 @@ def inquire_topic_evidence_terminal(
         ) from exc
     input_digest = stable_hash(packet)
     dump_data(packet, inquiry_input_path)
-    output = provider.generate_structured(
-        system_prompt=load_topic_evidence_terminal_inquiry_prompt(),
-        user_prompt=json.dumps(packet.model_dump(mode="json"), ensure_ascii=False, indent=2),
-        output_model=TopicEvidenceTerminalInquiryOutput,
-    )
+    user_prompt = json.dumps(packet.model_dump(mode="json"), ensure_ascii=False, indent=2)
+    output: TopicEvidenceTerminalInquiryOutput | None = None
+    for attempt in range(1, TERMINAL_INQUIRY_MAX_ATTEMPTS + 1):
+        try:
+            output = provider.generate_structured(
+                system_prompt=load_topic_evidence_terminal_inquiry_prompt(),
+                user_prompt=user_prompt,
+                output_model=TopicEvidenceTerminalInquiryOutput,
+            )
+            break
+        except StructuredModelProviderError as exc:
+            # One transient hiccup on this single call ended a ~7-minute live leg that had already
+            # cleared the independent narrative gate, and a hand replay of the identical persisted
+            # packet succeeded on the first attempt. The repository already classifies which
+            # failures a replay can clear; this lane had the taxonomy available and did not use it.
+            # Only transient kinds replay -- a truncation or an auth failure fails closed here, as
+            # it must.
+            if exc.kind not in TRANSIENT_FAILURE_KINDS or attempt >= TERMINAL_INQUIRY_MAX_ATTEMPTS:
+                raise
+    if output is None:  # pragma: no cover - the loop either breaks with a value or raises
+        raise AssertionError("terminal inquiry ended without a provider result")
     try:
         record = TopicEvidenceTerminalInquiryRecord(
             brief_id=brief.brief_id,

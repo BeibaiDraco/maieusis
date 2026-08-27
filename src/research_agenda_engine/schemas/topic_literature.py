@@ -223,7 +223,17 @@ class TopicSourceTable(BaseModel):
     topic_terms: list[str] = Field(default_factory=list)
     records: list[TopicSourceRecord] = Field(default_factory=list)
     search_traces: list[TopicSourceSearchTrace] = Field(default_factory=list)
-    max_records: int = Field(default=20, ge=1, le=100)
+    #: Ceiling raised 100 -> 300 on 2026-08-17. The old bound came from a bulk de-dev commit (#27)
+    #: as a generic sanity limit, not from a judgement about corpora, and it had become the binding
+    #: constraint: the ibl derived scope yields 325 DISTINCT records after dedup, so a cap of 100
+    #: discarded 225 records unread. The default stays small; only a caller that has decided how
+    #: many its selector can read may go higher.
+    max_records: int = Field(default=20, ge=1, le=300)
+    #: Distinct records the harvest actually produced, before ``max_records`` cut it. Zero means
+    #: the harvester did not report it (a hand-built or legacy table), never "nothing was found".
+    #: Without it, ``len(records)`` reads as the whole harvest and the cap is an invisible
+    #: narrowing sitting directly upstream of the selector's own.
+    distinct_after_dedupe: int = Field(default=0, ge=0)
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     @model_validator(mode="before")

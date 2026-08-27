@@ -24,6 +24,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Sequence
 from concurrent.futures import ThreadPoolExecutor
+from datetime import UTC, datetime
 from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
@@ -34,11 +35,12 @@ from ...providers.scientific_agents.base import (
     ScientificAgentSessionError,
 )
 from ...schemas.cited_literature import (
+    CitationSelectionPolicy,
     CitationSelectionStatus,
     PaperLocalLiteratureContext,
     literature_context_digest,
 )
-from ...schemas.gate_outcome import GateDecision, GateOutcome
+from ...schemas.gate_outcome import GateDecision, GateLoopResult, GateOutcome
 from ...schemas.paper_case import PaperCase
 from ...schemas.stage_receipt import FailureClass
 from ..agents.citation_importance_reviewer import promote_literature_to_ai_reviewed
@@ -148,37 +150,91 @@ FIDELITY_MAX_REVISE_ROUNDS = 1
 #: bare `fidelity_revise` so a reader can tell "nobody tried" from "we tried once and it still asked".
 FIDELITY_REVISE_BUDGET_EXHAUSTED_REASON = "fidelity_revise_budget_exhausted"
 
+#: Reason recorded when the reviewer asked for a change this host has no deterministic repair for,
+#: so no round was spent and no second review was paid for. Before this existed, the loop re-reviewed
+#: a byte-identical artifact and filed the result as budget exhaustion — a paid call and a false
+#: record. Measured across the live corpus: 11 of 20 fidelity `revise` verdicts name nothing this
+#: gate can repair.
+FIDELITY_REVISE_NO_REPAIR_REASON = "fidelity_revise_no_repair_available"
+
+#: Same pair, one gate later. Before this card the citation gate had NO revise loop at all: 11
+#: `citation_revise` and 3 `citation_insufficient_evidence` exclusions across the live corpus, every
+#: one a paper a reviewer explicitly declined to reject.
+CITATION_MAX_REVISE_ROUNDS = 1
+CITATION_REVISE_BUDGET_EXHAUSTED_REASON = "citation_revise_budget_exhausted"
+CITATION_REVISE_NO_REPAIR_REASON = "citation_revise_no_repair_available"
+
+#: Every paper exclusion in this module that is NOT a reviewer's final verdict, and the class that
+#: says so. A reject / insufficient_evidence keeps `failure_class=None`, which
+#: `_paper_half_terminal_cause` reads as science. Operator ruling 2026-08-12: budget exhaustion must
+#: not be equivalent to rejection anywhere, and `schemas/stage_receipt.py` already agreed — a
+#: reviewer that asked for a change and never gave a final verdict has not judged the science.
+_NON_SCIENTIFIC_EXCLUSION_CLASSES: dict[str, FailureClass] = {
+    FIDELITY_REVISE_BUDGET_EXHAUSTED_REASON: FailureClass.PROMPT_BUDGET,
+    CITATION_REVISE_BUDGET_EXHAUSTED_REASON: FailureClass.PROMPT_BUDGET,
+    FIDELITY_REVISE_NO_REPAIR_REASON: FailureClass.VALIDATION_FAILURE,
+    CITATION_REVISE_NO_REPAIR_REASON: FailureClass.VALIDATION_FAILURE,
+}
+
 
 def _failed_criteria(outcome: GateOutcome) -> set[str]:
     return {item.criterion for item in outcome.criterion_assessments if not item.passed}
 
 
-def _redraft_for_fidelity_revise(case: PaperCase, outcome: GateOutcome) -> tuple[PaperCase, str]:
-    """The one honest, deterministic repair available at this gate: drop the inline trace draft.
+def _publication_date_is_impossible(case: PaperCase) -> bool:
+    """True when the recorded publication date could not be supported by any source, ever.
 
-    Measured on the 2026-07-29 climate leg: 6 of 8 `revise` verdicts failed exactly
-    ``supports_formation_trace``, on a field that ``promote_paper_case_to_ai_reviewed`` sets to None
-    moments later and that the dedicated trace stage then regenerates. So the reviewer was refusing
-    papers over a draft the pipeline discards. Removing that draft and asking again lets the reviewer
-    judge the artifact that actually survives.
+    Purely a host predicate against the run's own clock — no prose parsing, no inference about what
+    the right date would be. `20-shaw-miyawaki-2024` carried ``publication_date: '3000-11-30'`` in
+    the published climate demo while its own evidence span reads "Published online: 30 November
+    2023"; that was the reviewer's ONLY finding, against a rationale recording that the question,
+    the dataset cue, all fifteen key citations and the trace were faithful.
+    """
+    return case.publication_date is not None and case.publication_date > datetime.now(UTC).date()
+
+
+def _redraft_for_fidelity_revise(case: PaperCase, outcome: GateOutcome) -> tuple[PaperCase, str]:
+    """The honest, deterministic repairs available at this gate. No model call, no invention.
+
+    (1) Drop the inline trace draft. Measured on the 2026-07-29 climate leg: 6 of 8 `revise`
+    verdicts failed exactly ``supports_formation_trace``, on a field that
+    ``promote_paper_case_to_ai_reviewed`` sets to None moments later and that the dedicated trace
+    stage then regenerates. So the reviewer was refusing papers over a draft the pipeline discards.
+
+    (2) Clear an impossible ``publication_date``. The field is ``date | None`` and is not one of
+    ``missing_required_scientific_fields``, so clearing it costs the case nothing it needs to hold
+    reviewed authority. The host deliberately does NOT try to derive the right date from the paper's
+    evidence spans: reading "Published online: 30 November 2023" out of prose is inference, and this
+    gate does not infer. It removes a claim it can prove no source supports and asks again.
 
     This is host-side and deterministic: no model call, no prompt, no new construction seam. It does
     not overrule the reviewer — the re-review is a real, independent second verdict, and an accept
-    earned there is promoted through the unchanged fail-closed path. A `revise` naming anything other
-    than the trace has no deterministic repair here and is left alone, which keeps the round honest
-    rather than performative.
+    earned there is promoted through the unchanged fail-closed path. A `revise` naming anything else
+    still has no repair here and the case is returned untouched, which
+    ``run_gate_with_revise_loop`` now detects instead of paying for an identical second review.
     """
-    if case.formation_trace is None:
-        return case, ""
-    if _FORMATION_TRACE_CRITERION not in _failed_criteria(outcome):
-        return case, ""
-    revised = case.model_copy(deep=True)
-    revised.formation_trace = None
-    return revised, (
-        "Bounded fidelity revision round 1: dropped the inline formation_trace draft the review "
-        f"faulted under {_FORMATION_TRACE_CRITERION}; the accepted path nulls that field and the "
-        "trace stage drafts a fresh one, so the re-review judges the surviving case."
-    )
+    revised = case
+    notes: list[str] = []
+    if revised.formation_trace is not None and _FORMATION_TRACE_CRITERION in _failed_criteria(
+        outcome
+    ):
+        revised = revised.model_copy(deep=True)
+        revised.formation_trace = None
+        notes.append(
+            "Bounded fidelity revision round 1: dropped the inline formation_trace draft the review "
+            f"faulted under {_FORMATION_TRACE_CRITERION}; the accepted path nulls that field and the "
+            "trace stage drafts a fresh one, so the re-review judges the surviving case."
+        )
+    impossible = revised.publication_date
+    if impossible is not None and _publication_date_is_impossible(revised):
+        revised = revised.model_copy(update={"publication_date": None}, deep=True)
+        notes.append(
+            f"Bounded fidelity revision round 1: cleared publication_date {impossible.isoformat()}, "
+            "which postdates this run and so cannot be supported by any source. The host does not "
+            "infer the correct date from the paper's prose; the field is optional and the case's "
+            "scientific content is untouched."
+        )
+    return revised, " ".join(notes)
 
 
 def _fidelity_with_one_bounded_revision(
@@ -187,7 +243,7 @@ def _fidelity_with_one_bounded_revision(
     fidelity_review: FidelityReview,
     batch_context: PaperBankBatchContext,
     revision_notes: dict[str, list[str]],
-) -> GateOutcome:
+) -> GateLoopResult:
     """Review the case; on `revise`, repair once deterministically and re-review.
 
     Before this, `revise` was operationally identical to `reject` — the gate excluded on ANY
@@ -224,7 +280,156 @@ def _fidelity_with_one_bounded_revision(
     if notes:
         revision_notes.setdefault(draft.paper_id, []).extend(notes)
     draft.paper_case = case
-    return loop.final_outcome
+    return loop
+
+
+def _redraft_for_citation_revise(
+    literature: PaperLocalLiteratureContext, outcome: GateOutcome
+) -> tuple[PaperLocalLiteratureContext, str]:
+    """Drop selected works whose participation the HOST itself can see is unevidenced.
+
+    The one repair available here without reading the reviewer's prose. A selection item that
+    carries no ``evidence_context_ids`` AND has no citation context of its own anywhere in the
+    packet asserts a rank and a role over nothing: the schema's own
+    ``central/supporting citation selection requires evidence context ids`` rule does not catch it,
+    because that rule only fires when contexts for the work exist. It is exactly what cost the
+    published climate demo ``18-thackeray-et-al-2022``, whose blocker reads that ``cw-1c5f62581c46``
+    is "selected with a supporting rank/role ... yet has no evidence_context_ids and no
+    corresponding citation_contexts entry anywhere in the input".
+
+    Deterministic and host-checkable: no author-year matching, no prose parsing, nothing invented.
+    The dropped item leaves the sidecar smaller and honest, and the re-review is a real independent
+    second verdict on it. Every other citation finding — a context attached to the wrong work, an
+    abstract-honesty mismatch — has no host repair and returns the literature untouched, which the
+    kernel now detects rather than paying for an identical second review.
+    """
+    selection = literature.importance_selection
+    if selection is None:
+        return literature, ""
+    if selection.selection_policy != CitationSelectionPolicy.EVIDENCE_DRIVEN:
+        # A legacy FIXED_COUNT selection is size-locked to its input: fewer than ten cited works
+        # must ALL be selected, and ten or more must select between ten and fifteen
+        # (`schemas/cited_literature.py:265-280`). Shrinking one is not the host's to do, so this
+        # repair is simply unavailable there and the kernel records that rather than producing an
+        # artifact that would die at promotion. The product selector emits EVIDENCE_DRIVEN.
+        return literature, ""
+    evidenced_work_ids = {context.cited_work_id for context in literature.citation_contexts}
+    unevidenced = [
+        item.cited_work_id
+        for item in selection.items
+        if not item.evidence_context_ids and item.cited_work_id not in evidenced_work_ids
+    ]
+    if not unevidenced:
+        return literature, ""
+    dropped = set(unevidenced)
+    kept = [item for item in selection.items if item.cited_work_id not in dropped]
+    if not kept:
+        # An evidence-driven selection must keep at least one work; a selection where NOTHING is
+        # evidenced is not a repair case, it is the reviewer's finding standing.
+        return literature, ""
+    # Ranks must stay contiguous from 1 (`cited_literature.py:254-256`). Renumbering the survivors
+    # in their existing order preserves the model's relative ordering exactly and invents nothing.
+    kept_items = [
+        item.model_copy(update={"rank": position}) for position, item in enumerate(kept, start=1)
+    ]
+    revised_selection = selection.model_copy(
+        update={
+            "items": kept_items,
+            # `selected_cited_work_ids` must match item order, not merely membership.
+            "selected_cited_work_ids": [item.cited_work_id for item in kept_items],
+            "selection_size_actual": len(kept_items),
+        },
+        deep=True,
+    )
+    revised = literature.model_copy(update={"importance_selection": revised_selection}, deep=True)
+    return revised, (
+        "Bounded citation revision round 1: dropped "
+        f"{len(unevidenced)} selected work(s) with no citation context anywhere in the packet "
+        f"({', '.join(sorted(dropped))}); their rank and role rested on nothing the reviewer or the "
+        "host could check. Surviving works keep their relative order and are renumbered from 1; no "
+        "other selection was touched."
+    )
+
+
+def _citation_with_one_bounded_revision(
+    draft: PaperCaseDraft,
+    *,
+    citation_review: CitationReview,
+    revision_notes: dict[str, list[str]],
+) -> GateLoopResult:
+    """Review the citation sidecar; on `revise`, repair once deterministically and re-review.
+
+    This gate had NO revise loop. A non-degradable `revise` excluded the whole paper with zero
+    rounds — 11 `citation_revise` exclusions across the live corpus, on eight distinct papers, every
+    one of them a paper whose reviewer wrote out why revision rather than rejection was the right
+    call. `citation_reject` is untouched and still drops the paper on sight.
+
+    Mutates ``draft.literature`` when a repair applies, so promotion binds to the artifact that was
+    actually re-reviewed; ``_sync_case_literature_link`` then re-binds the case's stored digest to
+    it on both the promoted and the unpromoted path.
+    """
+    assert draft.paper_case is not None and draft.literature is not None
+    paper_case = draft.paper_case
+    notes: list[str] = []
+
+    def _review(literature: PaperLocalLiteratureContext) -> GateOutcome:
+        return citation_review(paper_case, literature)
+
+    def _redraft(
+        literature: PaperLocalLiteratureContext, outcome: GateOutcome
+    ) -> PaperLocalLiteratureContext:
+        revised, note = _redraft_for_citation_revise(literature, outcome)
+        if note:
+            notes.append(note)
+        return revised
+
+    literature, loop = run_gate_with_revise_loop(
+        artifact=draft.literature,
+        review=_review,
+        redraft=_redraft,
+        max_revise_rounds=CITATION_MAX_REVISE_ROUNDS,
+    )
+    if notes:
+        revision_notes.setdefault(draft.paper_id, []).extend(notes)
+    draft.literature = literature
+    return loop
+
+
+def _revise_loop_exclusion(
+    *,
+    paper_id: str,
+    gate: str,
+    loop: GateLoopResult,
+) -> ExcludedPaper | None:
+    """The honest non-verdict terminal for a `revise` this gate could not clear, or None.
+
+    Names WHICH of the two happened, and carries a non-scientific class either way. Neither is the
+    reviewer's final judgement on the science: one is a budget that ran out, the other is a repair
+    the host does not have.
+    """
+    outcome = loop.final_outcome
+    if outcome.decision != GateDecision.REVISE:
+        return None
+    if loop.redraft_unavailable:
+        reason = f"{gate}_revise_no_repair_available"
+        lead = (
+            "the reviewer asked for a change this host has no deterministic repair for, so no "
+            "revision round was spent"
+        )
+    elif loop.budget_exhausted:
+        reason = f"{gate}_revise_budget_exhausted"
+        lead = "the bounded revision round ran and the reviewer still asked for changes"
+    else:
+        return None
+    detail = "; ".join(
+        [lead, outcome.rationale, *(f"still required: {ask}" for ask in outcome.required_changes)]
+    )
+    return ExcludedPaper(
+        paper_id=paper_id,
+        reason=reason,
+        detail=detail,
+        failure_class=_NON_SCIENTIFIC_EXCLUSION_CLASSES[reason],
+    )
 
 
 _LOCAL_AGENT_KINDS = frozenset(
@@ -345,7 +550,7 @@ def gate_paperbank(
     contained: dict[str, str] = {}
     revision_notes: dict[str, list[str]] = {}
 
-    def _review_one(draft: PaperCaseDraft) -> tuple[GateOutcome | None, GateOutcome | None]:
+    def _review_one(draft: PaperCaseDraft) -> tuple[GateLoopResult | None, GateLoopResult | None]:
         """One paper's gates, contained.
 
         Containment lives INSIDE this function on purpose: `list(pool.map(...))` re-raises at
@@ -372,7 +577,7 @@ def gate_paperbank(
             contained[draft.paper_id] = _contained_failure_detail(exc)
             return None, None
 
-    def _review_one_or_raise(draft: PaperCaseDraft) -> tuple[GateOutcome, GateOutcome | None]:
+    def _review_one_or_raise(draft: PaperCaseDraft) -> tuple[GateLoopResult, GateLoopResult | None]:
         assert draft.paper_case is not None and draft.literature is not None
         fidelity = _fidelity_with_one_bounded_revision(
             draft,
@@ -380,7 +585,7 @@ def gate_paperbank(
             batch_context=batch_context,
             revision_notes=revision_notes,
         )
-        if fidelity.decision != GateDecision.ACCEPT:
+        if fidelity.final_outcome.decision != GateDecision.ACCEPT:
             return fidelity, None
         # A paper with no key-citation selection (select_key_citations off, or zero cited works) has
         # nothing for the citation gate to review. Skip it honestly: the paper stands on its fidelity
@@ -388,7 +593,11 @@ def gate_paperbank(
         # citation-verified. A non-SELECTED terminal selection also has no reviewable selection.
         if not _has_reviewable_selection(draft.literature):
             return fidelity, None
-        return fidelity, citation_review(draft.paper_case, draft.literature)
+        return fidelity, _citation_with_one_bounded_revision(
+            draft,
+            citation_review=citation_review,
+            revision_notes=revision_notes,
+        )
 
     if max_workers <= 1 or len(canonical) <= 1:
         reviews = [_review_one(draft) for draft in canonical]
@@ -397,9 +606,9 @@ def gate_paperbank(
             reviews = list(pool.map(_review_one, canonical))
 
     accepted: list[AcceptedPaperCase] = []
-    for draft, (fidelity, citation) in zip(canonical, reviews, strict=True):
+    for draft, (fidelity_loop, citation_loop) in zip(canonical, reviews, strict=True):
         assert draft.paper_case is not None and draft.literature is not None
-        if fidelity is None:
+        if fidelity_loop is None:
             # Contained: this paper was never judged. Recorded as an infrastructure exclusion so it
             # can never be read as a scientific verdict on the paper.
             excluded.append(
@@ -411,22 +620,24 @@ def gate_paperbank(
                 )
             )
             continue
+        fidelity = fidelity_loop.final_outcome
+        citation = citation_loop.final_outcome if citation_loop is not None else None
         if fidelity.decision != GateDecision.ACCEPT:
-            # A `revise` that survived its one repaired re-review is reported as budget exhaustion,
-            # carrying what the reviewer still asked for. A bare `fidelity_revise` read as "nobody
-            # tried"; this says "we tried once and the reviewer still asked for these changes".
-            if fidelity.decision == GateDecision.REVISE:
-                reason = FIDELITY_REVISE_BUDGET_EXHAUSTED_REASON
-                detail = "; ".join(
-                    [
-                        fidelity.rationale,
-                        *(f"still required: {ask}" for ask in fidelity.required_changes),
-                    ]
+            # A `revise` the loop could not clear names WHICH of the two things happened and carries
+            # a non-scientific class; a reject / insufficient_evidence is the reviewer's own final
+            # verdict and keeps `failure_class=None`, which downstream reads as science.
+            non_verdict = _revise_loop_exclusion(
+                paper_id=draft.paper_id, gate="fidelity", loop=fidelity_loop
+            )
+            excluded.append(
+                non_verdict
+                if non_verdict is not None
+                else ExcludedPaper(
+                    paper_id=draft.paper_id,
+                    reason=f"fidelity_{fidelity.decision.value}",
+                    detail=fidelity.rationale,
                 )
-            else:
-                reason = f"fidelity_{fidelity.decision.value}"
-                detail = fidelity.rationale
-            excluded.append(ExcludedPaper(paper_id=draft.paper_id, reason=reason, detail=detail))
+            )
             continue
         citation_unpromoted = citation is None or (
             citation is not None and _citation_can_degrade_without_excluding_paper(citation)
@@ -436,8 +647,14 @@ def gate_paperbank(
             and citation.decision != GateDecision.ACCEPT
             and not citation_unpromoted
         ):
+            assert citation_loop is not None
+            non_verdict = _revise_loop_exclusion(
+                paper_id=draft.paper_id, gate="citation", loop=citation_loop
+            )
             excluded.append(
-                ExcludedPaper(
+                non_verdict
+                if non_verdict is not None
+                else ExcludedPaper(
                     paper_id=draft.paper_id,
                     reason=f"citation_{citation.decision.value}",
                     detail=citation.rationale,

@@ -14,7 +14,11 @@ from ...providers.models.base import StructuredModelProvider
 from ...schemas._r5_firewall import assert_proposal_safe_payload
 from ...schemas.gate_outcome import GateDecision, GateOutcome
 from ...schemas.inferred_research_scope import ResolvedResearchScope
-from ...schemas.scientific_context import TopicEvidenceBrief, TopicEvidenceBriefReviewStatus
+from ...schemas.scientific_context import (
+    TopicEvidenceBrief,
+    TopicEvidenceBriefReviewStatus,
+    TopicEvidenceClaimOrigin,
+)
 from .topic_evidence import (
     R5TopicEvidenceSourceTable,
     _TopicEvidenceBriefModelOutput,
@@ -174,6 +178,17 @@ def revise_topic_evidence_brief(
     revised = TopicEvidenceBrief.model_validate(
         {
             **generated.model_dump(mode="python"),
+            # ``origin`` is code-owned like every identity below it, and was the one that escaped.
+            # LOCAL_SUPPORTED and BOTH assert corroboration by the deterministic local lane, which
+            # builds its brief with ``claims=[]`` (topic_evidence.py:873) and whose only claim
+            # producer, ``_claim_from_record``, has no callers -- so that lane contributes nothing
+            # and cannot corroborate anything. First-pass synthesis already force-stamps
+            # GPT_SYNTHESIZED (topic_evidence.py:938); the reviser did not, which is why every
+            # ``both`` in the recorded corpus appears only from round-0001 onward.
+            "claims": [
+                claim.model_copy(update={"origin": TopicEvidenceClaimOrigin.GPT_SYNTHESIZED})
+                for claim in generated.claims
+            ],
             "questions_already_answered": projected_questions,
             "brief_id": brief.brief_id,
             "topic_terms": list(brief.topic_terms),

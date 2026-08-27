@@ -68,6 +68,44 @@ class ReviewAuthority(StrEnum):
     UNKNOWN = "unknown"
 
 
+class AutomatedReviewKind(StrEnum):
+    """Who actually performed an `AUTOMATED` review, which the authority alone does not say."""
+
+    INDEPENDENT_MODEL = "independent_model"
+    HOST_AUTHORIZATION = "host_authorization"
+    UNRESOLVED = "unresolved"
+
+
+def classify_automated_review(authority: ReviewAuthority, provider_id: str) -> AutomatedReviewKind:
+    """Separate a real independent review from a host authorization to render a dossier.
+
+    `ReviewAuthority.AUTOMATED` says who was ALLOWED to authorize a dossier — no human gate
+    required — and says nothing about whether an independent reviewer read it. Measured on the
+    2026-08-14 climate leg: all four scientific rejections were closed by
+    `provider_id: local:automated-review`, `model_id: deterministic-automated-review`, whose own
+    `decision_summary` reads "Automated review allows a development dossier only." Printing
+    "automated independent review" off the flag told readers a review had happened when none had.
+
+    **This lives here because it had two implementations and only one was repaired**, which is the
+    defect class this repository keeps paying for. `generic_family_dossier.py` was fixed on
+    2026-08-15 and `presentation/family_page.py` was not, so the next run would have published two
+    pages of the same family disagreeing about whether it was independently reviewed. Both now call
+    this; neither restates the rule.
+
+    An EMPTY `provider_id` is `UNRESOLVED`, not independent: the field defaults to `""`, and
+    `"".startswith("local:")` is False, so a naive port of the sibling's check would silently call
+    every unrecorded review independent.
+    """
+    if authority is not ReviewAuthority.AUTOMATED:
+        return AutomatedReviewKind.UNRESOLVED
+    identity = provider_id.strip()
+    if not identity:
+        return AutomatedReviewKind.UNRESOLVED
+    if identity.startswith("local:"):
+        return AutomatedReviewKind.HOST_AUTHORIZATION
+    return AutomatedReviewKind.INDEPENDENT_MODEL
+
+
 class MultiFamilyCoordinationMode(StrEnum):
     IMPORT_ONLY = "import_only"
     DRY_RUN_QUEUE = "dry_run_queue"

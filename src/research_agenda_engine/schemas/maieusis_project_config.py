@@ -291,13 +291,37 @@ class LiteratureConfig(BaseModel):
     openalex_email: str = ""
     # Live-readiness LR-C: the targeted OA fulltext-excerpt plus-on (strengthens evidence, never a gate).
     # Off when literature is off; off in demo (literature is force-disabled below).
-    fulltext_enrichment: bool = True
+    #
+    # DEFAULT FLIPPED TO FALSE on 2026-08-13. It defaulted true and was attempted on every leg, and
+    # it has never once succeeded: across the 24 legs on this machine that carry counts, 113 attempts
+    # produced 0 enriched records (per-attempt statuses: no_eligible_assertion 59, rights_rejected 41,
+    # http_error 9, media_type_rejected 4). The blocker is the rights-assertion supply, which is its
+    # own card; until that lands, topic evidence in this version is abstract-only and a knob that is
+    # on by default advertises a grounding the run does not have. Turning it back on is supported and
+    # costs a few HTTP calls; if it still enriches nothing, the stage receipt now says so in words.
+    fulltext_enrichment: bool = False
     # Opt-in paid literature source. Reuses the TopicSourceProfile taxonomy; the ELICIT key is NEVER in
     # config (it loads from runtime.env via os.getenv). `public` = free only (default); `auto` = HYBRID
     # iff ELICIT_API_KEY is present else PUBLIC (honest, no hard fail); `hybrid`/`elicit` = force (a
     # forced profile with no key fails closed in preflight). Default PUBLIC ⇒ a run with no knob spends
     # nothing on Elicit and behaves exactly as today.
     source_profile: TopicSourceProfile = TopicSourceProfile.PUBLIC
+    # The scholarly field this run's literature lives in, NAMED BY THE USER in the user's own words.
+    # It is never inferred from the topic terms and never defaulted to a discipline: a project that
+    # leaves it empty retrieves exactly what it retrieved before this field existed.
+    #
+    # Topic retrieval resolves it against OpenAlex's own twenty-six-field taxonomy by exact display
+    # name and, on a match, ANDs `primary_topic.field.id` onto the same works request -- a structural
+    # condition on the provider's own classification of a work, not a word filter. A name OpenAlex
+    # has no category for applies no filter and retrieves exactly as before.
+    #
+    # Which name to give is a measurable choice, and the wrong one is not obviously wrong: for the
+    # 2026-08-12 climate scope, `Environmental Science` returned on-topic atmospheric dynamics for
+    # all sixteen terms with a smallest pool of 20, while `Earth and Planetary Sciences` -- the name
+    # a human names first -- answered `weather regimes` with lithium-isotope weathering geochemistry
+    # and left `weather regime transitions` a pool of 6 against a lane that asks for 8. Preflight's
+    # `literature.topic_term_pools` check exists to make that discovery free instead of paid.
+    research_field: str = ""
 
 
 class NoveltyWebToolRateCard(StrEnum):

@@ -64,6 +64,14 @@ class ResolvedResearchScope(BaseModel):
 
     source_mode: ResearchScopeSourceMode
     terms: list[str] = Field(default_factory=list)
+    #: The names a paper REUSING this dataset would cite it by -- its release name, benchmark name,
+    #: consortium, or accession. Deliberately NOT in `terms`: the deriver prompt rejects instrument,
+    #: software and consortium names as scope terms because their literature is about the tool
+    #: rather than a question anyone argues over, and that rule is right. But the reviewer requires
+    #: source-backed evidence for the `dataset_resource_reuse` dimension, and no scope term is
+    #: allowed to carry the only vocabulary that finds it -- so the dimension had no retrieval path
+    #: at all and whatever reuse evidence appeared did so by luck. These terms feed that one lane.
+    dataset_identity_terms: list[str] = Field(default_factory=list)
     construct_families: list[str] = Field(default_factory=list)
     seed_question: str = ""
     inferred_scope: InferredResearchScope | None = None

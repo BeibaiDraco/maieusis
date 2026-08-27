@@ -10,9 +10,18 @@ maieusis --help
 maieusis check --project maieusis.yaml
 ```
 
-Preflight makes no paid model or coding-agent call. Fix every `FAIL` before
+Preflight launches no coding agent and runs no stage, but it does send one minimal request per configured provider — `max_tokens: 1`, a single full stop for content — because an API key is not a balance —
+so a `FAIL` naming a provider balance is a real billing failure, not a configuration one. Expect a
+fraction of a cent per provider. Fix every `FAIL` before
 running. A `WARN` does not always block the run, but it may lower the authority
 or completeness of the result.
+
+**`0.1.1` prints `Preflight OK — no paid calls made.` on success, and that line is wrong.** It
+predates the balance probe and it ships inside this release's wheel, so it cannot be corrected
+without rebuilding the bytes the release was qualified on — which would mean re-running the
+scientific legs to fix a sentence. It is corrected in the next release. This page is the accurate
+statement: the probe is real, it is one minimal request per provider, and it is the only spend
+`check` makes.
 
 ## `maieusis` is not found
 
@@ -28,7 +37,7 @@ maieusis --help
 If provider, MCP, or PDF imports are missing, reinstall the needed extras:
 
 ```bash
-python -m pip install "maieusis[openai,anthropic,mcp,pdf]==0.1.1"
+python -m pip install "maieusis[openai,anthropic,mcp,pdf]"
 ```
 
 Do not run from inside a different Maieusis source checkout unless that is the
@@ -37,8 +46,12 @@ installation you intend to test.
 ## `maieusis init` skipped a file
 
 `init` never overwrites an existing file. A `skip` message is expected when
-`maieusis.yaml`, `AGENTS.md`, `CLAUDE.md`, `PROJECT_LAYOUT.md`, or a Dataset
-Planner role file already exists.
+`maieusis.yaml`, `AGENTS.md`, `CLAUDE.md`, a Dataset Planner role file, or
+either host's `maieusis-setup/SKILL.md` already exists.
+
+`PROJECT_LAYOUT.md` is written outside that loop and prints nothing at all when
+it already exists — silence there is the same "left alone" outcome, not a
+missing step.
 
 Inspect the existing file before deciding whether to move it aside. Do not
 delete a project contract or configuration blindly.

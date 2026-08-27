@@ -45,13 +45,14 @@ from ...io import dump_data, load_data, load_model
 from ...provenance import semantic_hash, sha256_bytes, sha256_file, stable_hash
 from ...providers.models.base import VENDOR_DEFAULT
 from ...providers.models.policy import model_versions_accept
+from ...schemas.derived_dataset_scope import DATASET_SCOPE_DERIVER_PROMPT_VERSION
 from ...schemas.external_evidence import (
     ExternalEvidenceAttemptStatus,
     ExternalEvidenceBatchReceipt,
     LegacyExternalEvidenceDegradationReceipt,
     RetrievalOperation,
 )
-from ...schemas.front_half_authority import FrontHalfAuthorityCeiling
+from ...schemas.front_half_authority import FrontHalfAuthorityCeiling, FrontHalfCeilingReason
 from ...schemas.gate_outcome import PromotionReceipt
 from ...schemas.inferred_research_scope import ResolvedResearchScope
 from ...schemas.maieusis_project_config import MaieusisProjectConfig
@@ -115,6 +116,7 @@ from ..context.topic_evidence_revision import (
 from ..context.topic_evidence_terminal_inquiry import (
     TOPIC_EVIDENCE_TERMINAL_INQUIRY_PROMPT_VERSION,
 )
+from ..narrative_sources.narrative_revision import DATASET_NARRATIVE_REVISER_PROMPT_VERSION
 from ..paper_ingest.extraction import SOURCE_SPAN_PROMPT_VERSION
 from ..paper_ingest.paperbank_gate import AcceptedPaperCase, PaperBankGateResult, PaperCaseDraft
 from ..paper_patterns.citation_importance import (
@@ -126,6 +128,7 @@ from ..paper_patterns.pattern_revision import (
     PatternRevisionHistory,
 )
 from ..paper_patterns.trace_drafting import QUESTION_FORMATION_TRACE_DRAFTER_PROMPT_VERSION
+from ..retrieval.topic_source_selection import TOPIC_SOURCE_SELECTOR_PROMPT_VERSION
 from .run_layout import (
     RunPaths,
     assign_family_slugs,
@@ -155,8 +158,8 @@ STAGE_BACK_HALF = "back_half"
 # config and model routing do not. Otherwise an honest SCIENTIFIC_TERMINAL from old code is reusable
 # forever and a launch-blocker fix cannot take effect on resume. Bump the respective explicit
 # revision for every paper- or dataset-half semantic change that can alter products or disposition.
-PAPER_HALF_IMPLEMENTATION_VERSION = "paper_half/v7-terminal-cause"
-DATASET_HALF_IMPLEMENTATION_VERSION = "dataset_half/v6-terminal-cause-inquiry"
+PAPER_HALF_IMPLEMENTATION_VERSION = "paper_half/v9-identity-basis-and-round-labels"
+DATASET_HALF_IMPLEMENTATION_VERSION = "dataset_half/v10-accounted-narrowing"
 STAGE_C_IMPLEMENTATION_VERSION = "stage_c/v2-rights-safe-projection"
 STAGE_D_IMPLEMENTATION_VERSION = "stage_d/v2-n2-web-grounding"
 FRONT_LAYOUT_IMPLEMENTATION_VERSION = "front_layout/v2-novelty-admission-projection"
@@ -371,6 +374,12 @@ class DatasetHalfStageOutput(BaseModel):
     topic_revision_history: TopicEvidenceRevisionHistory | None = None
     lane_coverage: dict[str, int] = Field(default_factory=dict)
     source_count: int = 0
+    #: The candidate pool the kept sources were selected FROM. Carried here because only the stage
+    #: that ran the selector knows it, and a resume rewrites the reader's retrieval summary: without
+    #: this a resumed run would DOWNGRADE a summary that named the real pool to one that says the
+    #: pool was not recorded. Zero means genuinely unknown -- an injected table, or a run from
+    #: before this field existed -- and renders as "not recorded", never as the kept count.
+    retrieved_count: int = 0
     scope: ResolvedResearchScope
     fulltext_counts: dict[str, int] = Field(default_factory=dict)
     external_evidence_batch_receipt_path: str = ""
@@ -379,6 +388,14 @@ class DatasetHalfStageOutput(BaseModel):
     rights_degradation_receipt_digest: str = ""
     authority_ceiling: FrontHalfAuthorityCeiling = FrontHalfAuthorityCeiling.VERIFIED
     source_activity_path: str = ""
+    # Why the ceiling was applied.  The ceiling alone cannot distinguish a brief that never reached
+    # a reviewer from one that was reviewed and re-adjudicated and still found short, and every
+    # reader-facing surface that says "unreviewed" is wrong about the second.  Absent on runs that
+    # predate the field: consumers that need the distinction must fail closed on ``None``, never
+    # read it as "verified".
+    ceiling_reason: FrontHalfCeilingReason | None = None
+    ceiling_residual_dimensions: list[str] = Field(default_factory=list)
+    ceiling_reason_detail: str = ""
 
 
 # --- shared digest computation (single source of truth for receipt WRITE and resume READ) ----------
@@ -523,6 +540,15 @@ def stage_prompt_versions(
         return {
             "dataset_narrative_extraction": DATASET_NARRATIVE_EXTRACTOR_PROMPT_VERSION,
             "dataset_narrative_review": DATASET_NARRATIVE_FIDELITY_REVIEWER_PROMPT_VERSION,
+            # The bounded narrative repair loop is a real generator on this stage, so an upgrade to
+            # its prompt must invalidate a resume exactly as the topic reviser's does. The dataset
+            # half is not cross-run importable, so this key moves resume reuse only.
+            "dataset_narrative_revision": DATASET_NARRATIVE_REVISER_PROMPT_VERSION,
+            # The scope deriver decides which literature this stage retrieves at all, so a prompt
+            # upgrade must invalidate a resume: reusing a dataset half derived under an older
+            # deriver would silently keep a corpus the current product would not have searched.
+            "dataset_scope_derivation": DATASET_SCOPE_DERIVER_PROMPT_VERSION,
+            "topic_source_selection": TOPIC_SOURCE_SELECTOR_PROMPT_VERSION,
             "topic_field_state_synthesis": TOPIC_FIELD_STATE_SYNTHESIZER_PROMPT_VERSION,
             "topic_evidence_synthesis": TOPIC_EVIDENCE_BRIEF_SYNTHESIZER_PROMPT_VERSION,
             "topic_evidence_revision": TOPIC_EVIDENCE_BRIEF_REVISER_PROMPT_VERSION,
@@ -552,12 +578,14 @@ def _dataset_half_config_slice(
     arbitrary config mismatch as eligible for a no-call migration.
     """
 
+    literature = config.literature.model_dump(mode="json")
+    _drop_unnamed_research_field(literature)
     payload: dict[str, object] = {
         "mode": config.mode.value,
         "dataset_id": config.dataset.seed.dataset_id,
         "link": config.dataset.seed.link,
         "docs": [str(path) for path in config.dataset.seed.docs],
-        "literature": config.literature.model_dump(mode="json"),
+        "literature": literature,
         "research_intent": config.research_intent.model_dump(mode="json"),
     }
     if include_rights_implementation_version:
@@ -576,6 +604,25 @@ def legacy_dataset_half_config_version(config: MaieusisProjectConfig) -> str:
     return stable_hash(
         _dataset_half_config_slice(config, include_rights_implementation_version=False)
     )
+
+
+def _drop_unnamed_research_field(dumped: object) -> None:
+    """Strip an unnamed research field from a dumped LiteratureConfig.
+
+    A run that names no field sends the same requests it sent before the field existed, so its
+    dataset half is unchanged and its receipt must stay reusable -- the same rule
+    ``_drop_vendor_default_reasoning`` enforces for reasoning depth, and for the same reason: this
+    slice dumps ``config.literature`` wholesale, so a new key at its default would otherwise move
+    the dataset-half config hash of every existing run and make a resume re-pay narrative fusion,
+    retrieval, synthesis, and review to arrive at identical bytes.
+
+    A field that WAS named is scientific configuration and stays in the digest. That is correct: it
+    changes what literature the run acquires.
+    """
+    if not isinstance(dumped, dict):
+        return
+    if not str(dumped.get("research_field") or "").strip():
+        dumped.pop("research_field", None)
 
 
 def _drop_vendor_default_reasoning(dumped: object) -> None:
@@ -1953,6 +2000,48 @@ def acquire_run_lock(run_root: Path, *, command: str) -> Iterator[None]:
 
 
 # --- family completion discovery -------------------------------------------------------------
+def shortlist_context_digest(manifest: QuestionFamilyShortlistManifest) -> str:
+    """The shared proposal context every family in a batch was planned against.
+
+    Deliberately NOT a hash of the whole manifest. Which siblings were shortlisted beside a family
+    does not change what that family's plan means, and treating it as if it did is what made a
+    transient connection drop unrecoverable on 2026-08-14: rescuing one family would have
+    invalidated four accepted plans and a reject that were already earned and paid for.
+    """
+
+    return stable_hash(
+        {
+            "shortlist_id": manifest.shortlist_id,
+            "pack_id": manifest.pack_id,
+            "context_id": manifest.context_id,
+            "context_digest": manifest.context_digest,
+            "authority_ceiling": str(getattr(manifest.authority_ceiling, "value", "")),
+        }
+    )
+
+
+def shortlist_entry_digest(manifest: QuestionFamilyShortlistManifest, family_id: str) -> str:
+    """A digest over ONE family's shortlist entry, or its bucket when it is not shortlisted.
+
+    A family whose own entry changed must still lose its terminal — the narrower binding is not a
+    free pass. A family that has no entry (it sits in `run_incomplete`, say) digests its bucket, so
+    moving between buckets invalidates it exactly as a content change would.
+    """
+
+    for shortlisted in manifest.shortlisted:
+        if shortlisted.family.question_family_id == family_id:
+            return stable_hash(shortlisted.model_dump(mode="json"))
+    for bucket, ids in (
+        ("rejected", manifest.rejected_family_ids),
+        ("needs_revision", manifest.needs_revision_family_ids),
+        ("deferred", manifest.deferred_family_ids),
+        ("run_incomplete", manifest.run_incomplete_family_ids),
+    ):
+        if family_id in ids:
+            return stable_hash({"bucket": bucket, "question_family_id": family_id})
+    return stable_hash({"bucket": "absent", "question_family_id": family_id})
+
+
 def family_slug_map(manifest: QuestionFamilyShortlistManifest) -> dict[str, str]:
     """The DETERMINISTIC family-id → layout-slug map (sorted ids; identical at write and resume)."""
     all_ids = sorted(
@@ -1975,13 +2064,23 @@ def discover_family_completions(
     a matching digest (mismatch/missing artifact behind a record → corruption, fail closed).
     A missing record or a non-terminal status → RUN (clean + recreate).
     """
-    shortlist_digest = semantic_hash(manifest)
+    context_digest = shortlist_context_digest(manifest)
     slugs = family_slug_map(manifest)
     completed: list[FamilyCompletionRecord] = []
     decisions: list[FamilyResumeDecision] = []
-    for shortlisted in manifest.shortlisted:
-        family_id = shortlisted.family.question_family_id
+    # The `run_incomplete` bucket is visited too. It holds families whose shortlist review was
+    # stopped by an infrastructure fault -- nothing scientific was decided about them -- and before
+    # 2026-08-14 this loop read `manifest.shortlisted` alone, so they were unreachable by any resume
+    # and one dropped connection cost a family permanently. They have no completion record, so they
+    # fall through to RECORD_MISSING below and are re-reviewed.
+    family_ids = [sf.family.question_family_id for sf in manifest.shortlisted] + [
+        family_id
+        for family_id in manifest.run_incomplete_family_ids
+        if family_id not in {sf.family.question_family_id for sf in manifest.shortlisted}
+    ]
+    for family_id in family_ids:
         slug = slugs[family_id]
+        entry_digest = shortlist_entry_digest(manifest, family_id)
         record_path = paths.family_completion(slug)
         if not record_path.is_file():
             decisions.append(
@@ -1993,8 +2092,28 @@ def discover_family_completions(
                 )
             )
             continue
-        record = load_model(record_path, FamilyCompletionRecord)
-        if record.shortlist_digest != shortlist_digest:
+        try:
+            record = load_model(record_path, FamilyCompletionRecord)
+        except (OSError, ValueError, ValidationError, YAMLError):
+            # A record this reader cannot parse is not a reusable terminal, and it must not stop the
+            # resume either. Splitting `shortlist_digest` into a context digest and an entry digest
+            # made every record written before that change unreadable, and without this branch the
+            # first resume over such a run died inside `load_model` instead of re-running the
+            # family. Caught against a real leg's artifacts; the unit fixtures all carried new
+            # records and saw nothing.
+            decisions.append(
+                FamilyResumeDecision(
+                    question_family_id=family_id,
+                    slug=slug,
+                    decision=StageResumeDecisionKind.RUN,
+                    reason=FamilyResumeReason.RECORD_MISSING,
+                )
+            )
+            continue
+        if (
+            record.shortlist_context_digest != context_digest
+            or record.shortlist_entry_digest != entry_digest
+        ):
             decisions.append(
                 FamilyResumeDecision(
                     question_family_id=family_id,
@@ -2060,12 +2179,17 @@ def inspect_persisted_family_processing(
     consistent with the discovery predicate without relabeling warnings as accepted plans.
     """
 
-    shortlist_digest = semantic_hash(manifest)
+    context_digest = shortlist_context_digest(manifest)
     slugs = family_slug_map(manifest)
     outcomes: list[FamilyRunOutcome] = []
     infrastructure_incomplete = False
-    for shortlisted in manifest.shortlisted:
-        family_id = shortlisted.family.question_family_id
+    # `run_incomplete` families are counted here too: a family the shortlist gate could not review
+    # is precisely an infrastructure-incomplete run, and reading only `shortlisted` let the
+    # finalizer miss the one family that made the run incomplete in the first place.
+    shortlisted_ids = {sf.family.question_family_id for sf in manifest.shortlisted}
+    for family_id in [sf.family.question_family_id for sf in manifest.shortlisted] + [
+        fid for fid in manifest.run_incomplete_family_ids if fid not in shortlisted_ids
+    ]:
         record_path = paths.family_completion(slugs[family_id])
         if not record_path.is_file():
             infrastructure_incomplete = True
@@ -2075,7 +2199,9 @@ def inspect_persisted_family_processing(
         except (OSError, ValueError, ValidationError, YAMLError):
             infrastructure_incomplete = True
             continue
-        if record.shortlist_digest != shortlist_digest:
+        if record.shortlist_context_digest != context_digest or (
+            record.shortlist_entry_digest != shortlist_entry_digest(manifest, family_id)
+        ):
             infrastructure_incomplete = True
             continue
         outcome = record.family_run_outcome
@@ -3188,6 +3314,9 @@ def regenerate_summary_from_disk(
         outcomes,
         development_surrogate=development_surrogate,
         authority_ceiling=manifest.authority_ceiling,
+        # A resumed run must render the same banner a fresh run does. The manifest carries the
+        # ceiling but not its reason; the dataset half already loaded above carries the reason.
+        ceiling_reason=dataset_out.ceiling_reason,
         evidence_basis_line=summary_evidence_basis_line(abstract_only, len(planning_family_ids)),
         resume_note=resume_note,
     )

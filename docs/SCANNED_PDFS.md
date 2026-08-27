@@ -43,9 +43,14 @@ page_map:
   # ... one entry per page
 ```
 
-Every field is required. `page_map` must cover every page; when OCR preserves page order, as it
-normally does, the mapping is one-to-one and easy to generate in a loop. If the page counts differ,
-map the pages that correspond and leave out the ones that do not.
+Every field is required. `page_map` must cover **every page of the derivative, exactly once** —
+that is the rule the validator enforces, and a map that omits one is refused, which skips the paper
+rather than ingesting it partially. When OCR preserves page order, as it normally does, the mapping
+is one-to-one and easy to generate in a loop.
+
+If the page counts differ, every derived page still needs an entry. Point the ones with no
+counterpart at the original page they came closest to rather than leaving them out; an original page
+that produced no derived page simply goes unmentioned, which is allowed.
 
 Both checksums are plain SHA-256 of the file bytes — `shasum -a 256 scan.pdf` on macOS, or
 `sha256sum scan.pdf` on Linux.

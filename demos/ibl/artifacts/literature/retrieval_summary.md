@@ -1,11 +1,13 @@
 # Literature retrieval
 
-- Query terms: neural population geometry, dynamical systems models, neural dynamics, neural population code, neural co-variability, neural manifolds, representational geometry, neural circuit models
-- Sources retrieved: 20
+- Query terms: noise correlations, perceptual decision-making, evidence accumulation, sensory evidence, neural decision variables, choice selectivity, movement-related activity, response time variability, neural population dynamics, representational geometry, mixed selectivity, distributed representations, brain-wide neural activity, inter-laboratory variability, behavioral reproducibility, spike sorting
+- Candidate sources retrieved: 200
+- Sources kept for review: 51
 
 ## Retrieval lineage
 
-- scope_term_acquisition: 20 source(s)
+- dataset_resource_reuse: 6 source(s)
+- scope_term_acquisition: 45 source(s)
 
 ## If this looks wrong
 

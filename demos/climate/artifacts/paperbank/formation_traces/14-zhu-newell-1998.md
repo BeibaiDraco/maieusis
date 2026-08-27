@@ -4,25 +4,26 @@
 
 ## Starting background
 
-- Conventional atmospheric moisture-transport analyses partition fluxes into time-mean and zonal-mean flows, stationary eddies, and transient perturbations, but this resolution can smooth filamentary middle-latitude structures and obscure their relation to storm tracks and other transient mechanisms.
-- Prior work cited by the source paper had characterized tropospheric moisture transport as filamentary atmospheric rivers and suggested that a small number of such structures could carry a large fraction of global meridional transport.
+- Prior work cited in the source paper characterized tropospheric moisture transport as filamentary atmospheric rivers and suggested that a small number of such structures could carry a large share of global meridional transport.
+- The conventional decomposition into time and zonal means, stationary eddies, and transient perturbations provides aggregate components but can smooth or obscure the spatially concentrated, transient structures associated with moisture transport and storm tracks.
+- The source paper places atmospheric rivers in a broader synoptic context in which comparable filamentary structures are also termed conveyor belts.
 
 ## Unresolved gap
 
-The provided evidence supports an unresolved measurement and interpretation gap: conventional mean/transient and eddy decompositions did not adequately quantify how much moisture transport is carried by filamentary river structures, how spatially concentrated that transport is, or how those structures relate to cyclonic disturbances and broader flows.
+The provided evidence supports a gap between the aggregate Reynolds-type decomposition and the filamentary organization visible in daily moisture-flux fields. It remained unclear how much meridional transport was concentrated in atmospheric rivers rather than broad fields, how this concentration related to storm tracks and cyclonic disturbances, and whether conventional transient components adequately represented those moving structures.
 
 ## Dataset opportunity
 
-The ECMWF gridpoint data provide spatially resolved wind and humidity fields sampled daily at multiple tropospheric pressure levels across several seasons and years, making vertically integrated, geographically localized moisture-flux structures observable.
+The study had spatially resolved, twice-daily ECMWF wind and humidity fields at multiple tropospheric pressure levels, allowing moisture-flux vectors to be identified at gridpoints, vertically integrated, and summarized along latitude circles.
 
-Because the fields preserve spatial structure, the authors could compare high-magnitude filamentary fluxes with residual broad fluxes along latitude circles, quantify their transport and longitudinal coverage, and examine their correspondence with storm tracks and cyclonic disturbances rather than treating them only as components of a temporal or zonal average.
+Because the ECMWF fields preserve spatial structure and day-to-day variation, the paper could sort fluxes along each latitude according to a threshold related to the latitude-specific mean and compare high-magnitude filamentary river fluxes with the residual broad fluxes and conventional transport components. This made it possible to quantify both transport contribution and longitudinal concentration while examining correspondence with storms and fronts.
 
 ## Resulting question
 
-Can a structure-based partition of vertically integrated moisture fluxes isolate filamentary atmospheric-river fluxes from residual broad fluxes, and thereby describe their magnitude, spatial concentration, seasonal behavior, and relationship to storm tracks and cyclonic disturbances more informatively than the conventional mean/transient decomposition?
+Can a filament-sensitive partition of vertically integrated atmospheric moisture fluxes represent atmospheric-river structures more faithfully than the conventional mean, stationary-eddy, and transient-perturbation decomposition, and what magnitude and fraction of meridional transport do rivers carry relative to broad fluxes across extratropical and tropical regions?
 
 ## Scientific consequence
 
-If rivers account for a substantial share of meridional transport while occupying limited longitudinal coverage, then conventional decompositions may conceal an important concentrated transport mechanism and may reassign physically relevant transient features to mean or broad components. If their contribution is small or weakly related to circulation disturbances, the conventional accounting would remain more adequate for the quantities examined. Either outcome informs how atmospheric moisture transport and its relation to cyclonic development should be represented.
+If rivers carry most extratropical meridional transport while occupying a small longitudinal fraction, then transport is physically concentrated in filamentary moving systems and conventional transient components may underrepresent their contribution and geographic organization. If river contributions are small or broadly distributed, the conventional aggregate view would remain more adequate, and the proposed partition would have less explanatory value. Differences between extratropical and tropical regions would also bear on whether the same disturbance-based account applies across atmospheric regimes.
 
-The question is scientifically valuable because it tests whether a physically recognizable spatial organization of transport provides a more informative description than a generic statistical decomposition. It links global moisture accounting to localized structures, storm-track dynamics, and possible moisture-flux convergence, offering a reusable example of how a dataset can support a new construct-level interpretation of an established physical process.
+The question is scientifically valuable because it tests whether a physically recognizable spatial organization of moisture transport is lost when fluxes are summarized only by temporal and zonal averages. It links a measurable atmospheric structure to the organization of global transport and provides a reusable example of revising an analysis representation when an established decomposition obscures the phenomena of interest.

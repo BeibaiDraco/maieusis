@@ -23,7 +23,12 @@ from pydantic import BaseModel
 
 from ...schemas.analysis_plan import AnalysisPlan
 from ...schemas.front_half_authority import FrontHalfAuthorityCeiling
-from ...schemas.multi_family_dossier import FamilyDossierStatus, ReviewAuthority
+from ...schemas.multi_family_dossier import (
+    AutomatedReviewKind,
+    FamilyDossierStatus,
+    ReviewAuthority,
+    classify_automated_review,
+)
 from ...schemas.planning_dialogue import (
     BranchDecisionKind,
     FamilyVariantPlanningEntry,
@@ -42,6 +47,7 @@ from ...schemas.run_outcome import (
     ReviewAxis,
     ShortlistAxis,
 )
+from .privacy import is_identifier_shaped
 
 
 class FamilyDetailedPageError(ValueError):
@@ -348,10 +354,19 @@ def render_family_detailed_page(
                     f"- {len(evidence) - 3} additional typed inspection statement(s) remain in "
                     "the complete planning record."
                 )
-        else:
+        elif inspection_evidence:
+            # A page may not assert an absence it did not verify. "None was available" conflated two
+            # different facts -- this family retained none, versus none of what it retained is in
+            # scope for this variant -- and for nine families it was simply false, because the
+            # loader discovered evidence by filename substring and matched none of their files.
+            # Now the loader accounts for the whole import manifest, so this branch can say which
+            # of the two states actually holds, and both statements are counts.
             lines.append(
-                "- No safely resolved, typed inspection statement was available for this view."
+                f"- None of the {len(inspection_evidence)} typed inspection statement(s) retained "
+                "for this family are in scope for this variant."
             )
+        else:
+            lines.append("- No typed inspection statement was retained for this family.")
         if not accepted_family:
             lines.append("- These retained inspection notes do not create accepted-plan authority.")
         lines.append("")
@@ -468,7 +483,17 @@ def validate_family_detailed_page(
     for pattern, label in checks:
         if pattern.search(markdown):
             raise FamilyDetailedPagePrivacyError(f"family detailed page contains forbidden {label}")
-    if any(token and token in markdown for token in forbidden_tokens):
+    # The SAME shape test the redactor uses, and it has to be: they read one token set, so a token
+    # the redactor is told to leave alone must not be one this refuses the page over. Splitting them
+    # was measured on the 2026-08-14 NLB leg and it is worse than either half alone -- the redactor
+    # skipped the ordinary word `subjects`, the validator still found it, and three reading guides
+    # were lost entirely instead of merely losing a word.
+    leaked = [
+        token
+        for token in forbidden_tokens
+        if token and is_identifier_shaped(token) and token in markdown
+    ]
+    if leaked:
         raise FamilyDetailedPagePrivacyError(
             "family detailed page contains forbidden internal identity value"
         )
@@ -539,10 +564,22 @@ def _validate_source_bindings(
             getattr(message, key) != value for key, value in expected_message.items()
         ):
             raise FamilyDetailedPageError(f"{label} identity mismatch")
-        if message is not None and [item.variant_id for item in message.variant_outcomes] != (
-            source_variant_ids
-        ):
-            raise FamilyDetailedPageError(f"{label} variant order or coverage mismatch")
+        # COVERAGE is the invariant; ORDER is not. A variant's identity is its id, never its
+        # position in a list an agent happened to return. Requiring positional equality cost a whole
+        # reading guide on the 2026-08-14 NLB leg: the family listed
+        # `regional-geometry, regional-dynamics` and the plan draft and both reviews listed the same
+        # two the other way round, so the page was discarded over an ordering with no meaning.
+        #
+        # It also produced the reader-facing defect that made the page wrong even when it rendered:
+        # sections keyed off the family order and sections keyed off the draft order both said
+        # "Variant 1", meaning different variants, so a reader cross-referencing them concluded the
+        # opposite branch had been refused. Rendering below reads outcomes by id, so one order wins.
+        if message is not None:
+            message_variant_ids = [item.variant_id for item in message.variant_outcomes]
+            if sorted(message_variant_ids) != sorted(source_variant_ids):
+                raise FamilyDetailedPageError(f"{label} variant coverage mismatch")
+            if len(set(message_variant_ids)) != len(message_variant_ids):
+                raise FamilyDetailedPageError(f"{label} repeats a variant")
 
     for evidence in inspection_evidence:
         if (
@@ -579,7 +616,11 @@ def _require_reviewed_plan_sources(
         ("Owner", owner_review.variant_outcomes),
         ("independent", independent_review.variant_outcomes),
     ):
-        if [item.variant_id for item in entries] != expected:
+        # Coverage, not order — the same rule as the identity check above, and it has to be stated
+        # twice because the accepted-family path re-checks what that one already checked. Fixing
+        # only the first left this one to discard the same page for the same meaningless reason.
+        entry_ids = [item.variant_id for item in entries]
+        if sorted(entry_ids) != sorted(expected) or len(set(entry_ids)) != len(entry_ids):
             raise FamilyDetailedPageError(f"accepted family {label} variant coverage mismatch")
     plan_decisions = {item.variant_id: item.decision for item in plan_draft.variant_outcomes}
     for label, entries in (
@@ -664,9 +705,19 @@ def _authority_label(
     if disposition == FamilyDetailedDisposition.INTEGRITY_TERMINAL:
         return "No promoted scientific authority"
     authority = completion.dossier_record.human_review_authority
+    # `AUTOMATED` alone does not say a reviewer read this — see `classify_automated_review`. The
+    # sibling renderer in `services/dossier/generic_family_dossier.py` was repaired for exactly this
+    # and this one was not, so a family could be published twice with two different answers.
+    automated = {
+        AutomatedReviewKind.INDEPENDENT_MODEL: "Automated independent review, planning only",
+        AutomatedReviewKind.HOST_AUTHORIZATION: (
+            "Automated host authorization, planning only; no independent review was recorded"
+        ),
+        AutomatedReviewKind.UNRESOLVED: "Provisional; review authority unresolved",
+    }[classify_automated_review(authority, completion.dossier_record.provider_id)]
     label = {
         ReviewAuthority.REAL_HUMAN_EXPERT: "Human reviewed, planning only",
-        ReviewAuthority.AUTOMATED: "Automated independent review, planning only",
+        ReviewAuthority.AUTOMATED: automated,
         ReviewAuthority.DEVELOPMENT_MODEL_SURROGATE: (
             "Development-model surrogate; not serious-use acceptance"
         ),
@@ -1077,16 +1128,41 @@ def _variant_decision_text(decision: BranchDecisionKind) -> str:
     }[decision]
 
 
+def _spell_out_internal_field(match: re.Match[str]) -> str:
+    """Rewrite only the SUFFIX of a matched internal field name.
+
+    `str.replace("id", "identifier")` rewrites every occurrence of the substring, not the suffix
+    the match is about, and four of this pattern's twenty-two names carry `id` inside their stem:
+    measured 2026-08-18, `provider_id` published as `providentifierer identifier` and
+    `evidence_digest` as `evidentifierence digest`. Both stems are ordinary words a planner writes
+    about provenance, so the corruption reaches the reader on exactly the sentences this
+    normalisation exists to keep.
+    """
+
+    stem, _, suffix = match.group(0).rpartition("_")
+    spelled = "identifier" if suffix.lower() == "id" else suffix
+    return f"{stem.replace('_', ' ')} {spelled}"
+
+
 def _public_text(value: object, *, field: str) -> str:
     text = " ".join(str(value).split()).strip()
     if not text:
         raise FamilyDetailedPageError(f"{field} is empty")
-    # Dataset schemas legitimately use ``event_id`` as a public join-key column. The private
-    # identity boundary below protects run-event provenance, not that scientific schema fact.
-    # Normalize the one typed evidence surface where the homonym is useful to a reader; every
-    # other occurrence remains fail-closed.
-    if "evidence" in field:
-        text = re.sub(r"\bevent_id\b", "event identifier", text, flags=re.IGNORECASE)
+    # Dataset schemas legitimately use these names as public columns, and the private identity
+    # boundary below protects run provenance, not that scientific schema fact. The carve-out used
+    # to be `event_id` alone and only inside evidence fields, which left the rest of the family
+    # fail-closed on prose the planner had every reason to write.
+    #
+    # Measured on the 2026-08-14 NLB leg: the dataset narrative reads "a single subject (subject_id
+    # Jenkins), single scaled session (session_id small)". `session_id` raises
+    # `FamilyDetailedPagePrivacyError`, `materialize.py` swallows it as page isolation, and the
+    # family's ENTIRE reading guide is dropped. It survived that run only by ranking outside the
+    # rendered top three.
+    #
+    # Normalising the whole family in every field removes the machine-readable field NAME and keeps
+    # the sentence. It weakens nothing: `_INTERNAL_VALUE` below still refuses an actual identifier
+    # value such as `owner-session-052a081a167b`, which is what a leak looks like.
+    text = _INTERNAL_FIELD.sub(_spell_out_internal_field, text)
     for pattern, label in (
         (_ABSOLUTE_POSIX_PATH, "local absolute path"),
         (_ABSOLUTE_WINDOWS_PATH, "local absolute path"),
@@ -1098,16 +1174,29 @@ def _public_text(value: object, *, field: str) -> str:
     ):
         if pattern.search(text):
             raise FamilyDetailedPagePrivacyError(f"{field} contains forbidden {label}")
+    # Neutralise Markdown and HTML meaning WITHOUT destroying scientific notation. Substituting a
+    # different character does both, and this function did it twice:
+    #   `<` -> `(` published `move_onset ) tau` where the planner wrote `move_onset > tau`;
+    #   `[` -> `(` published the OPEN interval `(go_cue, go_cue + W)` where `dossier.md`, rendered
+    #   by the sibling renderer, published the CLOSED interval `[go_cue, go_cue + W]` — two public
+    #   pages of one family stating different mathematics.
+    # Escaping and HTML entities remove the syntax and keep the sentence, which is what
+    # `context_pages.py:1033` already does for the same characters.
     return (
-        text.replace("[", "(")
-        .replace("]", ")")
-        .replace("<", "(")
-        .replace(">", ")")
-        .replace("`", "'")
+        text.replace("\\", "\\\\")
+        .replace("[", "\\[")
+        .replace("]", "\\]")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace("`", "\\`")
     )
 
 
-_REDACTED_INTERNAL_ID = "[internal id]"
+#: Parentheses, not brackets. `[internal id]` immediately before a `(` composes into
+#: `[internal id](…)` — a syntactically valid Markdown link — and `validate_family_detailed_page`
+#: requires the page's link list to equal exactly `[dossier_href]`, so the whole reading guide is
+#: discarded over a marker that was supposed to keep the sentence readable.
+_REDACTED_INTERNAL_ID = "(internal id)"
 
 
 def _redact_internal_tokens(markdown: str, forbidden_tokens: set[str]) -> str:
@@ -1124,6 +1213,16 @@ def _redact_internal_tokens(markdown: str, forbidden_tokens: set[str]) -> str:
     """
 
     for token in sorted((item for item in forbidden_tokens if item), key=len, reverse=True):
+        if not is_identifier_shaped(token):
+            # A token that reads as an ordinary word is not an identifier a reader could act on,
+            # and replacing it eats prose. Measured on the 2026-08-14 NLB leg: the dataset
+            # narrative carries a scale fact whose `scale_fact_id` is literally `subjects`, the
+            # collector took it because the field name ends in `_id`, and every occurrence of the
+            # English word vanished from the reading guides -- including "inference is conditional
+            # on this one session and does not generalize across subjects", which is the single
+            # most important scope caveat those pages carry. The word appeared zero times in any
+            # published detailed page.
+            continue
         if token in markdown:
             markdown = markdown.replace(token, _REDACTED_INTERNAL_ID)
     return markdown
