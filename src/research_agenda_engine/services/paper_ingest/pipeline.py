@@ -575,6 +575,12 @@ class PaperIngestPipeline:
             source_pdf=parsed.source_pdf,
             source_sha256=parsed.source_sha256,
         )
+        # The identity BASIS is what the paper's own bytes supplied, so it must be read before the
+        # loop: `query` is rebound each iteration with `doi=query.doi or record.identifiers.doi`, so
+        # testing `query.doi` afterwards asks whether any PROVIDER found a DOI, which is a different
+        # question and the opposite of the risk. Measured: the label fired on 0 of 71 merged records
+        # across four legs while 25 of them entered this loop with no front-matter DOI at all.
+        seed_doi = query.doi
         records: list[ExternalPaperRecord] = []
         warnings: list[str] = []
         for provider in self.lookup_providers:
@@ -600,7 +606,7 @@ class PaperIngestPipeline:
             merged.warnings.extend(
                 f"title_candidate_rejected_{reason}" for reason in title_candidate.rejections
             )
-        elif not query.doi:
+        elif not seed_doi:
             # The whole identity rests on a page-1 line, and every provider writes
             # `title=<response> or query.title` while the Null provider stamps the query straight
             # through -- so a wrong line becomes the record's title with nothing marking it. That

@@ -7,6 +7,37 @@ execute the final scientific analysis.
 Start with the [project overview](../README.md), then follow the path that
 matches what you want to do.
 
+## The words everything else here is written in
+
+Every page below uses these, and two of them are load-bearing enough that reading a dossier without
+them does not work.
+
+- A **question family** is one scientific tension and the tests built on it — not a topic, and not a
+  single question. It is the unit a run proposes, plans, reviews and reports.
+- Each family is written as two **variants**: two concrete ways of asking the same thing, built to
+  fail differently. They share a family and are judged separately, so one can reach a plan while its
+  sibling is stopped. `run.max_families` and `run.variants_per_family` set how many of each a run
+  produces.
+- The **PaperBank** is what the run built from your source PDFs: one reconstructed record per paper
+  of how its authors moved from an open problem to a question, plus the reusable **question
+  patterns** induced across them.
+- A **research intent** is what you point the run at. In `open` mode you declare nothing and the run
+  derives its own scope from the dataset's description; in `topic_conditioned` mode you name the
+  topic. The two published IBL runs are the same recordings, the same papers and the same models,
+  and the whole of the difference between them lives in this one block: `mode`, the `topic_terms`
+  it requires, and the `scope_derivation` that follows from it. They produced twelve questions with
+  no family in common.
+- The **Question Owner** and the **independent reviewer** are two model agents on two different
+  providers. The Owner develops a plan with the dataset planner; the reviewer, which never saw that
+  conversation, decides whether it stands. Preflight refuses a single-provider configuration.
+- The **dataset planner** is the coding agent — your Codex or Claude Code session — that opens the
+  real dataset and reports what is actually there.
+- A **dossier** is what a family ends as: an evidence-backed plan, or a specific reason not to
+  proceed. Both are results.
+- A **run** is one end-to-end pass, and its **run id** names the directory it wrote. [Reading the
+  labels](LABELS.md) covers the vocabulary inside those artifacts; this list is the vocabulary the
+  documentation itself uses.
+
 ## Run Maieusis for the first time
 
 1. [Install Maieusis](INSTALLATION.md).
@@ -46,11 +77,15 @@ matches what you want to do.
 
 ## Explore the examples
 
-- [All demo questions and variants](../demos/QUESTIONS.md) — eighteen question families across
-  three datasets, including the three that closed without a plan
+- [All demo questions and variants](../demos/ALL_QUESTIONS.md) — twenty-four question families across
+  four demonstrations of three datasets, including the six that closed without a plan and the
+  different reasons they closed
 - [Climate demo](../demos/climate/README.md): ERA5-derived stratospheric dynamics, and
   [its dataset notes](../demos/climate/DATASET_NOTES.md)
-- [International Brain Laboratory (IBL) Brain-Wide Map demo](../demos/ibl/README.md)
+- [International Brain Laboratory (IBL) Brain-Wide Map demo](../demos/ibl/README.md), run with one
+  declared topic anchor
+- [The same IBL recordings, asked open](../demos/ibl-open/README.md) — no anchor declared, scope
+  derived from the dataset. The pair is the clearest evidence here for what research intent does
 - [Neural Latents Benchmark (NLB) MC_Maze-S demo](../demos/nlb/README.md), with
   [dataset notes](../demos/nlb/DATASET_NOTES.md) and a
   [runnable region-mapping check](../demos/nlb/verify_region_mapping.py)
@@ -72,7 +107,11 @@ traffic, or hidden local audit files.
 ## Get help or contribute
 
 - Use [troubleshooting](TROUBLESHOOTING.md) for common setup and run failures.
-- Open a GitHub issue for a reproducible software or documentation problem.
+- Open an issue at [github.com/BeibaiDraco/maieusis/issues](https://github.com/BeibaiDraco/maieusis/issues)
+  for a reproducible software or documentation problem. Include the run id and the stage that
+  failed; if preflight refused, paste the `FAIL` line, which names the check.
 - Read [CONTRIBUTING.md](../CONTRIBUTING.md) before proposing a change.
+- [CHANGELOG.md](../CHANGELOG.md) records what changed between versions, including which
+  demonstrations each release published and what was known to be wrong at the time.
 - Follow [SECURITY.md](../SECURITY.md) for a vulnerability or sensitive report.
 - For scientific collaboration, contact `dracoxu@uchicago.edu`.

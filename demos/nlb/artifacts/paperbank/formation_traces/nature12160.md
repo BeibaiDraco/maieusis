@@ -4,25 +4,24 @@
 
 ## Starting background
 
-- Mixed selectivity in prefrontal neurons is heterogeneous and difficult to interpret when viewed through a reverse-engineering approach focused on specialized, individually interpretable components.
-- The provided PaperCase frames a theoretical possibility that diverse, high-dimensional neural representations can make many task-relevant input-output relations accessible to simple readouts, even when information is not evident in individual neurons.
+- PFC neurons often show heterogeneous mixed selectivity to multiple task-relevant aspects, making single-neuron responses difficult to interpret. The paper-local conceptual background also treats distributed neural representations as potentially capable of emergent information processing rather than as mere response disorder.
 
 ## Unresolved gap
 
-The unresolved issue is whether apparently disordered mixed selectivity is merely heterogeneous activity, or whether it provides a functionally meaningful population representation: distributed information about task-relevant variables, a broader repertoire of implementable readouts, and representational structure related to successful behavior.
+It remained unclear whether mixed selectivity in PFC carries usable, distributed information that supports complex cognitive behavior, or whether its apparent heterogeneity is largely uninterpretable or redundant. In particular, the relationship between representational dimensionality, downstream readout capacity, and behavioral correctness was unresolved.
 
 ## Dataset opportunity
 
-The recorded population activity comes from a memory task that independently combines multiple task-relevant aspects, including the identities and order of sequential objects and task type, with delay periods and both correct and error trials.
+The available recording contains population activity from lateral PFC neurons while monkeys performed a sequence-memory task that jointly varied object identities, temporal order, task type, task epoch, and trial correctness.
 
-Because the task varies several aspects in combination and the dataset contains population activity across task epochs and behavioral outcomes, the paper could test information at the population level rather than infer function from classical single-neuron selectivity alone. Controlled removal of classical selectivity and comparisons with simpler simulated populations further make it possible to ask whether nonlinear mixed selectivity contributes information and dimensionality.
+Because multiple task-relevant aspects were varied within the same population recording, the paper could compare pure- and mixed-selectivity representations, test whether information remained decodable after classical single-aspect selectivity was removed, quantify representational dimensionality, and compare those representations across correct and error trials.
 
 ## Resulting question
 
-What functional and computational role does mixed selectivity in prefrontal-cortex populations play during a complex object-sequence memory task? In particular, does it preserve task-relevant information beyond classical single-neuron selectivity, expand the repertoire of linear readouts through higher-dimensional representations, and vary systematically with behavioral correctness?
+Does mixed selectivity in recorded PFC population activity provide a functionally useful, high-dimensional representation of the multiple aspects of an object-sequence memory task, and is its dimensionality related to the generation of correct behavior?
 
 ## Scientific consequence
 
-If task-relevant variables remain decodable after classical selectivity is removed, mixed-selectivity populations support more diverse readouts than pure-selectivity alternatives, and higher dimensionality is associated with correct rather than error trials, then mixed selectivity would be evidence for a computational population resource rather than merely difficult-to-interpret activity. Conversely, weak residual decoding, no readout advantage, or no relation to behavioral outcome would support interpretations in which mixed selectivity is largely reducible to simpler selectivity or task-irrelevant variability.
+If task-relevant variables remain decodable after classical selectivity is removed and mixed-selectivity populations support a larger repertoire of readout classifications, mixed selectivity would be evidence for distributed computational capacity rather than merely difficult-to-interpret activity. If dimensionality also decreases on error trials, that would link the representational property to behavioral performance; failure of these comparisons would instead weaken the claim that mixed selectivity is functionally useful for this task. The provided evidence also indicates that cue identity can remain decodable during errors, making a dimensionality collapse distinguishable from a simple loss of sensory or mnemonic coding.
 
-The question tests whether a common but apparently disordered neural response property should be treated as functionally meaningful for cognition. It is scientifically valuable because it connects population-level representational geometry to flexible computation and behavior, and because it provides a way to reinterpret otherwise opaque neural heterogeneity without requiring every neuron to have a specialized, individually identifiable role.
+The question connects a widely observed but difficult-to-interpret neural response property to a mechanistic account of population coding and behavior. Its value is not limited to identifying which neurons encode which variables: it asks whether distributed representational structure can expand the computations available to relatively simple readouts and whether that structure changes with behavioral success. This provides a reusable pattern for turning heterogeneous population activity into a test of functional organization.

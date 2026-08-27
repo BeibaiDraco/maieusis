@@ -36,19 +36,72 @@ from ...schemas.topic_literature import (
     TopicSourceTable,
 )
 from .literature_prior_search import _exception_message, _http_get_json
+from .openalex_scope import openalex_works_filter
 
 JsonGetter = Callable[[str, dict[str, str]], dict[str, Any]]
 JsonPoster = Callable[[str, dict[str, Any], dict[str, str]], "JsonPostResponse"]
 
 TOPIC_SOURCE_QUERY_PLAN_VERSION = "topic_source_query_plan/v1"
 R5_TOPIC_EVIDENCE_QUERY_PLAN_VERSION = "r5_topic_evidence_lanes/v1"
+
+#: Every generic scope-term protocol version this harvester understands, oldest first. It lives
+#: here rather than in ``generic_topic_lanes`` because that module imports this one; the current
+#: version is defined there and a guard test pins it inside this tuple.
+#:
+#: The set is a set and not a single constant because a persisted table outlives the code that
+#: wrote it. A resumed or re-read v2 run must still be recognised as generic: the branch below and
+#: the protocol stamp in ``services/context/topic_evidence.py`` both used to compare against one
+#: literal, and a version bump alone would have quietly routed generic tables down the legacy path.
+GENERIC_TOPIC_EVIDENCE_QUERY_PLAN_VERSIONS: tuple[str, ...] = (
+    "generic_topic_evidence_lanes/v2",
+    "generic_topic_evidence_lanes/v3",
+)
+GENERIC_TOPIC_EVIDENCE_PLAN_ID_PREFIXES: tuple[str, ...] = (
+    "generic-topic-evidence-plan-v2-",
+    "generic-topic-evidence-plan-v3-",
+)
+
+
+def generic_topic_evidence_protocol_version(query_plan_id: str) -> str:
+    """The generic protocol a plan id belongs to, or ``""`` when it is not a generic plan.
+
+    A v2 table keeps saying v2. Restamping an old table with the current version would put a claim
+    about what was queried into an artifact that was queried differently.
+    """
+
+    for prefix, version in zip(
+        GENERIC_TOPIC_EVIDENCE_PLAN_ID_PREFIXES,
+        GENERIC_TOPIC_EVIDENCE_QUERY_PLAN_VERSIONS,
+        strict=True,
+    ):
+        if query_plan_id.startswith(prefix):
+            return version
+    return ""
+
+
 R5_TOPIC_SEED_SOURCE_CONFIG = Path("config/r5/topic_seed_sources/coding_geometry_bwm.yml")
 
+#: Semantic Scholar was removed from this list on 2026-08-17. It is not deleted -- the enum member,
+#: the search method and the record shape all remain, so a run that one day carries a key can put it
+#: back -- but it is not a DEFAULT source, for two measured reasons.
+#:
+#: It returns nothing. Harvesting the ibl derived scope issued 15 Semantic Scholar queries and got
+#: back **0 records**, while PubMed returned 111, OpenAlex 114 and Crossref 119. Probing the endpoint
+#: directly returns HTTP 429 on three consecutive attempts with the API's own explanation: "Too Many
+#: Requests. Please wait and try again or apply for a key for higher rate limits." The unauthenticated
+#: quota is shared across every anonymous caller in the world, so it is not intermittently full, it is
+#: full. A quarter of every run's retrieval fan-out was being spent to receive nothing.
+#:
+#: And the remedy does not belong in a default. Restoring it needs an API key each user would have to
+#: apply for from a third party, which contradicts what the `public` profile is for -- a profile that
+#: works without the user obtaining anything. `HarvesterHTTP` also sends no key today: the Semantic
+#: Scholar request goes out with an empty header dict, and the harvester has no rate limiting, no
+#: backoff and no retry (it reads `X-RateLimit-*` headers and does not act on them), so honouring the
+#: key programme's own "apply exponential backoff" condition is itself unbuilt work.
 PUBLIC_TOPIC_SOURCE_FAMILIES = [
     TopicLensSourceFamily.PUBMED,
     TopicLensSourceFamily.OPENALEX,
     TopicLensSourceFamily.CROSSREF,
-    TopicLensSourceFamily.SEMANTIC_SCHOLAR,
 ]
 
 
@@ -166,6 +219,22 @@ def resolve_topic_source_profile(
     return TopicSourceProfile.HYBRID if key else TopicSourceProfile.PUBLIC
 
 
+#: One ceiling, one unit, for every excerpt this module persists.
+#:
+#: There were three, in two units, stacked. `_openalex_abstract` cut at 120 WORDS -- roughly 700 to
+#: 800 characters -- and then a second cut at 800 CHARACTERS ran over the result, so the tighter
+#: invisible one usually won. Crossref used 600. Measured over the 60 records the three 2026-08-14
+#: legs retained: 45 snippets end at exactly 800 characters and 44 of those stop mid-word. The
+#: independent reviewer named the consequence itself -- "the evidence text for
+#: topic-source-record-9a90e4ec1ffc stops before the study's finding is stated" -- and downgraded a
+#: claim over it.
+#:
+#: 1500 is not a new number: `RetrievalPolicy.max_persisted_excerpt_chars` has declared it as the
+#: default and the hard maximum since it was written, and had zero readers anywhere in `src/` or
+#: `tests/`. This is that declared ceiling finally being honoured.
+TOPIC_EXCERPT_MAX_CHARS = 1500
+
+
 class TopicSourceHarvester:
     """Retrieve compact online source records for TopicLens synthesis."""
 
@@ -227,6 +296,9 @@ class TopicSourceHarvester:
                         errors=[_exception_message(exc)],
                     )
                 )
+        # Held before any branch narrows `records`, because every branch below rebinds the name and
+        # the pre-cap count is unrecoverable afterwards.
+        distinct_harvested = len(_dedupe_records(records))
         if query_plan.prompt_version == R5_TOPIC_EVIDENCE_QUERY_PLAN_VERSION:
             records = self._enrich_r5_doi_records(_dedupe_records(records))
             filtered_records = _filter_topic_relevant_records(
@@ -240,7 +312,7 @@ class TopicSourceHarvester:
                 query_plan=query_plan,
                 max_records=self.max_records,
             )
-        elif query_plan.prompt_version == "generic_topic_evidence_lanes/v2":
+        elif query_plan.prompt_version in GENERIC_TOPIC_EVIDENCE_QUERY_PLAN_VERSIONS:
             all_records = _dedupe_records(records)
             filtered_records = _filter_topic_relevant_records(
                 all_records,
@@ -267,6 +339,11 @@ class TopicSourceHarvester:
             records=records,
             search_traces=traces,
             max_records=self.max_records,
+            # Counted before the cap, from the deduped harvest, so a reader can tell a pool of 200
+            # that WAS the whole harvest from one truncated to 200 out of far more. It stays out of
+            # `table_id` (computed above from plan/records/traces only), so no existing table
+            # identity moves.
+            distinct_after_dedupe=distinct_harvested,
         )
 
     def _enrich_r5_doi_records(self, records: list[TopicSourceRecord]) -> list[TopicSourceRecord]:
@@ -380,7 +457,7 @@ class TopicSourceHarvester:
             }
         )
         if abstract:
-            updates["snippet"] = abstract[:800]
+            updates["snippet"] = abstract[:TOPIC_EXCERPT_MAX_CHARS]
         return TopicSourceRecord.model_validate({**record.model_dump(mode="python"), **updates})
 
     def _search_query(
@@ -431,7 +508,7 @@ class TopicSourceHarvester:
         )
         summary = self.http_get_json(summary_url, {})
         records = []
-        for pmid in ids:
+        for index, pmid in enumerate(ids, start=1):
             item = summary.get("result", {}).get(str(pmid), {})
             title = str(item.get("title") or "").strip()
             if not title:
@@ -451,7 +528,7 @@ class TopicSourceHarvester:
                     venue=str(item.get("fulljournalname") or item.get("source") or ""),
                     snippet="",
                     payload=item,
-                    relevance_score=0.85,
+                    relevance_score=rank_relevance(index, len(ids)),
                 )
             )
         return records, _trace(query, summary_url, summary, len(records))
@@ -465,9 +542,14 @@ class TopicSourceHarvester:
         # of them anywhere, not for the field's focused literature. Restricting to title+abstract
         # and quoting the phrase is what makes a search for "sudden stratospheric warming" return
         # the papers that are ABOUT sudden stratospheric warmings.
+        # OpenAlex ANDs comma-separated filter conditions inside one `filter` parameter, so a
+        # structural condition the plan asked for -- today the user's own field, as OpenAlex itself
+        # classifies a work -- rides the SAME request: no extra call and no extra cost. An empty
+        # `filters` reproduces the single-condition request byte for byte. The builder is shared
+        # with the preflight pool probe so that what the probe counted is what this will ask for.
         params = urllib.parse.urlencode(
             {
-                "filter": f'title_and_abstract.search:"{query.query}"',
+                "filter": openalex_works_filter(query.query, query.filters),
                 "per-page": str(query.max_results),
                 "sort": "relevance_score:desc",
             }
@@ -479,6 +561,7 @@ class TopicSourceHarvester:
         # shared anonymous pool and never reached the operator's own account.
         public_url = f"https://api.openalex.org/works?{params}"
         raw = self.http_get_json(public_url + self._openalex_auth_suffix(), {})
+        results = list(raw.get("results", []))
         records = [
             _record(
                 source_family=TopicLensSourceFamily.OPENALEX,
@@ -494,10 +577,10 @@ class TopicSourceHarvester:
                 publication_types=[str(item.get("type") or "")],
                 snippet=_openalex_abstract(item),
                 payload=item,
-                relevance_score=float(item.get("relevance_score") or 0.75),
+                relevance_score=rank_relevance(index, len(results)),
                 fulltext_rights_assertions=_openalex_fulltext_rights_assertions(item),
             )
-            for item in raw.get("results", [])
+            for index, item in enumerate(results, start=1)
             if str(item.get("display_name") or item.get("title") or "").strip()
         ]
         return records, _trace(query, public_url, raw, len(records))
@@ -527,7 +610,8 @@ class TopicSourceHarvester:
         url = f"https://api.crossref.org/works?{params}"
         raw = self.http_get_json(url, {})
         records = []
-        for item in raw.get("message", {}).get("items", []):
+        items = list(raw.get("message", {}).get("items", []))
+        for index, item in enumerate(items, start=1):
             title = str((item.get("title") or [""])[0]).strip()
             if not title:
                 continue
@@ -543,7 +627,7 @@ class TopicSourceHarvester:
                     venue=str((item.get("container-title") or [""])[0]),
                     snippet=_strip_jats(str(item.get("abstract") or "")),
                     payload=item,
-                    relevance_score=float(item.get("score") or 0.5),
+                    relevance_score=rank_relevance(index, len(items)),
                 )
             )
         return records, _trace(query, url, raw, len(records))
@@ -561,7 +645,8 @@ class TopicSourceHarvester:
         url = f"https://api.semanticscholar.org/graph/v1/paper/search?{params}"
         raw = self.http_get_json(url, {})
         records = []
-        for item in raw.get("data", []):
+        data = list(raw.get("data", []))
+        for index, item in enumerate(data, start=1):
             title = str(item.get("title") or "").strip()
             if not title:
                 continue
@@ -579,9 +664,9 @@ class TopicSourceHarvester:
                     publication_types=[
                         str(pubtype) for pubtype in (item.get("publicationTypes") or []) if pubtype
                     ],
-                    snippet=str(item.get("abstract") or "")[:600],
+                    snippet=str(item.get("abstract") or "")[:TOPIC_EXCERPT_MAX_CHARS],
                     payload=item,
-                    relevance_score=0.7,
+                    relevance_score=rank_relevance(index, len(data)),
                 )
             )
         return records, _trace(query, url, raw, len(records))
@@ -656,9 +741,9 @@ class TopicSourceHarvester:
                     authors=[str(author) for author in item.get("authors", []) if author],
                     cited_by_count=_optional_int(item.get("citedByCount")),
                     publication_types=["Elicit paper search"],
-                    snippet=str(item.get("abstract") or "")[:800],
+                    snippet=str(item.get("abstract") or "")[:TOPIC_EXCERPT_MAX_CHARS],
                     payload=item,
-                    relevance_score=max(0.1, 0.95 - (index - 1) * 0.01),
+                    relevance_score=rank_relevance(index, len(response.payload.get("papers", []))),
                 )
             )
         return (
@@ -1244,7 +1329,7 @@ def _record(
         cited_by_count=cited_by_count,
         confirmed_source_families=[source_family],
         publication_types=publication_types,
-        snippet=snippet[:800],
+        snippet=snippet[:TOPIC_EXCERPT_MAX_CHARS],
         relevance_score=relevance_score,
         metadata_quality_score=_metadata_quality(locator, title, year, snippet),
         source_payload_hash=payload_hash,
@@ -1658,11 +1743,37 @@ def _first_safe_provider_url(*values: object) -> str:
     return ""
 
 
+#: Every source family's relevance is stored on this one scale, so that ranking compares like with
+#: like. It is the vendor's own RANK, not its raw score, because the raw scores are not comparable:
+#: OpenAlex returns 11 to 941 for the same harvest, Crossref returns its own unrelated magnitude,
+#: PubMed and Semantic Scholar returned hardcoded constants of 0.85 and 0.7, and Elicit already
+#: derived its value from rank. There is no defensible common calibration between those, and rank
+#: is exactly what "the vendor thinks this one is more relevant" means.
+#:
+#: What it costs, stated: within one response, the distance between the first and second hit is
+#: lost. What it buys: a first hit is a first hit whichever catalogue returned it.
+def rank_relevance(index: int, total: int) -> float:
+    """Vendor rank (1-based) as a comparable [0.1, 1.0] relevance."""
+    if total <= 1:
+        return 1.0
+    return round(1.0 - 0.9 * (max(1, index) - 1) / (total - 1), 6)
+
+
 def _record_quality(record: TopicSourceRecord) -> float:
+    # The clamp that used to stand here -- `min(record.relevance_score, 1.0)` -- did not merely
+    # lose the ordering, it INVERTED the comparison between catalogues. Measured over all 60 records
+    # retained by the three 2026-08-14 legs: every raw score was above 1.0, so OpenAlex and Crossref
+    # records all scored the maximum 1.0 while PubMed sat permanently at its hardcoded 0.85 and
+    # Semantic Scholar at 0.7. Relevance therefore contributed a constant, the real tiebreak became
+    # `item.title.lower()` -- the corpus was ordered ALPHABETICALLY -- and no record in any leg was
+    # kept on the strength of PubMed or Semantic Scholar alone.
+    #
+    # `relevance_score` is now normalised to a common scale at the point each record is built, so
+    # this reads it directly. `min` is retained only as a bound against a malformed record.
     confirmations = record.confirmed_source_families or [record.source_family]
     locator_score = 0.25 if record.doi or record.pmid else 0.0
     return (
-        min(record.relevance_score, 1.0)
+        min(max(record.relevance_score, 0.0), 1.0)
         + record.metadata_quality_score
         + locator_score
         + min(0.3, 0.075 * len(set(confirmations)))
@@ -1898,4 +2009,6 @@ def _openalex_abstract(item: dict[str, Any]) -> str:
             if isinstance(position, int):
                 words.append((position, str(word)))
     words.sort()
-    return " ".join(word for _, word in words[:120])
+    # No second, tighter ceiling in a different unit. The caller applies
+    # TOPIC_EXCERPT_MAX_CHARS; a 120-word cut here silently won that race.
+    return " ".join(word for _, word in words)

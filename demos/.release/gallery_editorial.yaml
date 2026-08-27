@@ -1,0 +1,226 @@
+# The only hand-written part of `demos/public/ALL_QUESTIONS.md`.
+#
+# Everything else on that page -- family and variant titles, question wordings, every link and
+# anchor, the outcome label and its consequence sentence, the at-a-glance tables, every tally --
+# is rendered from the published artifacts by `scripts/render_demo_gallery.py`. Hand-maintained,
+# that page linked to anchors that no longer existed and called a family planned whose variant had
+# been stopped before planning ever began.
+#
+# `{name}` and `{name}_word` placeholders in the prose below are filled from the run: `families`,
+# `variants`, `deferred`, `reached_planning`, `plans`, `closed_at_planning`, and the five outcome
+# tallies `both`, `prior_art`, `mixed`, `rejection`, `warning`.
+#
+# A family with no entry under `families:` still renders -- its question line falls back to the
+# run's own family title and its paragraph to the run's own shared-tension sentence -- and the
+# renderer prints which ones fell back. A fresh set is therefore honest and correct on the first
+# render, and the writing that improves it cannot break a link or a tally.
+schema_version: maieusis.gallery_editorial/v1
+
+# The page's own title and the row of links under it. Split out of `front_matter` when the table
+# moved above the prose: the reader has to know what page they are on and be able to leave it
+# before they meet a paragraph.
+title: |
+  # Every question Maieusis wrote, and what happened to each
+
+  {families_Word} scientific questions across three real datasets, each asked two ways, with the
+  outcome of every one. Nothing here was executed and no result is reported.
+
+nav: |
+  [Mice, asked about noise](ibl/README.md) · [The same mice, asked nothing](ibl-open/README.md) ·
+  [A monkey reaching](nlb/README.md) · [The polar stratosphere](climate/README.md) ·
+  [Source papers](PAPER_SOURCES.md)
+
+front_matter: |
+  ## How to read this
+
+  Maieusis was pointed at three real datasets — brain-wide recordings from mice making decisions, a
+  single session of macaque motor cortex during reaching, and four decades of the polar stratosphere —
+  and asked what would be worth asking of each. It read the field's papers, was handed a deliberately
+  coarse description of the dataset, and wrote six questions per run: {families_word} in all. It then
+  asked each question twice, in two deliberately different ways, so {variants_word} attempts.
+
+  **Four demonstrations, three datasets.** The brain-wide recordings appear twice, and the pair is the
+  most direct thing on this page. One run was told what to think about — a single declared anchor,
+  *noise correlations* — and the other was told nothing and worked out its own scope from the
+  dataset's own description. Same recordings, same twelve papers, same models. They produced twelve
+  different questions, with no family in common — not one shared title. Individual questions do
+  reach the same ground from opposite directions; what the anchor changed is which contrasts each
+  run organised its six families around. Reading the two side by side is the only way to see it.
+
+  Prior-art review stopped {deferred_word} of the {variants_word} before planning began. Most of the
+  rest went to a coding agent that opened whatever the dataset exposed —
+  documentation and file inventories, schemas and metadata, and in some families real data samples —
+  and tried to turn each one into a study plan that would survive contact with it. **{plans_Word}
+  became plans. {closed_at_planning_Word} were closed once the planner had seen the data and the
+  task.** Every family's page states how deep its own inspection went.
+
+  **All {variants_word} are on this page.** The refusals are not gaps we forgot to fill — they are
+  the part you cannot get from a system that shows you only what worked.
+
+  > **Nothing here was run.** No analysis was executed, no effect was measured, no hypothesis was
+  > tested, and no page below reports a result. Every plan was checked by a second model, on a
+  > different provider, independently of the model that wrote it — never by a human expert — and then
+  > stopped there.
+
+  **The reviewer agreed with the Owner every time, and you should know that before you weigh the
+  word "independent".** Twenty families carry both decisions: eighteen were accepted by both, two
+  were sent back for revision by both, and the reviewer overturned nothing. Read that in whichever
+  direction the evidence supports for you — two models reaching the same verdict from different
+  vendors on evidence they did not share, or a check that has not yet been observed to bite. It is
+  one release over four runs, which is too little to settle it. The disagreement rate is the number
+  this design would have to be judged on, and publishing it while it reads well is the only way the
+  number means anything later.
+
+  Two caveats before the science. The literature behind these questions is visibly draft: much of it
+  was read as abstracts and metadata rather than full text. Twenty of the family pages open with a
+  **Data basis** banner saying exactly that, and each demonstration's topic-evidence summary counts
+  how many of its open gaps rest on abstract-only sources. Every one of the
+  {variants_word} went through prior-art review within a recorded scope, but no question is claimed
+  to be novel — no search proves absence. Each demo page names the run behind it.
+
+glance_intro: |
+  Every row links to the full entry, which gives you the two ways that question was asked, what
+  happened to each, and the links into the run's own record. **{families_with_a_plan_Word} of the
+  {families_word} questions produced a plan**; the rest closed, and the reasons are not all the
+  same kind.
+  Read on for what the columns mean, or pick a row and go.
+
+before_you_open: |
+  ## Before you open one
+
+  **Every question was asked twice, on purpose.** Maieusis calls the two versions *variants*. They are
+  not a first draft and a revision: they are two ways of asking one thing, built so that a result
+  supporting one would count against the other. Each entry below shows both, with a short name and the
+  question as the run itself worded it. A group of two is a *family*, and the small italic line under
+  each heading is the run's own name and number for it — that is what you will see on the pages the
+  entry links to.
+
+  **Prior-art review sharpens a question before it is planned.** The wording you read below is the
+  proposal-stage wording. Where the review found a scholarly record sitting close, it required the
+  question to be made specific enough to be told apart from that work, and the sharpened version is
+  the one the planner actually received. Several closures below turn on a term the sharpening added.
+  Most reading guides print both wordings side by side, the second labelled *post-novelty revised
+  proposal*; where a guide shows only one wording, none was recorded.
+
+  **{outcome_label_count_Word} things could happen to a family.** The name in bold is the label the run assigns; the
+  sentence after it is what the label means.
+
+  - **Plan developed (provisional)** — both versions got a plan. *Provisional* means an independent
+    reviewer signed off — a second model, on a different provider, not a human expert — and that
+    nothing was executed. {both_Families}.
+  - **Mixed family** — one version got a plan and the other was closed during planning, once the
+    planner had inspected the dataset's schemas and metadata and read the task description. The closed
+    one stays on the page with its reason. {mixed_Families}.
+  - **Deferred on prior-art grounds** — one version got a plan and the other was stopped *before*
+    planning, by prior-art review. Two different findings stop a version here, and each family's own
+    disposition line says which: a real scholarly record — a paper or a preprint — sitting close
+    enough that the question had to be made distinguishable from it, or a search that could not
+    retrieve enough evidence to judge the question either way. Where a prior is named, a model's
+    impression is not enough: it has to resolve to a DOI-identified identity, and it does not mean
+    the prior answers the question. {prior_art_Families}.
+  - **Stopped before planning on prior-art grounds** — the same review, and *every* version stopped
+    there, so the family has no plan and no planning record at all. It is not a rejection: nobody
+    inspected the data and judged the question unanswerable; the question was closed before it ever
+    reached that stage. Its question page carries only the bare disposition, because the line that
+    names a prior is written by the shortlist stage this family never reached; what each version
+    ran into is on the run's prior-art page instead. {prior_art_none_Families}.
+  - **Scientific rejection terminal** — the family produced no plan at all. Every version that reached
+    the planner was closed there, and the run names the construct that was missing rather than
+    substituting a proxy for it. This is a scientific answer — not a failure, not a crash, and not an
+    abandoned branch. {rejection_Families}.
+  - **Service warning** — no plan survives, and the reason is the machinery rather than the science.
+    The run says so instead of presenting a partial family as a complete one. {warning_Families}.
+  - **Validation warning** — the planner did its work and the material it returned could not be fully
+    validated on the way back in, so no plan is claimed. Like a service warning this is machinery, not
+    science, and it is named rather than dressed up as a scientific closure. {other_terminal_word}
+    families. What went wrong in this set is written down: the planner revised its own evidence files
+    under new names and left the earlier drafts beside them, and both copies were read back.
+
+  **Each entry ends with up to three links, richest first.**
+
+  1. *The question in full* — the scientific background, the competing explanations, the observation
+     that would tell them apart, and what a positive, negative, or null result would mean.
+  2. *The reading guide* — sets what the proposal stage assumed beside what the planner actually saw
+     in the data. It is the only place the Question Owner and the independent reviewer speak in their
+     own words.
+  3. *The full planning record* — every control, estimand, diagnostic and stated limit, and the full
+     reasoning for any version closed during planning.
+
+  Neither of the last two contains the other, so read both. Two exceptions are worth knowing before
+  you click. A version stopped by prior-art review **never reached planning**, so it appears in no
+  planning record at all; its reasoning — which prior was found, and what would have to change —
+  lives in the first link. {deferred_Word} of the {variants_word} are in that state, and each is
+  flagged where it appears. And a family whose *every* version stopped there has no reading guide at
+  all, because no planning branch was opened to write one about: that entry offers two links, not
+  three.
+
+  Other labels travel with these plans: how deeply the planner got into the data, what kind of claim a
+  design could support, how the supporting literature was read. All of them, with their permitted
+  values, are in [reading the labels](../docs/LABELS.md).
+
+datasets:
+  ibl:
+    order: 1
+    glance_heading: Mice making decisions (IBL Brain-Wide Map), asked about noise
+    section_heading: "Mice making decisions: the IBL Brain-Wide Map, asked about noise"
+    blurb: |
+      Standardized Neuropixels recordings from mice performing a sensory decision task, with the same
+      protocol repeated across many laboratories. This run was given one anchor — *noise correlations*
+      — and told to develop questions around it. Every family below is downstream of that one phrase,
+      and the next demonstration is the same recordings with no phrase at all.
+
+      Three of these six carry a warning rather than a plan. Two are a defect in how the planner's
+      returned files were read back, one is a transport failure, and none of the three is a finding
+      about the data. They stay on the page because a demonstration that quietly dropped them would
+      be showing you a cleaner run than the one that happened.
+    showcase_line: The [IBL demo page](ibl/README.md) opens with the family it features below.
+  ibl-open:
+    order: 2
+    glance_heading: The same mice (IBL Brain-Wide Map), asked nothing
+    section_heading: "The same mice, asked nothing: the IBL Brain-Wide Map in open mode"
+    blurb: |
+      The same recordings, the same twelve papers, the same models — and no declared topic. Instead of
+      being handed an anchor, this run read the dataset's own description and derived its own scope,
+      then asked six questions inside it.
+
+      Put the two IBL pages side by side and the difference is the whole argument. Neither list is a
+      subset of the other and no family appears in both. Declaring *noise correlations* did not narrow
+      the run to a smaller version of the open one; it moved it somewhere else. That is what a
+      research intent is for, and it is also why an anchor is a commitment rather than a hint: a term
+      that is wrong for the dataset steers six questions away from the ones worth asking, and nothing
+      downstream will put them back.
+    showcase_line: The [open-mode IBL page](ibl-open/README.md) opens with the family it features below.
+  nlb:
+    order: 3
+    glance_heading: A monkey reaching (NLB MC_Maze-S)
+    section_heading: "A monkey reaching: NLB MC_Maze-S"
+    blurb: |
+      One session of macaque motor cortex during delayed reaches through a maze, from the Neural
+      Latents Benchmark. A single session is a hard constraint, and the plans below say so: nothing
+      here generalizes across animals, and the pages state that limit rather than working around it.
+      This run was also open — no declared topic — and its scope came from the dataset description.
+
+      It is the run where the planner counted. Nine maze layouts crossed with three versions give
+      twenty-seven conditions across a hundred training trials, which is two to four trials each, and
+      the family that closed here closed on that arithmetic rather than on anything about the science.
+    showcase_line: The [NLB demo page](nlb/README.md) opens with the family it features below.
+  climate:
+    order: 4
+    glance_heading: The polar stratosphere (ERA5-derived)
+    section_heading: "The polar stratosphere: ERA5"
+    blurb: |
+      Four decades of daily zonal-mean wind at 60N, derived from ERA5, asked in open mode. It is a
+      deliberately thin description — one latitude, no longitude — and it is the leg where the
+      thinness is most visible in what the planner said it could and could not do.
+
+      The refusal here is worth the click even though it is not what the page leads with. It asked
+      whether rapid vortex weakening is organized mainly by anomalous wave forcing or by the
+      susceptibility of the state the vortex was already in — a live division in the literature, and
+      a reasonable thing to ask. Separating those two accounts needs the horizontal structure of the
+      forcing, and this record is a single latitude circle with longitude already averaged away. The
+      planner named the missing construct and stopped, rather than substituting a proxy that would
+      have answered something else.
+    showcase_line: The [climate demo page](climate/README.md) opens with the family it features below.
+
+# One entry per family, keyed `<demo>/<published family directory>`.
+families: {}

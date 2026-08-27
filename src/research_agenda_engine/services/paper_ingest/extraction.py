@@ -30,6 +30,7 @@ from ...schemas.question_pattern import (
     QuestionFormationTrace,
     QuestionFormationTraceReviewStatus,
 )
+from .parsing import parse_degrade_is_material
 from .verifier import EvidenceSpanVerifier, _normalize_text
 
 FREE_QUOTE_PROMPT_VERSION = "paper_case_extractor/v2"
@@ -238,7 +239,13 @@ class PaperCaseExtractionPipeline:
         else:
             result = self._extract_packet(parsed=parsed, packet=packet)
 
-        if not completeness.is_complete and result.paper_case is not None:
+        # Only a MATERIAL degrade costs the paper authority. `is_complete` is false for essentially
+        # every real paper -- all twenty of the published climate demonstration -- because a heading
+        # regex cannot match "2. Data and techniques". Resetting every paper to the bottom rung and
+        # printing an open uncertainty about it on every published page was a wording heuristic
+        # enforcing a hard boundary, which AGENTS.md rule 11 forbids. Structural risks and a
+        # document with no recognised structure at all still land here; see parse_degrade_is_material.
+        if parse_degrade_is_material(completeness) and result.paper_case is not None:
             request = (
                 "EvidenceRequest[parse_completeness_degraded]: parser-owned text was usable, but "
                 "the parse completeness report recorded limitations; review before authority raise."

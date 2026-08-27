@@ -5,69 +5,70 @@
 
 ## Scientific purpose
 
-To understand the neural basis of decision-making in the mouse by constructing a brain-wide activity map from electrophysiological recordings collected across multiple laboratories.
+The dataset is intended to support a whole-brain map of neural activity in the mouse and to study the neural basis of decision-making. It pools electrophysiological recordings from multiple laboratories and samples major brain areas using a grid-based approach.
 
 ## Population
 
-Mice performing the IBL decision-making task; the release includes recordings from 139 subjects across 12 laboratories.
+Mice performing the IBL decision-making task; the release includes data from 139 subjects across 12 laboratories.
 
 ## Task / design
 
-A multi-laboratory, brain-wide electrophysiological recording study using Neuropixels probes during a mouse decision-making task, with repeated sampling of recording sites across laboratories.
+A multisite, brain-wide electrophysiology study conducted during a mouse decision-making task. The experiment includes sensory stimuli, mouse decisions and response times, and video-based pose measurements.
 
 ## Recording modalities
 
-Electrophysiological recordings with Neuropixels probes; Spike-sorted neural activity; Sensory stimulus measurements; Mouse decisions and response times; Video-based mouse pose measurements processed with DeepLabCut
+Neuropixels electrophysiological recordings; Spike-sorted neural activity; Video recordings; DeepLabCut-derived mouse pose information; Sensory stimulus and behavioral measurements
 
 ## Broad scale
 
-The documentation reports 459 Neuropixels experimental sessions, 699 probe insertions, 139 subjects, 12 laboratories, 621,733 spike-sorted units, 75,708 units classified as good quality, and 241 brain regions represented in sufficient numbers for inclusion in the reported analyses.
+The public release comprises hundreds of experimental sessions and probe insertions, spanning 139 subjects and 12 laboratories, with neural recordings covering hundreds of brain regions and hundreds of thousands of spike-sorted units.
 
 ## Anatomical / spatial coverage
 
-The dataset is intended to provide brain-wide coverage. Recordings were systematically collected from nearly all major brain areas using a grid system; 241 brain regions are reported as represented in sufficient numbers for the IBL analyses.
+The study was designed for brain-wide coverage, with recordings from nearly all major brain areas. The documentation reports 241 brain regions recorded in sufficient numbers for inclusion in the associated analyses.
 
 ## Temporal / trial structure
 
-Recordings are organized into experimental sessions and probe insertions during performance of a decision-making task. The excerpt does not specify the detailed timing structure, trial counts, or duration of individual recordings.; 12 laboratories; 139 subjects; 459 experimental sessions; 699 probe insertions; Spike-sorted neural units; 241 brain regions represented in sufficient numbers for reported analyses
+Recordings and behavioral measurements are collected during decision-making task sessions, including sensory stimulus presentation, mouse decisions, response times, electrophysiological activity, and video-based pose over the task.
 
 ## Standardization
 
-The data are organized according to the standard IBL data structure. Recording sites were sampled using a grid system, and each site was replicated in at least two laboratories to support systematic and replicated coverage.
+Recordings use Neuropixels probes and a grid system for systematic, unbiased sampling, with each recording site replicated in at least two laboratories. The data follow the standard IBL data structure and are accompanied by spike-sorting and data-processing pipelines.
 
 ## Major variables
 
 - Neural spiking activity
+- Brain region
 - Sensory stimuli
 - Mouse decisions
 - Response times
-- Mouse pose and movement information from video
+- Mouse pose
+- Task session and probe-insertion context
+- Laboratory and subject context
 
 ## Reuse opportunities
 
-- Study brain-wide neural correlates of mouse decision-making
-- Relate neural activity to sensory stimuli, decisions, and response times
-- Investigate cross-region and cross-laboratory organization of neural activity
-- Analyze relationships between neural activity and video-derived pose or movement measures
-- Compare recordings across subjects, sessions, probe insertions, and laboratories within a standardized data organization
+- Comparative analysis of neural activity across brain regions during decision-making
+- Investigation of relationships between neural activity, sensory stimuli, decisions, and response times
+- Study of brain-wide and multisite reproducibility across laboratories
+- Integration of electrophysiology with video-derived pose and behavioral measurements
+- Analysis of neural activity at single-spike cellular resolution
 
 ## Known high-level limitations
 
-- The supplied excerpt does not specify detailed trial structure, recording durations, preprocessing choices, or the exact temporal and anatomical coverage available for any particular future analysis.
-- The documentation reports regions represented in sufficient numbers for the IBL analyses, but this broad statement does not establish question-specific coverage or feasibility.
-- The excerpt does not provide detailed information about behavioral variability, missingness, or measurement quality beyond the reported distinction between total spike-sorted units and units classified as good quality.
+- The supplied documentation excerpt does not provide detailed question-specific coverage or measurement-quality criteria beyond the reported high-level release summary.
+- The reported 241 regions are those recorded in sufficient numbers for inclusion in the associated analyses, so they should not be interpreted as uniform coverage of every brain region.
+- The excerpt does not specify the full details of preprocessing, spike-sorting quality criteria, or the availability of every behavioral and video-derived measurement for every recording.
 
 ## Coarse scale facts
 
-- subjects: 139 subjects
-- experimental sessions: 459 experimental sessions
-- probe insertions: 699 distinct recordings, referred to as probe insertions
-- spike-sorted units: 621,733 units
-- good-quality units: 75,708 units
-- laboratories: 12 laboratories
-- brain regions: 241 brain regions recorded in sufficient numbers for inclusion in the IBL analyses
-- task or experimental structure: Mouse decision-making task with sensory stimuli, recorded decisions, response times, and video-derived pose information
-- public access mode and hierarchy: Released dataset organized according to the standard IBL data structure, with exploration through a visualization website
+- subjects or participants: 139 mouse subjects
+- sessions or recordings: 459 experimental sessions and 699 probe insertions
+- recording units, channels, or sensors: On the order of hundreds of thousands of spike-sorted units, including tens of thousands classified as good quality
+- measurement sites or regions: Hundreds of brain regions; 241 were recorded in sufficient numbers for inclusion in the analyses
+- task or experimental structure: A multisite, brain-wide Neuropixels study of mice performing a decision-making task, with sampling replicated across 12 laboratories
+- behavioral or auxiliary measurements: Behavioral task variables plus video-derived pose measurements are released alongside neural recordings
+- public access mode and hierarchy: Publicly released data organized in the standard IBL data structure, with an accompanying visualization website and documentation of processing pipelines
 
 ## Provenance
 
@@ -77,11 +78,11 @@ The data are organized according to the standard IBL data structure. Recording s
 
 ## Review authority
 
-Automated independent-AI fidelity gate dataset_narrative_fidelity_reviewer/v1 (provider anthropic, model claude-sonnet-5, session narrative_fidelity-review) returned accept; reviewer independent of generators ['cached-openai:gpt-5.6-luna'].
+Automated independent-AI fidelity gate dataset_narrative_fidelity_reviewer/v2 (provider anthropic, model claude-sonnet-5, session narrative_fidelity-review) returned accept; reviewer independent of generators ['cached-openai:gpt-5.6-luna'].
 
 ## Data basis & limitations
 
 The local sample proves only what is present IN the sample. Absence of a feature in the sample is NOT absence in the full dataset; no joint-coverage across variables is proven; and a property the sample cannot resolve is recorded as insufficient_sample_evidence, never as a dataset mismatch.
-- The supplied excerpt does not specify detailed trial structure, recording durations, preprocessing choices, or the exact temporal and anatomical coverage available for any particular future analysis.
-- The documentation reports regions represented in sufficient numbers for the IBL analyses, but this broad statement does not establish question-specific coverage or feasibility.
-- The excerpt does not provide detailed information about behavioral variability, missingness, or measurement quality beyond the reported distinction between total spike-sorted units and units classified as good quality.
+- The supplied documentation excerpt does not provide detailed question-specific coverage or measurement-quality criteria beyond the reported high-level release summary.
+- The reported 241 regions are those recorded in sufficient numbers for inclusion in the associated analyses, so they should not be interpreted as uniform coverage of every brain region.
+- The excerpt does not specify the full details of preprocessing, spike-sorting quality criteria, or the availability of every behavioral and video-derived measurement for every recording.

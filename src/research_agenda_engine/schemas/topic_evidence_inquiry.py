@@ -17,6 +17,15 @@ class TopicEvidenceInquiryDisposition(StrEnum):
     UPHOLD_INSUFFICIENT = "uphold_insufficient"
     SOURCE_LOCKED_REVISE = "source_locked_revise"
     HUMAN_ESCALATION = "human_escalation"
+    #: The inquiry found nothing scope-essential missing. Added because three ordinary answers had
+    #: no legal home at all and therefore could not be returned: an empty gap table (the field's own
+    #: ``default_factory``), a table whose absences are all scope-OPTIONAL, and a table whose
+    #: indeterminates are all scope-optional. The prompt actively invites the second -- it tells the
+    #: model optional breadth may remain absent when that limitation is honest -- so a model that
+    #: obeyed it produced an object no disposition accepted, Pydantic raised inside
+    #: ``generate_structured``, and the run recorded ``PROVIDER_FAILURE``: a scientific judgement
+    #: filed as a broken machine, which inverts the ``FailureClass`` contract.
+    NO_ESSENTIAL_GAP = "no_essential_gap"
 
 
 class TopicEvidenceGapDisposition(StrEnum):
@@ -126,6 +135,22 @@ class TopicEvidenceTerminalInquiryOutput(BaseModel):
                 raise ValueError("uphold_insufficient requires an essential packet-absent gap")
             if not needed:
                 raise ValueError("uphold_insufficient must name the evidence needed")
+        if self.disposition == TopicEvidenceInquiryDisposition.NO_ESSENTIAL_GAP:
+            essential_omitted = any(
+                assessment.essential_to_scope
+                and assessment.disposition == TopicEvidenceGapDisposition.PACKET_PRESENT_BUT_OMITTED
+                for assessment in self.gap_assessments
+            )
+            if essential_absent or essential_indeterminate:
+                raise ValueError(
+                    "no_essential_gap cannot be returned alongside an essential absent or "
+                    "indeterminate gap"
+                )
+            if essential_omitted:
+                raise ValueError(
+                    "an essential packet-present omission is repairable: return "
+                    "source_locked_revise, not no_essential_gap"
+                )
         if self.disposition == TopicEvidenceInquiryDisposition.HUMAN_ESCALATION:
             if essential_absent or not essential_indeterminate:
                 raise ValueError(

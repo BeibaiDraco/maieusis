@@ -24,15 +24,17 @@ import os
 import re
 import shutil
 import subprocess
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
+from importlib import import_module
 from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..providers.coding_agents.spawn_sandbox import default_lead_codex_home
 from ..providers.coding_agents.subprocess_utils import detect_repo_root, source_tree_digest
+from ..providers.models.base import is_account_exhaustion_error
 from ..providers.models.factory import build_model_provider
-from ..providers.models.policy import ensure_model_allowed
+from ..providers.models.policy import ModelTier, classify_model_id, ensure_model_allowed
 from ..providers.models.web_search_provider import (
     build_novelty_web_search_provider,
     require_strict_novelty_web_capability,
@@ -44,10 +46,18 @@ from ..schemas.maieusis_project_config import (
     ProviderModel,
 )
 from ..schemas.topic_literature import TopicSourceProfile
+from .context.research_scope import config_declared_scope_terms
 from .dossier.development_review_dossier import _MAX_REVIEW_ARTIFACT_REATTEMPTS
 from .orchestration.paperbank_import import PaperBankImportError, validate_paperbank_import
 from .paper_ingest.external_lookup import ExternalLookupError, probe_openalex_quota
+from .paper_ingest.source_preparation import (
+    SourcePreparationError,
+    derived_companion_names,
+    resolve_source_preparation,
+)
 from .retrieval.dataset_seed_retrieval import resolve_seed_link
+from .retrieval.generic_topic_lanes import GENERIC_TOPIC_MAX_RESULTS_PER_QUERY
+from .retrieval.openalex_scope import TopicTermPoolReport, probe_topic_term_pools
 from .retrieval.topic_sources import resolve_topic_source_profile
 
 _ELICIT_PROFILES = (TopicSourceProfile.ELICIT, TopicSourceProfile.HYBRID)
@@ -67,6 +77,81 @@ SourceTreeProbe = Callable[[str | Path], object]
 DatasetSeedProbe = Callable[[str, str], list[object]]
 CodexVersionProbe = Callable[[str], str]
 ClaudeVersionProbe = Callable[[str], str]
+#: Injected like ``which``, and for the same reason: probing the real import would make every
+#: hermetic preflight test depend on whether the machine running it happens to have the optional
+#: ``pdf`` extra installed.
+ImportProbe = Callable[[str], object]
+#: Free OpenAlex counting of each scope term under the user's own field. Injected like ``which`` so
+#: hermetic preflight tests neither reach the network nor sleep between paced requests.
+TopicTermPoolProbe = Callable[..., TopicTermPoolReport]
+#: One minimal request against a provider. Raises on failure; the caller classifies.
+BalanceProbe = Callable[[str], None]
+
+
+def _probe_provider_balance(provider: str) -> None:
+    """One request, the smallest the vendor will accept. Raises whatever the SDK raises."""
+
+    if provider == "anthropic":
+        import anthropic
+
+        anthropic.Anthropic().messages.create(
+            model=os.getenv("ANTHROPIC_PROBE_MODEL", "claude-sonnet-4-5-20250929"),
+            max_tokens=1,
+            messages=[{"role": "user", "content": "."}],
+        )
+        return
+    if provider == "openai":
+        from openai import OpenAI
+
+        OpenAI().chat.completions.create(
+            model=os.getenv("OPENAI_PROBE_MODEL", "gpt-4o-mini"),
+            max_tokens=1,
+            messages=[{"role": "user", "content": "."}],
+        )
+        return
+    raise RuntimeError(f"no balance probe for provider {provider!r}")
+
+
+#: Mean non-whitespace characters per page over a PDF's opening pages, or ``None`` when the probe
+#: could not measure (no ``pypdf``, unreadable file). Injected for the same reason as ``which``.
+TextLayerProbe = Callable[[Path], float | None]
+
+#: A page-average below this means the page images carry the article and the text layer carries at
+#: most a stamp. Measured over the twenty-paper climate cohort: the five image-only scans each
+#: yield exactly 44.0 (one watermark line per page, "Unauthenticated | Downloaded ... UTC"), and the
+#: fifteen text-layer papers yield 2169 to 6094. The floor sits 4.5x above the observed watermark
+#: and 10x below the thinnest real paper, so neither side is near it.
+_MIN_TEXT_LAYER_CHARS_PER_PAGE = 200.0
+#: Enough to clear a cover sheet without reading a whole document in the preflight.
+_TEXT_LAYER_PROBE_PAGES = 3
+
+
+def probe_pdf_text_layer(pdf_path: Path) -> float | None:
+    """Mean non-whitespace characters per page over the opening pages; ``None`` if unmeasurable.
+
+    Uses ``pypdf`` rather than a Poppler binary so the check costs nothing and does not depend on
+    what happens to be on PATH. Returning ``None`` rather than raising is deliberate: a preflight
+    that cannot measure must say so, not accuse the file.
+    """
+
+    try:
+        from pypdf import PdfReader
+        from pypdf.errors import PyPdfError
+    except ImportError:
+        return None
+    try:
+        reader = PdfReader(str(pdf_path))
+        pages = reader.pages[:_TEXT_LAYER_PROBE_PAGES]
+        if not pages:
+            return None
+        total = sum(len("".join((page.extract_text() or "").split())) for page in pages)
+    # PyPdfError covers pypdf's own parse failures; the rest are what a malformed object graph
+    # raises out of the parser before pypdf can classify it. Deliberately NOT `except Exception`:
+    # a preflight probe that swallows everything hides its own bugs as "unmeasurable file".
+    except (PyPdfError, OSError, ValueError, KeyError, IndexError, RecursionError):
+        return None
+    return total / len(pages)
+
 
 _MIN_TERRA_CODEX_VERSION = (0, 144, 4)
 _CODEX_VERSION_PATTERN = re.compile(r"\bcodex-cli\s+(\d+)\.(\d+)\.(\d+)\b")
@@ -109,6 +194,8 @@ def run_preflight(
     build_novelty_web_provider: BuildNoveltyWebProvider = build_novelty_web_search_provider,
     build_runner: BuildRunner | None = None,
     which: Which = shutil.which,
+    import_probe: ImportProbe = import_module,
+    text_layer_probe: TextLayerProbe = probe_pdf_text_layer,
     home: Path | None = None,
     probe_dataset_seed: bool = False,
     dataset_seed_probe: DatasetSeedProbe | None = None,
@@ -118,6 +205,8 @@ def run_preflight(
     source_tree_probe: SourceTreeProbe | None = None,
     codex_version_probe: CodexVersionProbe | None = None,
     claude_version_probe: ClaudeVersionProbe | None = None,
+    topic_term_pool_probe: TopicTermPoolProbe = probe_topic_term_pools,
+    balance_probe: BalanceProbe = _probe_provider_balance,
 ) -> PreflightReport:
     """Run the preflight over a validated config; return a report (never proceeds to a run)."""
     checks: list[PreflightCheck] = []
@@ -156,6 +245,83 @@ def run_preflight(
                 )
             ),
             warning=parser == "auto" and pdftotext is None,
+        )
+    # docling is a Python extra, not a binary, so the check above could never see it. Without this
+    # the same defect that check exists to prevent simply moved one parser to the left: preflight
+    # printed green, the operator approved a paid run, the run allocated its root, and then every
+    # PDF raised PdfParsingError("Install optional PDF dependencies") from parsing.py -- zero
+    # accepted papers, after the money started. The release's own frozen Climate profile selects
+    # this parser and the sealer pins it, so the configuration cannot be changed to route around it.
+    if not config.is_demo and parser in {"docling", "auto"}:
+        try:
+            # The exact module and attribute DoclingPdfProvider.parse resolves at run time. Probing
+            # the package alone would pass while the converter it actually needs is absent.
+            docling_ok = hasattr(import_probe("docling.document_converter"), "DocumentConverter")
+        except ImportError:
+            docling_ok = False
+        add(
+            "paperbank.docling_available",
+            docling_ok or parser == "auto",
+            (
+                f"parser {parser!r}: docling.document_converter.DocumentConverter "
+                + (
+                    "imports"
+                    if docling_ok
+                    else "NOT importable -- install the optional PDF extra "
+                    "(uv sync --extra pdf, or pip install 'maieusis[pdf]')"
+                )
+            ),
+            warning=parser == "auto" and not docling_ok,
+        )
+    # An image-only scan with no OCR derivative is a paid failure that costs nothing to see here.
+    # The 2026-08-11 climate qualification leg spent sixty-five minutes and then hard-failed five
+    # papers on `Docling parsed <file> but attributed no text to any page`. The five were 1977-1988
+    # typescripts; the inbox the published demonstration used carries a `.ocr.pdf` +
+    # `.derivative.yaml` pair for exactly those five, and the inbox the leg was pointed at carries
+    # neither. `resolve_source_preparation` substitutes the derivative when the receipt resolves, so
+    # a paper is only at risk when it has no text layer AND no admitted derivative.
+    if not config.is_demo and usable:
+        scanned_without_derivative: list[str] = []
+        unreadable_receipts: list[str] = []
+        # `*.ocr.pdf` matches `*.pdf`, so the companions are in `usable`. Probing one reports the
+        # derivative itself as an undeclared scan -- the same defect `derived_companion_names`
+        # exists to prevent, and which pipeline.py:208 already calls it for.
+        companions = derived_companion_names(inbox) if inbox.exists() else set()
+        for pdf in usable:
+            if pdf.name in companions:
+                continue
+            try:
+                prepared = resolve_source_preparation(pdf)
+            except SourcePreparationError as exc:
+                unreadable_receipts.append(f"{pdf.name} ({exc})")
+                continue
+            if prepared.receipt is not None:
+                continue
+            per_page = text_layer_probe(pdf)
+            if per_page is not None and per_page < _MIN_TEXT_LAYER_CHARS_PER_PAGE:
+                scanned_without_derivative.append(f"{pdf.name} ({per_page:.0f} chars/page)")
+        add(
+            "paperbank.source_derivatives_resolve",
+            not unreadable_receipts,
+            (
+                "every derivative receipt in the inbox resolves"
+                if not unreadable_receipts
+                else "unreadable derivative receipt(s): " + "; ".join(unreadable_receipts)
+            ),
+        )
+        add(
+            "paperbank.text_layer_or_derivative",
+            not scanned_without_derivative,
+            (
+                f"{len(usable)} PDF(s) carry a text layer or an admitted OCR derivative"
+                if not scanned_without_derivative
+                else (
+                    "image-only PDF(s) with no OCR derivative, which the parser cannot read: "
+                    + ", ".join(scanned_without_derivative)
+                    + " -- supply a <stem>.ocr.pdf plus <stem>.derivative.yaml beside each, or "
+                    "point paperbank.inbox_dir at an inbox that already carries them"
+                )
+            ),
         )
     paperbank_import_ok = True
     if config.paperbank.import_from_run is not None:
@@ -398,9 +564,24 @@ def run_preflight(
             "owner": config.models.owner,
             "reviewer": config.models.reviewer,
         }
+        # Optional, and unchecked until now precisely because it is optional: it falls back to
+        # ``reviewer`` when unset, so the only configurations that reach it are the ones where
+        # somebody typed an override -- and a typo there passed `check` green and failed on the
+        # first paid prior-art review. It exists for the case where one vendor's safety classifier
+        # makes that role unusable, which is exactly when it is being typed under pressure.
+        if config.models.novelty_reviewer is not None:
+            api_roles["novelty_reviewer"] = config.models.novelty_reviewer
         for role, pm in api_roles.items():
             _check_api_provider(
                 add, role, pm, allow_pro=config.models.allow_pro_model, build=build_provider
+            )
+        # Only after every role's key and tier are known good: probing an account whose key is
+        # missing would report a balance failure for a key problem.
+        if not config.is_demo:
+            _check_provider_balance(
+                add,
+                [pm.provider for pm in api_roles.values()],
+                probe=balance_probe,
             )
         # owner + reviewer must be DISTINCT providers (cross-check independence)
         distinct = (
@@ -409,6 +590,35 @@ def run_preflight(
         )
         add(
             "models.reviewer_independent", distinct, "owner and reviewer must be distinct providers"
+        )
+        # The coding-host model never reached _check_api_provider, so nothing said anything about it
+        # at all. It is DISCLOSED here rather than gated: the pro gate exists to stop unauthorized
+        # per-token API spend, and a coding host bills a subscription instead, so importing that
+        # gate would invent a hard boundary in the wrong billing lane and break configurations that
+        # work today. No vendor-naming rule is asserted either -- model families get renamed, and a
+        # hardcoded convention would refuse legitimate ids while proving nothing. What is left is
+        # the one thing worth saying before money moves: which tier the planner will be driven at.
+        coding_provider = (
+            "anthropic" if config.models.coding_host == CodingHost.CLAUDE_CODE else "openai"
+        )
+        coding_tier = classify_model_id(
+            config.models.coding_model.strip(), provider=coding_provider
+        )
+        coding_is_pro = coding_tier == ModelTier.PRO_EXPENSIVE
+        add(
+            "models.coding_model_tier",
+            True,
+            (
+                f"coding model {config.models.coding_model!r} on {config.models.coding_host.value} "
+                f"is {coding_tier.value}"
+                + (
+                    " -- subscription-billed, so the pro gate does not apply; make sure the plan "
+                    "you are on can carry it"
+                    if coding_is_pro
+                    else ""
+                )
+            ),
+            warning=coding_is_pro and not config.models.allow_pro_model,
         )
 
     # N-2 stays entirely absent from default-off and demo reports.  Once explicitly enabled, every
@@ -445,6 +655,9 @@ def run_preflight(
                 f"source_profile '{profile.value}'"
                 + (" — Elicit enabled (paid)" if enabled else " — public sources only (free)"),
             )
+
+        if config.literature.enabled:
+            _check_topic_term_pools(add, config, probe=topic_term_pool_probe)
 
         if probe_openalex and config.literature.enabled:
             try:
@@ -574,6 +787,165 @@ def _check_api_provider(
         add(f"models.{role}", True, f"{provider}:{model} present + tier-authorized")
     except Exception as exc:
         add(f"models.{role}", False, str(exc))
+
+
+def _check_provider_balance(
+    add: Callable[..., None],
+    providers: Sequence[str],
+    *,
+    probe: BalanceProbe,
+) -> None:
+    """Send a single minimal request per distinct provider, because a key is not a balance.
+
+    ``_check_api_provider`` above says so in its own comment -- ``CONSTRUCT only -- never send`` --
+    and that is exactly the gap: a key that exists, a model that is tier-authorized and an account
+    with no money look identical to it. Measured 2026-08-17: preflight was green and a 30-draw
+    measurement returned ``ScientificAgentSessionError: account_exhausted`` on 4 of 15 ibl draws and
+    15 of 15 nlb draws, while a direct request returned ``Your credit balance is too low to access
+    the Anthropic API``. A qualification leg is three hours and real money; the account it needs is
+    checked here, for a fraction of a cent, or it is discovered at the first gate.
+
+    Per DISTINCT provider, not per role: the seven roles share two accounts, so probing each role
+    would spend seven requests to learn two facts.
+
+    Exhaustion REFUSES; every other failure warns. `_check_topic_term_pools` already carries that
+    rule -- a check which costs nothing must never become the reason a run cannot start -- and a
+    transient network error is not evidence about the balance.
+    """
+
+    for provider in sorted({name.strip().lower() for name in providers if name.strip()}):
+        if provider == "mock":
+            continue
+        try:
+            probe(provider)
+        except Exception as exc:
+            if is_account_exhaustion_error(exc):
+                add(
+                    f"models.balance.{provider}",
+                    False,
+                    f"{provider} account has no usable balance; a paid leg would fail at its first "
+                    "call to this provider",
+                )
+            else:
+                # Deliberately the exception CLASS, never its text: a provider message can carry a
+                # signed URL or an account identifier (hard rule 13).
+                add(
+                    f"models.balance.{provider}",
+                    True,
+                    f"{provider} balance not verified ({type(exc).__name__}); proceeding",
+                    warning=True,
+                )
+            continue
+        add(f"models.balance.{provider}", True, f"{provider} answered a minimal request")
+
+
+def _check_topic_term_pools(
+    add: Callable[..., None],
+    config: MaieusisProjectConfig,
+    *,
+    probe: TopicTermPoolProbe,
+) -> None:
+    """Refuse, for free, a research field that hides the user's own terms from their own literature.
+
+    The field is the user's to name and the intuitive name is not always the working one. Measured
+    2026-08-12 on the climate scope: under `Earth and Planetary Sciences` the term `weather regime
+    transitions` has a pool of 6 against a lane that asks for 8, and `weather regimes` returns
+    lithium-isotope weathering geochemistry; under `Environmental Science` all sixteen terms are on
+    topic with a smallest pool of 20. Nobody can be expected to know that in advance, and a paid leg
+    must not be the thing that tells them, so the counting happens here where it is free and against
+    the same request the harvester will issue.
+
+    Only a shortfall the FIELD caused is a refusal, and that is why the probe counts twice. The
+    second scope measured that day has a term sitting at a pool of 3 -- and at 3 unfiltered as well.
+    No field name recovers a literature that does not exist, so refusing over that would be refusing
+    over something the user cannot fix; it is said out loud and the run proceeds. `weather regime
+    transitions` is the opposite case: 30 works unfiltered, 6 under the field the user named, and
+    renaming the field gets them back.
+
+    Two further refusals this check deliberately does not make. An unreachable or rate-limited
+    OpenAlex leaves terms unmeasured and warns, because a check that costs nothing must never become
+    the reason a run cannot start. A field name OpenAlex has no category for also warns rather than
+    fails: the run is then unfiltered, exactly as it behaved before the field existed, but the user
+    believes they scoped it and deserves to hear that they did not.
+    """
+
+    terms = config_declared_scope_terms(config.research_intent)
+    field = config.literature.research_field.strip()
+    if not terms:
+        add(
+            "literature.topic_term_pools",
+            True,
+            "open-mode scope terms are inferred from run artifacts, so no pool can be counted here",
+        )
+        return
+    report = probe(
+        terms,
+        research_field=field,
+        openalex_email=config.literature.openalex_email,
+        openalex_api_key=os.getenv("OPENALEX_API_KEY", ""),
+    )
+    if field and not report.openalex_field_id:
+        add(
+            "literature.research_field",
+            True,
+            f"research_field {field!r} did not resolve to an OpenAlex field, so retrieval runs "
+            "unfiltered and the pools below are unfiltered counts",
+            warning=True,
+        )
+    scope_note = (
+        f"under {report.research_field!r} ({report.openalex_field_id})"
+        if report.openalex_field_id
+        else "unfiltered"
+    )
+    required = GENERIC_TOPIC_MAX_RESULTS_PER_QUERY
+    thin = report.thin(required)
+    if thin:
+        add(
+            "literature.topic_term_scarcity",
+            True,
+            f"{len(thin)} of {len(terms)} topic term(s) have fewer than {required} works in the "
+            "whole index, so no research_field can fill their lane: "
+            + ", ".join(f"{pool.term!r} (pool {pool.pool})" for pool in thin),
+            warning=True,
+        )
+    starved = report.field_starved(required)
+    if starved:
+        add(
+            "literature.topic_term_pools",
+            False,
+            f"{len(starved)} of {len(terms)} topic term(s) lose their literature {scope_note} and "
+            f"cannot fill a lane of {required}: "
+            + ", ".join(
+                f"{pool.term!r} (pool {pool.pool}, {pool.unfiltered_pool} unfiltered)"
+                for pool in starved
+            )
+            + " -- name a literature.research_field these terms actually live under, or leave it "
+            "unset to retrieve unfiltered",
+        )
+        return
+    unmeasured = report.unmeasured()
+    if unmeasured:
+        add(
+            "literature.topic_term_pools",
+            True,
+            f"OpenAlex did not answer for {len(unmeasured)} of {len(terms)} topic term(s), so their "
+            f"pools are unknown {scope_note}: " + ", ".join(repr(pool.term) for pool in unmeasured),
+            warning=True,
+        )
+        return
+    fillable = [pool for pool in report.pools if pool.pool >= required]
+    smallest = min(fillable, key=lambda pool: pool.pool) if fillable else None
+    add(
+        "literature.topic_term_pools",
+        True,
+        f"no topic term loses its literature {scope_note}"
+        + (
+            f"; smallest pool that fills a lane of {required} is "
+            f"{smallest.pool} ({smallest.term!r})"
+            if smallest is not None
+            else ""
+        ),
+    )
 
 
 def _check_novelty_web_grounding(

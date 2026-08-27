@@ -47,7 +47,11 @@ from ...schemas.generic_scientific_source import (
     DatasetGroundingLevel,
     QuestionFamilyScientificSourceSnapshot,
 )
-from ...schemas.multi_family_dossier import ReviewAuthority
+from ...schemas.multi_family_dossier import (
+    AutomatedReviewKind,
+    ReviewAuthority,
+    classify_automated_review,
+)
 from ...schemas.question_family_branch import (
     QuestionFamilyBranch,
     QuestionFamilyBranchEventType,
@@ -1544,8 +1548,29 @@ def _planning_status_text(
         GenericFamilyOutcomeKind.REJECTION: "scientific rejection",
         GenericFamilyOutcomeKind.HUMAN_ESCALATION: "automated escalation terminal",
     }[outcome.outcome_kind]
+    # `ReviewAuthority.AUTOMATED` says who was ALLOWED to authorize this dossier -- no human gate
+    # required -- and says nothing about whether an independent reviewer actually read it. Printing
+    # "automated independent review" off that flag told readers a review had happened when none had.
+    #
+    # Measured on the 2026-08-14 climate leg: all four scientific rejections were closed by
+    # `provider_id: local:automated-review`, `model_id: deterministic-automated-review` -- a
+    # host-side authorization to render a development dossier, whose own `decision_summary` reads
+    # "Automated review allows a development dossier only." Their compact dossiers claimed automated
+    # independent review while their detailed pages said, twice, "No safely resolved typed review
+    # statement was available for this view". Two public pages of one family, contradicting.
+    #
+    # The detailed page was already right, and its own note states the rule this now follows: a
+    # missing review is shown as missing rather than inferred from the family's status.
+    # One shared classifier, imported rather than restated: this rule lived here and in
+    # `presentation/family_page.py`, only this copy was repaired, and the two pages of one family
+    # would have disagreed in the next run. An empty provider_id is unresolved, not independent.
+    automated_kind = classify_automated_review(decision.authority, decision.provider_id)
     authority_label = (
-        "automated independent"
+        {
+            AutomatedReviewKind.INDEPENDENT_MODEL: "automated independent",
+            AutomatedReviewKind.HOST_AUTHORIZATION: "automated host",
+            AutomatedReviewKind.UNRESOLVED: "automated, reviewer unresolved",
+        }[automated_kind]
         if decision.authority == ReviewAuthority.AUTOMATED
         else decision.authority.value.replace("_", " ")
     )

@@ -186,8 +186,19 @@ class FamilyCompletionRecord(BaseModel):
     run_id: str
     question_family_id: str
     slug: str
-    # stable_hash of the loaded shortlist manifest model — binds this record to the stage-D output.
-    shortlist_digest: str
+    #: The shortlist's SHARED proposal context — pack, context id and digest, authority ceiling.
+    #: What every family in a batch is planned against, and what genuinely invalidates all of them.
+    shortlist_context_digest: str
+    #: A digest over THIS family's own shortlist entry. Together with the shared digest above, this
+    #: replaces a single `stable_hash` of the whole manifest.
+    #:
+    #: The whole-manifest binding was measured wrong on 2026-08-14: a transient connection drop put
+    #: one qualification family in `run_incomplete_family_ids`, and moving it back into `shortlisted`
+    #: have changed the manifest hash and therefore invalidated four accepted plans and a reject that
+    #: were already earned and paid for. So the only lawful rescue cost more than the fault. A
+    #: family's terminal depends on the shared context and on its own entry; a sibling being
+    #: re-reviewed beside it changes neither.
+    shortlist_entry_digest: str
     dossier_record: FamilyDossierOutputRecord
     family_run_outcome: FamilyRunOutcome
     # run-root-relative POSIX path → sha256 of every artifact this completion claims.

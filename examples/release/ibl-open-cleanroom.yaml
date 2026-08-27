@@ -1,0 +1,125 @@
+version: maieusis_project_config/v1
+mode: standard
+paperbank:
+  inbox_dir: /ABSOLUTE/PATH/TO/IBL/PAPERS
+  extraction:
+    provider: openai
+    model: gpt-5.6-luna
+  parser: poppler_text
+  # Coupled to `parser`, deliberately, and stated rather than inherited from the schema default.
+  # The agent reader writes its body file from the PARSED blocks, so it reads whatever the parser
+  # produced: on poppler's column-interleaved fragments it was measured returning broken spans like
+  # "trate to successively lower altitudes", and docling's prose is recorded as "the whole reason
+  # this is worth doing" (services/paper_ingest/pipeline.py). Turning this on without also moving
+  # `parser` to docling buys garbage, not coverage.
+  #
+  # The cost of leaving it false is real and belongs in this set's limitations, not hidden: the
+  # regex fallback covers 5.7% of cited works on a square-bracket assumption false for every paper
+  # measured, and 8 of 12 papers here get zero citation contexts.
+  citation_contexts_by_agent: false
+  evidence_mode: source_span
+  max_workers: 4
+  cited_literature: true
+  select_key_citations: true
+  external_reference_fallback: true
+  min_local_reference_count: 10
+  crossref_mailto: ''
+  openalex_email: ''
+  citation_prompt_char_budget: 180000
+  # This leg reads the SAME twelve-PDF cohort as the topic-conditioned IBL leg, with the same parser,
+  # extraction model and prompt versions -- only the research intent differs. Re-extracting would pay
+  # for the most expensive stage twice to establish only that it can. Both leaves are bound between
+  # the IBL leg and this one, and the pre-ignition gate refuses the placeholder.
+  import_from_run:
+    source_run_root: /ABSOLUTE/PATH/TO/THIS_SETS_IBL_RUN_DIRECTORY
+    expected_receipt_sha256: '0000000000000000000000000000000000000000000000000000000000000000'
+dataset:
+  seed:
+    dataset_id: ibl_bwm
+    link: https://docs.internationalbrainlab.org/notebooks_external/2025_data_release_brainwidemap.html
+    docs: []
+  inspection_runtime:
+    dataset_root: /ABSOLUTE/PATH/TO/IBL/DATASET
+    dataset_access_mode: external_readonly
+    inspection_python: /ABSOLUTE/PATH/TO/IBL/INSPECTION/VENV/bin/python
+    inspection_command: ''
+    inspection_pythonpath: /ABSOLUTE/PATH/TO/IBL/INSPECTION/VENV/lib/python3.13/site-packages
+    inspection_extra_env: {}
+    source_tree_root: /ABSOLUTE/PATH/TO/CLEAN_PUBLIC_RC_CHECKOUT
+    max_turns: 60
+    timeout_seconds: 2400
+  allowed_inspection_resources:
+  - local dataset documentation
+  - dataset repository code
+  - schema and metadata files
+  - manifest-listed dataset files
+  - bounded sample data
+  - official IBL/ONE documentation
+  - metadata-only OpenAlyx/ONE queries
+  official_online_resources:
+  - https://int-brain-lab.github.io/ONE/
+  - https://int-brain-lab.github.io/ONE/one_reference.html
+  - https://docs.internationalbrainlab.org/public_docs/public_introduction.html
+  - https://docs.internationalbrainlab.org/notebooks_external/2025_data_release_brainwidemap.html
+research_intent:
+  theme: ''
+  mode: open
+  topic_terms: []
+  topic_description: ''
+  seed_question: ''
+  novelty_distance: adjacent
+  scope_derivation: auto
+models:
+  pattern:
+    provider: openai
+    model: gpt-5.6-sol
+  questioner:
+    provider: openai
+    model: gpt-5.6-sol
+  narrator:
+    provider: openai
+    model: gpt-5.6-luna
+  topic:
+    provider: openai
+    model: gpt-5.6-terra
+  owner:
+    provider: openai
+    model: gpt-5.6-terra
+  reviewer:
+    provider: anthropic
+    model: claude-sonnet-5
+  novelty_reviewer:
+    provider: openai
+    model: gpt-5.6-terra
+  coding_host: codex
+  coding_model: gpt-5.6-terra
+  coding_reasoning_effort: high
+  allow_pro_model: true
+literature:
+  enabled: true
+  openalex_email: ''
+  fulltext_enrichment: false
+  source_profile: public
+novelty:
+  enabled: true
+  direct_recap_threshold: 0.9
+  close_prior_threshold: 0.7
+  max_candidates: 5
+  web_grounding:
+    enabled: true
+    scout:
+      provider: anthropic
+      model: claude-sonnet-5
+    max_searches_per_scout: 3
+    max_leads_per_scout: 5
+    max_output_tokens: 21000
+    rate_card: anthropic_direct_web_search_20250305
+    hard_run_tool_spend_ceiling_micro_usd: 1000000
+run:
+  output_root: /ABSOLUTE/PATH/TO/QUALIFICATION/RUNS/ibl
+  shortlist_path: null
+  target_family_ids: []
+  max_families: 6
+  variants_per_family: 2
+  max_parallel_family_workers: 2
+  max_revise_rounds: 3

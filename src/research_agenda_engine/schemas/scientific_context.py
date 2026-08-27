@@ -20,6 +20,27 @@ class TopicEvidenceClaimStatus(StrEnum):
     KNOWN_LIMITATION = "known_limitation"
     OPEN_QUESTION = "open_question"
     ALREADY_ANSWERED = "already_answered"
+    #: How these data or comparable resources have already been used, and to what end.
+    #:
+    #: Added 2026-08-17 because the reviewer requires typed, source-bound evidence for the
+    #: `dataset_resource_reuse` dimension and there was no status that could carry it. The only
+    #: place a brief could put such evidence was `nearest_dataset_reuse_work: list[str]` -- a list
+    #: of plain strings, structurally incapable of holding a `claim`, a `status` and
+    #: `source_record_ids`. So the drafter wrote prose there and the reviewer, correctly, refused it
+    #: as untyped.
+    #:
+    #: Measured on the 2026-08-16 climate leg: the corpus contained FIVE reanalysis-reuse records,
+    #: including *Thermally Driven and Eddy-Driven Jet Variability in Reanalysis*, and the brief's
+    #: own sentence -- "the supplied sources use reanalysis-based circulation analyses, including
+    #: 700-hPa geopotential-height regime classification, ERA-40 jet and Rossby-wave-breaking
+    #: diagnostics" -- was TRUE and was exactly the evidence being asked for. It sat in the string
+    #: list, unbound, and the leg terminated on `essential_evidence_absent` for a dimension it
+    #: actually covered.
+    #:
+    #: Every consumer of this enum tests positive membership (`== X`, `in {X, Y}`); none switches
+    #: exhaustively, and the Question Scientist projection filters on source binding rather than
+    #: status, so a new member reaches the packs and breaks no existing path.
+    DATASET_RESOURCE_REUSE = "dataset_resource_reuse"
 
 
 class TopicEvidenceClaimOrigin(StrEnum):

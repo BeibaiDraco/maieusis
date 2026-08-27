@@ -4,26 +4,27 @@
 
 ## Starting background
 
-- The equatorial QBO is an approximately 20-month, wave-driven oscillation in equatorial lower-stratospheric winds, and prior studies had reported or sought analogous extratropical QBO signals.
-- Earlier extratropical studies often relied on short records, leaving it difficult to distinguish a circulation relationship with the equatorial QBO from ordinary interannual variability or sampling fluctuations.
-- Planetary-wave interactions with the stratospheric mean flow, including changes in the latitude of the zero-wind critical line, provided a plausible but theoretically non-simple route by which equatorial-QBO phase could affect extratropical circulation.
+- The equatorial QBO is an approximately 26-month oscillation of alternating westerly and easterly mean zonal winds, understood in the cited theoretical literature as a wave-driven stratospheric phenomenon.
+- Earlier studies reported or sought extratropical QBO-like signals, but their relatively short records left unresolved whether those signals were directly related to the equatorial QBO or instead reflected general interannual variability.
+- Planetary-wave interaction with the stratospheric mean flow, including the latitude of a QBO-dependent critical surface, provides a possible but theoretically non-simple link between equatorial QBO phase and extratropical circulation.
+- Planetary-wave activity differs seasonally and between hemispheres, making seasonal and hemispheric comparison relevant to interpreting any apparent QBO response.
 
 ## Unresolved gap
 
-The provided evidence supports an unresolved question about whether extratropical QBO signals are reproducibly related to the phase of the equatorial QBO, rather than being ordinary interannual variability or sampling artifacts. It also leaves unclear whether any seasonal planetary-wave response reflects shifts in the critical line, changes in the broader mean-zonal-wind distribution, or both.
+The provided evidence supports a gap concerning whether phase-related differences in extratropical circulation are reproducibly connected to the equatorial QBO, rather than being sampling manifestations of general interannual variability. Even if such differences are present, their seasonal and wavenumber dependence does not uniquely identify whether planetary-wave changes arise from a shifted critical line, altered mean zonal-wind distributions, or both.
 
 ## Dataset opportunity
 
-The study had multi-year 50 mb observations that could be organized into westerly and easterly equatorial-QBO phase composites, with seasonal comparisons, hemispheric coverage, and harmonic decomposition into zonal-mean and planetary-wave components.
+The paper had a multi-year record of monthly mean 50-mb geopotential-height fields and zonal-wind observations that could be categorized by equatorial QBO phase, with seasonal subsets and limited Southern Hemisphere station-network data for comparison.
 
-Phase-specific seasonal composites make it possible to compare circulation fields under the two QBO states while examining whether signals recur across seasons and hemispheres. Separating zonal-mean from wave components also allows the study to test whether the apparent extratropical association is concentrated in circulation modes for which planetary-wave activity is physically relevant, while additional years provide a check on the stability of reported signals.
+Classifying observations into westerly and easterly QBO categories permits matched observational composites of zonal-mean circulation and planetary-wave fields. Repeating the comparison across seasons, hemispheres, wave components, and additional years provides evidence about reproducibility and seasonal dependence, while also exposing signals that may be unstable under expanded sampling.
 
 ## Resulting question
 
-Does the phase of the equatorial QBO modulate extratropical and global circulation at 50 mb, including zonal-mean and stationary planetary-wave components, and are the associated signals dependent on season and hemisphere?
+How does equatorial QBO phase relate to the global circulation at 50 mb, especially extratropical zonal-mean circulation and planetary-wave structure, and how do those associations vary across seasons and hemispheres?
 
 ## Scientific consequence
 
-A reproducible phase-dependent circulation contrast would support a connection between tropical QBO variability and extratropical or global stratospheric circulation, and would constrain interpretations involving critical-line shifts, mean-flow changes, and wave–mean-flow interaction. A weak, seasonally restricted, or unstable contrast would instead limit claims of a general global QBO influence and indicate that some reported signals may reflect sampling variability or ordinary interannual circulation changes. The observations would not by themselves identify the physical mechanism definitively.
+A stable phase-conditioned extratropical signal would support a connection between the equatorial QBO and global stratospheric circulation and would constrain interpretation of seasonal and wavenumber dependence. Weak, seasonally restricted, or unstable contrasts would instead caution against treating apparent extratropical QBOs as direct QBO effects and would leave sampling variability or general circulation variability as plausible explanations. The observations would not by themselves uniquely establish whether wave changes are caused by the critical-line shift, altered mean flow, or both.
 
-The question links a well-characterized tropical oscillation to geographically remote circulation variability and tests whether that relationship is structured by season, hemisphere, and dynamical component. Its value lies in distinguishing a potentially general tropical–extratropical coupling from coincidental or sample-dependent extratropical patterns, while showing how decomposition and seasonal contrasts can make a broad circulation question scientifically discriminating.
+This question is scientifically valuable because it tests whether a well-defined equatorial oscillation has a reproducible large-scale and extratropical atmospheric expression, linking an established tropical phenomenon to planetary-scale circulation dynamics. It also illustrates how comparing phase-conditioned fields across temporal and spatial regimes can distinguish a potentially general circulation relationship from an artifact of limited sampling, even when the evidence remains associational.

@@ -1,57 +1,50 @@
-# Paper — Constraining the increased frequency of global precipitation extremes under warming
+# Paper — Thackeray, Hall, Norris, and Chen (2022), “Constraining the increased frequency of global precipitation extremes under warming.”
 
-- Review authority: `extracted` (automated unless expert)
+- Review authority: `ai_reviewed` (automated unless expert)
 
 ## Question the system extracted
 
-Can historical changes in the frequency of global extreme precipitation events be used as an emergent constraint on their future frequency under warming, and does this relationship remain useful across CMIP5 and CMIP6, emissions scenarios, and global or land-based domains?
+Can historical changes in the frequency of global extreme precipitation events be used as an emergent constraint on their future change under warming, across multiple generations of climate models and emissions scenarios?
 
 ## The scientific contrast
 
-Whether intermodel variability in historical extreme-precipitation frequency change is associated with and predictive of intermodel variability in future change, rather than merely reflecting internal variability, observational uncertainty, or model-specific noise.
+Whether the intermodel variation in recent historical FP≥99 trends predicts the intermodel variation in future FP≥99 changes, rather than merely reflecting internal variability, observational uncertainty, or differences in simulated warming.
 
 Competing explanations the paper weighed:
-- A historical–future relationship may reflect the forced response to warming, because historical and future extreme-precipitation changes respond to increasing greenhouse-gas forcing.
-- The apparent relationship may be weakened or distorted by internal variability, especially where only one or a few model realizations are available.
-- Differences among observational precipitation datasets and limited global observational coverage may make model evaluation uncertain.
-- Model biases or differences in simulated warming and climate sensitivity may carry from the historical period into future extreme-precipitation projections.
-- A relationship observed in one model generation or scenario might not generalize across CMIP5, CMIP6, emissions pathways, or land-only domains.
+- A robust historical–future relationship reflects a persistent model-specific forced response, so historical trends can constrain future changes.
+- The apparent relationship may be weakened or distorted by internal climate variability, especially when only one or few model realizations are available.
+- Differences among observational precipitation products and limited long-term global coverage may make model evaluation uncertain.
+- Differences in historical and future warming rates, including differences in equilibrium climate sensitivity, may contribute to the relationship and its slope.
+- Historical model biases may persist into future changes, but the emergent relationship may be less useful for precipitation magnitude than for frequency because the corresponding historical–future correlations are weaker.
 
-What would tell them apart: A robust cross-model relationship between historical trends and future extreme-precipitation frequency changes, reproduced in separate CMIP generations and under different emissions scenarios, and supported where possible by observational estimates over global or quality-masked land regions.
+What would tell them apart: Test whether historical FP≥99 trends and future FP≥99 changes are correlated across GCMs, whether the relationship recurs in CMIP5 and CMIP6 and under different emissions pathways, and whether it persists over observationally better-constrained land regions.
 
 ## Background and motivation
 
-- Precipitation extremes have increased regionally over recent decades, and warming is expected to increase the frequency and intensity of the heaviest and rarest precipitation events across nearly all latitudes.
-- Climate models project increased precipitation extremes but exhibit substantial uncertainty in the magnitude of future changes.
-- Historical model errors and observable climate metrics can be used in an emergent-constraint framework to inform best estimates of future climate change and targeted model development.
-- Historical and future precipitation-extreme changes may be linked because both respond to warming, and the available observational record is now long enough to assess model performance in an emergent-constraint framework.
-- Observed and simulated historical extreme-precipitation changes are affected by observational limitations, internal variability, and differences in available model realizations, so the validity and uncertainty of any emergent relationship must be assessed.
-- Climate change is associated with greater frequency and intensity of precipitation extremes, and several studies have documented increased regional extremes over recent decades.
-- Future precipitation-extreme projections vary widely across climate models despite broad agreement on the direction of change.
-- Emergent constraints seek relationships between uncertain future climate components and observable climate metrics, and historical model performance can inform best estimates of future change.
-- Recent observed heavy-precipitation changes and the length of available observational records make it possible to assess model performance for an emergent-constraint analysis.
+- Precipitation extremes have increased across much of the globe in recent decades, and the heaviest and rarest events are projected to undergo the largest increases in frequency and intensity under warming.
+- Climate models generally project increased global mean precipitation and more frequent extreme events, but they show substantial uncertainty in the magnitude of future precipitation-extreme changes.
+- Historical and future changes in precipitation extremes are potentially linked because biases in transient climate response can persist into the future, making historical model performance informative about future change.
+- Emergent-constraint methods can relate uncertain future climate components to observable climate metrics, informing likely future change and targeted model development.
+- Observed heavy-precipitation records have become sufficiently long to assess model performance in an emergent-constraint framework, although observational coverage and quality remain limiting factors.
 
 ## Why this question mattered
 
-The question is scientifically valuable because it addresses uncertainty in how often extreme precipitation will occur in a warming climate. Resolving whether observed historical changes constrain future changes makes the future projection range more informative and provides a way to use observations in evaluating climate-model projections.
-
-Future precipitation extremes have important implications and their projected magnitude remains uncertain across models. If historical observed changes constrain future changes, the analysis can reduce the range of projections, identify implausible outlier projections, and provide information relevant to evaluating model biases and understanding future extreme precipitation.
+A successful constraint would reduce uncertainty in future global and land-region precipitation-extreme projections, identify implausibly large model projections relative to observed historical change, and provide information useful for evaluating and developing climate models. The question is especially consequential because extreme precipitation changes have broad implications and are difficult to simulate, particularly in association with moist convection.
 
 ## What the dataset offered (as the paper used it)
 
-Secondary analysis of historical and future precipitation changes across 25 CMIP5 GCMs and 23 CMIP6 GCMs, using historical trends to evaluate models and constrain future precipitation-extreme projections under high- and medium-emissions pathways.
+Comparison of historical and future precipitation-extreme changes across 25 CMIP5 and 23 CMIP6 GCMs, with observational evaluation and emergent-constraint analysis under high- and medium-emissions pathways.
 
-- Population: Global climate-model simulations and global or quality-masked land regions represented in observational precipitation products.
-- Measurements: Frequency of daily precipitation events at or above the historical 99th percentile (FP≥99), Historical trends in extreme-precipitation frequency, Future changes in extreme-precipitation frequency, Future changes in extreme-precipitation magnitude, Frequency of events at or above the historical 99.9th percentile, Global warming and model-simulated precipitation changes, Observational uncertainty and internal variability
+- Population: Global climate-model simulations and observed global or land-region precipitation records
+- Measurements: Frequency of daily precipitation events at or above the historical 99th percentile (FP≥99), Future change in FP≥99, Magnitude of precipitation at or above the historical 99th percentile, Frequency of events at or above the historical 99.9th percentile, Historical trends, future changes, intermodel correlations, and prediction intervals
 
 ## Key citations used in forming the question
 
 Public citation details are represented by the paper context; internal citation identifiers are omitted from this gallery.
+
 ## Open uncertainties (unmet evidence)
 
-- The parser packet does not identify a single parent-dataset paper for the reused CMIP5/CMIP6 and observational products; parent-dataset identity and precise novelty relative to each parent cannot be fully grounded.
-- The abstract was not detected, and several introductory sentences are split across parser spans; some exact wording of the initial question and summary is reconstructed only from adjacent source spans.
-- parser-owned text was usable, but the parse completeness report recorded limitations; review before authority raise.
+- The provided source spans support reuse of CMIP5/CMIP6 and observational precipitation datasets, but do not identify a single parent-dataset paper or establish a more specific parent-dataset relationship.
 
 ## If this looks wrong
 

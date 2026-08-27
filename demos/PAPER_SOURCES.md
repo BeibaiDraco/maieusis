@@ -1,6 +1,6 @@
 # Source papers used by the demonstrations
 
-[All demo questions](QUESTIONS.md) · [IBL](ibl/README.md) · [NLB](nlb/README.md) · [Climate](climate/README.md)
+[All demo questions](ALL_QUESTIONS.md) · [IBL](ibl/README.md) · [NLB](nlb/README.md) · [Climate](climate/README.md)
 
 Maieusis does not distribute source PDFs. These tables identify exactly which papers each
 demonstration read, so you can obtain lawful copies yourself and check what the published artifacts
@@ -18,8 +18,14 @@ both demos.
 
 Screen: 12 candidates in,
 12 accepted PaperCases,
+0 excluded,
 10 reviewed formation traces,
 8 reviewed question-forming patterns.
+
+This cohort is read once and shared by three demonstrations. The two IBL runs and the NLB run use
+the same twelve papers and the same paper bank, bound by receipt digest — re-reading them for each
+run would pay for the most expensive stage three times to produce bytes that cannot differ, and
+holding it fixed is part of what makes the two IBL runs comparable at all.
 
 The `pdf_sha256` column lets you verify you obtained the same file the run read.
 
@@ -41,9 +47,9 @@ The `pdf_sha256` column lets you verify you obtained the same file the run read.
 ## Climate cohort — 20 papers
 
 Screen: 20 candidates in,
-13 accepted PaperCases,
-7 excluded,
-12 reviewed formation traces,
+18 accepted PaperCases,
+2 excluded,
+9 reviewed formation traces,
 8 reviewed question-forming patterns.
 
 **No checksums are published for this cohort, and that is deliberate.** Every one of these papers
@@ -51,11 +57,15 @@ was read through a text derivative produced locally, so a checksum taken from th
 match the file you download and would be a false verification aid. The neuroscience cohort above
 does carry checksums because those papers were read directly.
 
-Three of the seven exclusions were parse failures rather than scientific judgements:
-`09-lorenz-hartmann-2001`, `12-charlton-polvani-2007`, and `19-rousi-et-al-2022` could not be
-turned into the structured record the review stage requires. Two of those are canonical works in
-the field. The demonstration lists them as excluded with that reason rather than quietly dropping
-them, and the loss is a limitation of this run, not an assessment of those papers.
+Neither of the two exclusions is a judgement about the paper's science, and the paper bank lists
+both with the reviewer's full reasoning rather than quietly dropping them.
+
+One was refused because a citation the run had selected as important carried no passage tying it to
+the paper: the review calls that fabricating participation in the question-formation process and
+refuses the selection set rather than keep it. The other was refused because its key-citation list
+came back empty while the case's own prose named eight specific prior works — the reviewer says
+plainly that this is an incompleteness gap and not a fabrication, and that it is straightforwardly
+fixable. Both are the review stage doing its job on the run's own output.
 
 | File | Paper | Authors | Year |
 | --- | --- | --- | --- |
@@ -104,4 +114,4 @@ whether the pattern bank is independent of its builders, treat those two papers 
 
 ---
 
-[All demo questions](QUESTIONS.md)
+[All demo questions](ALL_QUESTIONS.md)

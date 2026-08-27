@@ -1,48 +1,59 @@
-# Paper — John M. Wallace and David S. Gutzler, “Teleconnections in the Geopotential Height Field during the Northern Hemisphere Winter”
+# Paper — Wallace and Gutzler, “Teleconnections in the Geopotential Height Field during the Northern Hemisphere Winter” (1981)
 
 - Review authority: `ai_reviewed` (automated unless expert)
 
 ## Question the system extracted
 
-What teleconnection patterns emerge from an objective treatment of Northern Hemisphere winter sea-level-pressure and geopotential-height data, do the objectively derived patterns resemble previously described teleconnection patterns, and are they reproducible in an independent data set?
+Which recurrent teleconnection patterns emerge from an objective treatment of Northern Hemisphere winter sea level pressure and 500 mb geopotential-height data, and are the objectively derived patterns reproducible in an independent data set and comparable to previously described teleconnection patterns?
 
 ## The scientific contrast
 
-Subjectively or index-defined regional teleconnection patterns versus objectively derived correlation structures, with reproducibility in an independent period used to distinguish robust patterns from sample-specific features.
+Whether recurrent spatial correlation patterns identified objectively and across the hemisphere are reproducible and correspond to previously described teleconnections, rather than being artifacts of selected stations, variables, data periods, or analysis procedures.
 
 Competing explanations the paper weighed:
-- Dipole or multiple-center patterns may reflect standing oscillations with geographically fixed nodes and antinodes.
-- The same patterns may instead reflect propagating wavelike disturbances with preferred zonal or meridional scales.
-- Differences between primary and independent samples may reflect sampling fluctuations, systematic local biases in earlier 700 mb analyses, or genuinely weaker/non-reproducible patterns.
-- The North Atlantic Oscillation may correspond to a regional pattern distinct from, rather than identical to, the leading eigenvector of the sea-level-pressure correlation matrix.
+- The spatial patterns may indicate standing oscillations with geographically fixed nodes and antinodes.
+- The spatial patterns may instead result from propagating wavelike oscillations with preferred scales.
+- The apparent North Atlantic Oscillation may correspond directly to the leading eigenvector of wintertime sea level pressure anomalies.
+- The apparent North Atlantic Oscillation and leading eigenvector may not have a one-to-one correspondence.
 
-What would tell them apart: Patterns interpreted as standing oscillations should be stronger near geographically fixed antinodes, whereas propagating disturbances should produce more similar pattern strengths and shapes across grid points in a latitude belt; independently reproducible correlation structures provide an additional test of robustness.
+What would tell them apart: Objective correlation maps, comparisons with eigenvector patterns, and repetition on an independent winter period distinguish reproducible recurrent structures from patterns dependent on a selected data set or analysis approach; the spatial organization of correlations provides evidence relevant to standing versus propagating interpretations.
 
 ## Background and motivation
 
-- Significant simultaneous correlations between meteorological parameters at widely separated points provide evidence concerning the transient behavior of planetary waves.
-- The literature provides convincing evidence for four Northern Hemisphere teleconnection patterns: the North Atlantic Oscillation, North Pacific Oscillation, zonally symmetric seesaw, and Pacific/North American pattern.
-- Existing teleconnection studies are difficult to interrelate because investigators used different variables, stations, time-averaging intervals, data bases, and criteria for defining horizontal structural relationships.
-- Dipole and multiple-center correlation patterns could indicate standing oscillations with geographically fixed nodes and antinodes, but they could also arise from propagating disturbances with preferred spatial scales.
-- The North Atlantic Oscillation and Pacific/North American pattern are supported by prior observational analyses, while evidence for some other patterns is less convincing or less reproducible.
+- Contemporaneous correlations between geopotential heights at widely separated points may reveal recurrent spatial patterns indicative of standing oscillations in planetary waves during Northern Hemisphere winter.
+- Prior literature provided evidence for four teleconnection patterns: the North Atlantic Oscillation, North Pacific Oscillation, zonally symmetric seesaw, and Pacific/North American pattern.
+- Existing teleconnection studies used differing data bases, variables, stations, and analysis approaches, making results difficult to compare and making the statistical significance of reported patterns difficult to assess.
+- The relationship between the North Atlantic Oscillation and the leading eigenvector of wintertime sea level pressure anomaly patterns was not established as a one-to-one correspondence.
+- Patterns visible in one-point correlation maps could represent standing oscillations with geographically fixed nodes and antinodes, or propagating wavelike oscillations with preferred scales.
+- The observed negative correlations in zonally averaged sea level pressure anomalies were reported as too strong to be explained solely by contributions from the North Atlantic and North Pacific Oscillations.
 
 ## Why this question mattered
 
-The design makes previously reported teleconnection structures more comparable and tests whether they are robust features of the winter circulation rather than consequences of selected stations, indices, or limited samples. It also clarifies the differing regional and planetary-scale structures represented by teleconnection patterns and eigenvectors.
+A reproducible and objectively derived description would make disparate teleconnection studies more comparable, clarify which reported spatial relationships recur across periods, and inform whether the observed structures are consistent with standing or propagating atmospheric-wave interpretations.
 
 ## What the dataset offered (as the paper used it)
 
-Objective analysis of monthly winter anomaly fields using temporal correlations between grid points, one-point correlation maps, teleconnectivity maps, composite pattern indices, eigenvector analysis, and an independent-period reproducibility test.
+Observational analysis of winter atmospheric fields using temporal correlations between all possible pairs of grid points, objective identification of teleconnection patterns, comparison with eigenvector patterns, and reproducibility testing on an independent period.
 
-- Population: Northern Hemisphere extratropics during winter
-- Measurements: monthly mean sea level pressure, monthly mean 500 mb geopotential height, 700 mb geopotential height in the earlier independent sample, temporal correlation coefficients between grid points, correlation matrices and one-point correlation maps, teleconnectivity and pattern indices, eigenvectors of normalized covariance/correlation matrices, composite anomaly maps
+- Population: Northern Hemisphere extratropics during winter.
+- Measurements: Temporal correlation coefficients between geopotential-height or pressure time series, Sea level pressure anomalies, 500 mb height anomalies, Thickness anomalies, Eigenvectors of the correlation or covariance matrix, Reproducibility across independent winter periods
 
 ## Key citations used in forming the question
 
 Public citation details are represented by the paper context; internal citation identifiers are omitted from this gallery.
+
 ## Open uncertainties (unmet evidence)
 
-- parser-owned text was usable, but the parse completeness report recorded limitations; review before authority raise.
+- Paper type and dataset relation to a parent dataset or prior dataset release are not explicitly grounded by the supplied parser-owned spans.
+- The supplied spans do not provide a complete methods/data-description passage establishing the full dataset name, provenance, public/private status, or exact measurement inventory.
+- The original motivating literature gap and detailed background claims are only partially represented in the supplied source window; full question-formation evidence would require earlier introduction/background spans.
+- The supplied source spans do not fully ground the exact citation identities and contexts of the nearest prior work.
+- extraction windows returned different scientific descriptions; the first is retained pending review.
+- Blocking extraction gap: the provided parser packet contains only fragmented reference-list spans from page 29 and does not provide source-backed evidence for the paper's dataset description, population, modalities, task/design, or measurements.
+- Blocking extraction gap: no parser-owned source span supports the paper type, dataset relation, parent-dataset status, or reuse status; the provisional paper_type value is not source-verified.
+- Blocking extraction gap: no parser-owned source span supports the motivating claims, unresolved tension, nearest prior work, or original scientific question.
+- Blocking extraction gap: no parser-owned source span supports the question design, competing explanations, discriminating observation, scientific value, or novelty relative to prior work.
+- Blocking formation-trace gap: the available spans cannot ground the required sequence from background claims through dataset opportunity to resulting question and scientific significance.
 
 ## If this looks wrong
 

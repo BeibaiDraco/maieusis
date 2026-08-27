@@ -19,7 +19,7 @@ from pathlib import Path
 from ...io import dump_data, load_model
 from ...schemas.dataset_narrative import DatasetNarrative
 from ...schemas.family_failure import sanitize_family_failure_text
-from ...schemas.front_half_authority import FrontHalfAuthorityCeiling
+from ...schemas.front_half_authority import FrontHalfAuthorityCeiling, FrontHalfCeilingReason
 from ...schemas.inferred_research_scope import ResolvedResearchScope
 from ...schemas.paper_case import PaperCase
 from ...schemas.question_family import QuestionFamily
@@ -385,6 +385,10 @@ def write_literature_and_dataset(
     topic_terms: list[str],
     lane_coverage: dict[str, int],
     source_count: int,
+    # The candidate pool this run's kept sources were selected FROM, or None when the caller never
+    # saw the selector. Required rather than defaulted: a default would silently reintroduce the
+    # single-count rendering this parameter exists to remove.
+    retrieved_count: int | None,
     topic_brief: TopicEvidenceBrief,
     narrative: DatasetNarrative,
     evidence_basis_banner: str = "",
@@ -397,7 +401,8 @@ def write_literature_and_dataset(
             paths,
             topic_terms=topic_terms,
             lane_coverage=lane_coverage,
-            source_count=source_count,
+            kept_count=source_count,
+            retrieved_count=retrieved_count,
         ),
         "topic_evidence_summary": write_topic_evidence_summary(
             paths, topic_brief, evidence_basis_banner=evidence_basis_banner
@@ -424,12 +429,16 @@ def write_retrieval_summary(
     *,
     topic_terms: list[str],
     lane_coverage: dict[str, int],
-    source_count: int,
+    kept_count: int,
+    retrieved_count: int | None,
 ) -> Path:
     return _write(
         paths.retrieval_summary,
         render_retrieval_summary(
-            topic_terms=topic_terms, lane_coverage=lane_coverage, source_count=source_count
+            topic_terms=topic_terms,
+            lane_coverage=lane_coverage,
+            kept_count=kept_count,
+            retrieved_count=retrieved_count,
         ),
     )
 
@@ -625,7 +634,79 @@ _PROVISIONAL_INSPIRATION_DOSSIER_BANNER = (
     "reviewed inputs. Dataset claims remain conditional or unverified, and this dossier cannot "
     "be elevated above provisional authority without independent review."
 )
+# A cap earned AFTER independent review needs its own sentence. The banner above says the inputs
+# were never reviewed; for a reviewed-coverage cap that is false in the direction that matters --
+# the brief went to an independent reviewer, and on the 2026-08-11 legs a second inquiry agent then
+# re-adjudicated the verdict. Telling that reader "not independently reviewed" understates what the
+# run actually did and misdirects them about what would lift the cap.
+_REVIEWED_COVERAGE_GAP_DOSSIER_BANNER = (
+    "> ⚠️ Provisional inspiration: the topic literature behind these planning records WAS "
+    "independently reviewed, and the review found it short of the coverage this question scope "
+    "needs, so planning continued capped rather than stopping. Dataset claims remain conditional "
+    "or unverified, and nothing here can be elevated above provisional authority until that "
+    "coverage is closed and re-reviewed."
+)
+# A readiness cap used to imply "no reviewer ever saw this", and the generic banner above said so.
+# Since 2026-08-13 the reviewer always runs, so that sentence is false for every new readiness cap
+# and true for every old one. This wording is the sentence that holds in both eras: it states what
+# the brief lacks and what would lift the cap, and claims nothing either way about review.
+_READINESS_NOT_MET_DOSSIER_BANNER = (
+    "> ⚠️ Provisional inspiration: the topic literature behind these planning records does not "
+    "carry the typed close-prior and open-gap structure that verified authority is compiled from, "
+    "so planning continued capped. Dataset claims remain conditional or unverified, and nothing "
+    "here can be elevated above provisional authority until that structure is closed and "
+    "independently reviewed."
+)
+# The case the deterministic check could never express: nothing is wrong with the brief. It reports
+# no already-answered prior work, an independent reviewer read the same sources and judged that
+# honest for this scope, and the cap is the compiler's structural requirement rather than a finding
+# against the science. Saying "not independently reviewed" here would be plainly false, and saying
+# "found short of coverage" would be a verdict the reviewer did not give.
+_CLOSE_PRIOR_ABSENCE_REVIEWED_HONEST_DOSSIER_BANNER = (
+    "> ⚠️ Provisional inspiration: the topic literature behind these planning records WAS "
+    "independently reviewed, and the review found no already-answered prior work to report for "
+    "this scope and judged that absence honest. Verified authority is compiled from a typed close "
+    "prior, so planning continued capped rather than claiming a coverage this literature does not "
+    "assert. Dataset claims remain conditional or unverified."
+)
+# The one banner that must NOT describe a finding, because there was none. The reviewer kept asking
+# for changes and the configured rounds ran out, or the host could not lawfully make the change it
+# asked for. Saying the coverage was "found short" would attribute to the reviewer a verdict it never
+# gave; saying nothing reviewed it would be false. This says what actually happened and what lifts it.
+_REVIEW_ROUNDS_EXHAUSTED_DOSSIER_BANNER = (
+    "> ⚠️ Provisional inspiration: the topic literature behind these planning records WAS "
+    "independently reviewed, but the review never reached a final verdict — it was still asking "
+    "for changes when the configured revision budget ran out. Planning continued capped rather "
+    "than claiming an authority no review granted. Dataset claims remain conditional or "
+    "unverified; raising the revision budget and re-running the review is what can lift this cap."
+)
 PROVISIONAL_INSPIRATION_DOSSIER_BANNER = _PROVISIONAL_INSPIRATION_DOSSIER_BANNER + "\n\n"
+
+_DOSSIER_BANNER_BY_CEILING_REASON = {
+    FrontHalfCeilingReason.REVIEWED_COVERAGE_GAP: _REVIEWED_COVERAGE_GAP_DOSSIER_BANNER,
+    FrontHalfCeilingReason.READINESS_NOT_MET: _READINESS_NOT_MET_DOSSIER_BANNER,
+    FrontHalfCeilingReason.CLOSE_PRIOR_ABSENCE_REVIEWED_HONEST: (
+        _CLOSE_PRIOR_ABSENCE_REVIEWED_HONEST_DOSSIER_BANNER
+    ),
+    FrontHalfCeilingReason.REVIEW_ROUNDS_EXHAUSTED: _REVIEW_ROUNDS_EXHAUSTED_DOSSIER_BANNER,
+}
+
+
+def provisional_inspiration_dossier_banner(
+    ceiling_reason: FrontHalfCeilingReason | None = None,
+) -> str:
+    """The provisional-inspiration banner, worded for WHY the cap was applied.
+
+    ``None`` (a run that predates the reason field) and ``HARVEST_EMPTY`` keep the original wording:
+    an empty harvest really did reach no reviewer, so "not independently reviewed" stays true there.
+    """
+
+    if ceiling_reason is None:
+        return PROVISIONAL_INSPIRATION_DOSSIER_BANNER
+    banner = _DOSSIER_BANNER_BY_CEILING_REASON.get(ceiling_reason)
+    if banner is None:
+        return PROVISIONAL_INSPIRATION_DOSSIER_BANNER
+    return banner + "\n\n"
 
 
 def render_run_summary(
@@ -633,6 +714,7 @@ def render_run_summary(
     *,
     development_surrogate: bool,
     authority_ceiling: FrontHalfAuthorityCeiling = FrontHalfAuthorityCeiling.VERIFIED,
+    ceiling_reason: FrontHalfCeilingReason | None = None,
     evidence_basis_line: str = "",
     resume_note: str = "",
     all_family_processing_finished: bool = True,
@@ -647,7 +729,7 @@ def render_run_summary(
     if development_surrogate:
         lines.extend([_DEV_SURROGATE_BANNER, ""])
     if authority_ceiling == FrontHalfAuthorityCeiling.PROVISIONAL_INSPIRATION:
-        lines.extend([_PROVISIONAL_INSPIRATION_DOSSIER_BANNER, ""])
+        lines.extend([provisional_inspiration_dossier_banner(ceiling_reason).rstrip("\n"), ""])
     lines.append(f"{len(outcomes)} question family/families reached a terminal outcome.")
     accepted_count = sum(outcome.dossier_axis == DossierAxis.RENDERED for outcome in outcomes)
     hard_incomplete = any(
@@ -903,6 +985,7 @@ def write_run_summary(
     *,
     development_surrogate: bool,
     authority_ceiling: FrontHalfAuthorityCeiling = FrontHalfAuthorityCeiling.VERIFIED,
+    ceiling_reason: FrontHalfCeilingReason | None = None,
     evidence_basis_line: str = "",
     resume_note: str = "",
     all_family_processing_finished: bool = True,
@@ -931,6 +1014,7 @@ def write_run_summary(
         safe_outcomes,
         development_surrogate=development_surrogate,
         authority_ceiling=authority_ceiling,
+        ceiling_reason=ceiling_reason,
         evidence_basis_line=evidence_basis_line,
         resume_note=resume_note,
         all_family_processing_finished=all_family_processing_finished,

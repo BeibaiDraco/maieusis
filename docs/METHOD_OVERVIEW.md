@@ -11,10 +11,12 @@ result.
 
 **A stage nobody expects: questions get rewritten after prior-art review.** A variant the review
 holds back is removed and said so. But a variant it admits is often *reworded* first, to separate
-it from a prior that sits nearby — the demonstrations show this on seventeen of eighteen families,
-under the heading "Post-novelty revised proposal" in each family's reading guide. The gallery lists
-the question as first proposed; the reading guide shows all three versions, ending with the one
-that was actually planned. If a gallery question and a dossier question differ, that is why.
+it from a prior that sits nearby — seventeen of the twenty-three published reading guides carry the
+rewording, under the heading "Post-novelty revised proposal". The gallery lists the question as
+first proposed; the reading guide shows every version the run recorded, ending with the one that was
+actually planned. Where a guide shows fewer, the run recorded fewer — a family whose variants were
+never reworded has nothing to show under that heading, and one that never reached planning has no
+guide at all. If a gallery question and a dossier question differ, this is why.
 
 1. **Reconstruct published question-forming moves.** Each source paper becomes
    a PaperCase. Source spans and relevant citation context support an
@@ -81,9 +83,16 @@ content hashes remain part of the record.
 ## Current literature is separate from PaperBank
 
 PaperBank provides historical examples of question formation. Topic-literature
-retrieval instead describes the current field context around the user's
-research direction. Keeping them separate prevents a historical example from
-being mistaken for the present state of evidence.
+retrieval instead describes the current field context around the run's research
+scope. Keeping them separate prevents a historical example from being mistaken
+for the present state of evidence.
+
+**That scope is not always the user's.** In the default configuration nothing is declared, and a
+model-backed stage derives the scope from the dataset's own reviewed narrative before any query is
+issued — which terms to search, which construct families to work in, which parts of the field to
+stay out of. It is published with the run as `artifacts/literature/research_scope.md` and it is the
+decision every question downstream rests on. See
+[configuration](CONFIGURATION.md) for how to declare a scope instead, and what that costs.
 
 The default route uses public scholarly metadata and can enrich records with
 lawful open full text. Incomplete evidence may still be useful, but its limits
@@ -163,7 +172,7 @@ that Maieusis automatically discovers true or important hypotheses,
 outperforms every prior system, or replaces scientific judgment.
 
 Next, read [architecture and trust boundaries](ARCHITECTURE.md), inspect the
-[demo question gallery](../demos/QUESTIONS.md), or follow the
+[demo question gallery](../demos/ALL_QUESTIONS.md), or follow the
 [installation guide](INSTALLATION.md).
 
 ---

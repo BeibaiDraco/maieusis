@@ -19,6 +19,7 @@ from ...schemas.question_family_branch import (
     QuestionFamilyBranch,
     QuestionFamilyBranchState,
     QuestionFamilyInspectionEvidence,
+    inspection_evidence_identity_digest,
 )
 from ..orchestration import QuestionFamilyBranchManager
 from .confined_workspace_io import (
@@ -404,8 +405,17 @@ def _assert_same_evidence(
     existing: QuestionFamilyInspectionEvidence,
     returned: QuestionFamilyInspectionEvidence,
 ) -> None:
-    if stable_hash(existing.model_dump(mode="json")) != stable_hash(
-        returned.model_dump(mode="json")
+    """A replan returning evidence the branch already holds must return the SAME evidence.
+
+    Compared by identity digest rather than by full model dump, for the reason spelled out in
+    `inspection_evidence_identity_digest`: on a replan the returned record is a re-read of the
+    planner's own file, which omits `created_at`, so the field is stamped at load time and can never
+    equal the stored copy. This check raises `HardFamilyIntegrityViolation` -- a burn-class terminal
+    -- and it had exactly the same timestamp defect as the collect-side check. It has never fired
+    only because collect refused first.
+    """
+    if inspection_evidence_identity_digest(existing) != inspection_evidence_identity_digest(
+        returned
     ):
         raise HardFamilyIntegrityViolation(
             "returned evidence differs from already recorded branch evidence"

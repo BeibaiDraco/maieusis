@@ -1,7 +1,10 @@
 """Source A — documentation coarse facts from the seed link.
 
-Deterministic, auditable: resolve the seed LINK to proposal-safe excerpts, run the active generic
-``dataset_narrative_extractor/v4`` GPT extraction over them (only the GPT leg — NOT the full
+Deterministic, auditable: resolve the seed LINK to proposal-safe excerpts, run the ACTIVE generic
+extractor over them — whichever ``DATASET_NARRATIVE_EXTRACTOR_PROMPT_VERSION`` currently names, not
+a version pinned in this sentence (it read ``v4`` for as long as the product ran ``v5``, and the
+release inventory's automatic classifier matched that stale prose and kept a retired prompt in the
+public runtime bucket) — (only the GPT leg — NOT the full
 ``build_dataset_narrative_draft_bundle``, which drags in the dataset-specific local track that is
 GF-2c's to delete), map the coarse story fields onto ``CoarseDocumentationFacts``, and pass it through the
 shared host import firewall. ``seed.docs`` is never consumed here (reserved for GF-2c Source D).
@@ -129,13 +132,19 @@ def extract_coarse_story_from_packet(
 
 def _map_to_coarse(output: DatasetNarrativeModelOutput, *, dataset_id: str) -> dict[str, Any]:
     """Map the (heavier) narrative model output onto the coarse story fields (a strict subset)."""
-    structure_parts = [output.temporal_structure, *output.hierarchical_structure]
-    coarse_structure = "; ".join(part for part in structure_parts if str(part).strip())
+    # Temporal stays temporal. The entity hierarchy travels as its own list -- joining them here is
+    # what put a hierarchy under a temporal label and killed two of five live legs on 2026-08-12.
+    coarse_structure = output.temporal_structure
+    hierarchical_structure = [item for item in output.hierarchical_structure if str(item).strip()]
     return {
         "dataset_id": dataset_id,
         "modalities": list(output.modalities),
         "broad_scale": output.broad_scale,
         "coarse_structure": coarse_structure,
+        "hierarchical_structure": hierarchical_structure,
+        # The model answers this one too; before it had a home in the coarse layer the answer was
+        # dropped here and the questioner's task_event_vocabulary was empty in every run.
+        "broad_interventions": [item for item in output.broad_interventions if str(item).strip()],
         "task_or_design": output.task_or_design,
         "spatial_or_anatomical_coverage": output.spatial_or_anatomical_coverage,
         "standardization": output.standardization,

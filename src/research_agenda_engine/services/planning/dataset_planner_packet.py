@@ -25,6 +25,7 @@ from ...schemas.question_family_branch import (
     QuestionFamilyBranchEventScope,
     QuestionFamilyBranchState,
     QuestionFamilyInspectionEvidence,
+    inspection_evidence_identity_digest,
 )
 from .construct_probe_validation import validate_construct_probe_maps
 from .direct_file_artifact_contract import DIRECT_FILE_FORBIDDEN_ENVELOPE_KEYS
@@ -358,9 +359,13 @@ def validate_planner_artifacts(
     evidence_by_id: dict[str, QuestionFamilyInspectionEvidence] = {}
     for evidence in evidence_items:
         if evidence.evidence_id in evidence_by_id:
-            if stable_hash(evidence_by_id[evidence.evidence_id].model_dump(mode="json")) != (
-                stable_hash(evidence.model_dump(mode="json"))
-            ):
+            # Identity, not bytes. A replan reads the branch's recorded round-0 evidence AND the
+            # planner's own file for the same evidence, and only the host-stamped `created_at` can
+            # differ between them -- see `inspection_evidence_identity_digest`. Comparing full model
+            # dumps here killed three families in the 2026-08-12 series over a timestamp.
+            if inspection_evidence_identity_digest(
+                evidence_by_id[evidence.evidence_id]
+            ) != inspection_evidence_identity_digest(evidence):
                 errors.append(
                     f"conflicting duplicate inspection evidence id: {evidence.evidence_id}"
                 )

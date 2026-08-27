@@ -843,6 +843,13 @@ def _canonical_web_resolved_prior(
             **payload,
             "evidence_digest": stable_hash(payload),
             "retrieval_scores": {hit.provider_id: hit.retrieval_score},
+            # A resolved web lead never competed on a ranked search page, so it has no position and
+            # no fusion score.  It does not need one: the web lane's slots are reserved before
+            # ``max_priors`` truncates, so an empty ranking basis cannot cost it its place.  Left
+            # empty rather than filled with a flattering default, so an auditor reading the pack
+            # can tell a ranked prior from a resolved one.
+            "provider_best_rank": {},
+            "rank_fusion_score": 0.0,
         }
     )
 
@@ -1452,6 +1459,15 @@ def _build_reviewer_packet(
                     "evidence_basis": prior.evidence_basis.value,
                     "abstract_or_excerpt": prior.abstract_or_excerpt,
                     "evidence_digest": prior.evidence_digest,
+                    # Why this record occupies a slot, in the reviewer's own packet.  A list the
+                    # reader cannot interrogate is a list the reader has to trust; these three
+                    # numbers say how many of the variant's search terms found it, how high its
+                    # indexes placed it, and what the ordering key actually was.
+                    "retrieval_basis": {
+                        "matched_query_count": len(prior.query_ids),
+                        "provider_best_rank": dict(prior.provider_best_rank),
+                        "rank_fusion_score": prior.rank_fusion_score,
+                    },
                     "evidence_origin": (
                         "resolved_web_lead"
                         if prior.evidence_origin == NoveltyPriorEvidenceOrigin.WEB_LEAD_RESOLVED
@@ -2096,6 +2112,7 @@ def _canonicalize_hits(
             "scholarly_identity": _scholarly_identity(best, providers).value,
             "abstract_or_excerpt": abstract,
         }
+        ranked_hits = [hit for hit in group if hit.relevance_rank > 0]
         records.append(
             NoveltyPriorRecord.model_validate(
                 {
@@ -2107,16 +2124,62 @@ def _canonicalize_hits(
                         )
                         for provider in providers
                     },
+                    "provider_best_rank": {
+                        provider: min(
+                            hit.relevance_rank for hit in ranked_hits if hit.provider_id == provider
+                        )
+                        for provider in providers
+                        if any(hit.provider_id == provider for hit in ranked_hits)
+                    },
+                    "rank_fusion_score": _rank_fusion_score(ranked_hits),
                 }
             )
         )
-    records.sort(
-        key=lambda record: (
-            -max(record.retrieval_scores.values(), default=0.0),
-            record.title.lower(),
-        )
-    )
+    records.sort(key=_prior_ordering_key)
     return records, exclusions
+
+
+#: Reciprocal-rank-fusion damping.  60 is the standard constant, and the measurement that chose
+#: this ordering swept it: at k of 0 or 1 the run lost an in-field prior on one of the reference
+#: run's 24 packs, and at every k from 3 upward it lost none.  With 8-row pages the sum is
+#: dominated by HOW MANY of the variant's own search terms returned the record at all, with page
+#: position refining within that -- which is the shape of a real prior and not of a stray hit.
+_RANK_FUSION_DAMPING = 60
+
+
+def _rank_fusion_score(ranked_hits: list[NoveltySearchHit]) -> float:
+    """Reciprocal-rank fusion over every (provider, query) page that returned this record."""
+    return round(sum(1.0 / (_RANK_FUSION_DAMPING + hit.relevance_rank) for hit in ranked_hits), 6)
+
+
+def _prior_ordering_key(record: NoveltyPriorRecord) -> tuple[float, float, bool, str]:
+    """The order a reviewer reads the prior-art list in, and that ``max_priors`` truncates.
+
+    Token overlap stays the primary key: measured over the 24 evidence packs of run
+    20260806T190138Z-2249f35e replayed live, it is the strongest single signal available
+    (66.8% in-field at 20 against a 51.5% pool base rate).  What it cannot do is DISCRIMINATE --
+    it saturates at 1.0 for most of the pool, and the alphabetical tiebreak underneath it was
+    therefore the real selector.  It put "ALTER: program-oriented conversion of DNA and protein
+    alignments" -- a sequence-format converter that scores a perfect 1.0 on "representational
+    alignment" because its abstract mentions a Representational State Transfer API -- third in the
+    list, ahead of every paper on the actual topic, and truncated the pack at the letter G.
+
+    Rank fusion over the providers' own relevance-ordered pages breaks that tie on evidence:
+    75.2% in-field at 20 (+8.4pp) and 32.2% in-field recall at 20 (+4.9pp), improving on 15 of 24
+    packs and losing an in-field prior on none of them.
+
+    The last two keys are the tiebreak proper, and neither is alphabetical.  Alphabetical order is
+    not a neutral default; it is a standing decision to favour titles beginning with A.  Prefer a
+    record that carries an abstract, because that is strictly more for the reviewer to judge than
+    a bare title; then break the remainder on the content digest, which is deterministic and
+    replayable but carries no positional bias of any kind.
+    """
+    return (
+        -max(record.retrieval_scores.values(), default=0.0),
+        -record.rank_fusion_score,
+        record.evidence_basis == NoveltyEvidenceBasis.TITLE_ONLY,
+        record.evidence_digest,
+    )
 
 
 def _scholarly_identity(

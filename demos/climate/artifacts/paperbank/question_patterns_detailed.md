@@ -2,436 +2,429 @@
 
 These pages expand the compact PatternBank summary for scientific reading. They describe reviewed question-forming moves; they do not establish novelty, dataset feasibility, or a scientific result.
 
-## Pattern 001: Replace heterogeneous construct definitions with a common representation and recurrence tests
+## Pattern 001: Objective construct recovery with an independent credibility check
 
 - Review authority: `ai_reviewed`
 - Transfer scope: `cross_paper`
 
 ### Starting scientific state
 
-- Prior literature reports familiar patterns or modes using heterogeneous selections, indices, variables, domains, or decompositions.
-- Method precedents suggest more objective or interpretable representations, but extracted structures are not automatically substantive.
-- The available record has broad spatial coverage and can support comparisons across periods, temporal contexts, scales, or analytical choices.
+- Prior studies describe recurring constructs or environmental relationships using heterogeneous selections, representations, or regional records.
+- Paper-local precedents establish candidate constructs or proxy ingredients, but leave their stability across methods, samples, or observing systems unresolved.
+- A broad, spatially continuous dataset is available alongside an independent period or observational record.
 
 ### Unresolved tension
 
-A reported construct may be a robust feature of the system or an artifact of investigator selection, sampling, decomposition, or preprocessing.
+A reported structure may be a reproducible feature of the system, or it may depend on selected locations, analytical representation, sampling period, or measurement system.
 
 ### Dataset cues
 
-- Broad joint coverage that permits a common representation rather than selected local indices
-- Independent or weakly dependent temporal partitions
-- Multiple levels, averaging scales, or alternative analytical representations
+- Broad spatial and temporal coverage permits the construct to be defined comprehensively rather than from preselected examples.
+- The record contains a held-out period or a distinct observational source that can assess reproducibility or measurement credibility.
+- Multiple fields or representations permit comparison between the newly derived structure and established constructs.
 
 ### Question-forming move
 
-Construct an objective inventory from the broad record, compare it with established literature-defined constructs and competing decompositions, and test whether candidate structures recur across independent periods and reasonable analytical variations.
+Derive the construct or proxy systematically from the broad dataset, compare it with paper-local literature representations, and use a genuinely separate period or observing system to test whether the principal structure or trend persists. Treat disagreement as evidence about construct stability or measurement credibility rather than merely as a failed search for confirmation.
 
 ### Scientific payoff
 
-Turns a fragmented descriptive literature into a comparable robustness test and clarifies whether established constructs denote reproducible system organization, method-dependent summaries, or only partial inventories.
+Distinguishes stable system organization from artifacts of sampling, representation, or measurement and makes heterogeneous prior findings more comparable.
 
 ### What different outcomes would mean
 
-- Positive: Recurring structures would support treating at least some constructs as robust and could reveal additional reproducible structures omitted by earlier selection rules. Agreement and systematic mismatch with competing decompositions would clarify what each representation captures.
-- Negative: Failure to recur would restrict the construct's scope and implicate sampling, preprocessing, domain choice, or decomposition instability rather than merely yielding a null discovery.
+- Positive: Recovery across representations and independent evidence strengthens the interpretation that the construct or trend reflects a reproducible feature rather than a study-specific analytical choice.
+- Negative: Failure to reproduce, or systematic disagreement between data sources, identifies where construct labels, proxy interpretations, or historical trends require qualification and may reveal measurement-system limitations.
 
 ### Common failure modes
 
-- Calling an extracted component physical without recurrence or sensitivity checks
-- Using the same observations for discovery and nominal validation
-- Treating agreement with a named construct as proof that the construct is unique
-- Interpreting disagreement among representations as method failure rather than possible construct dependence
-- Ignoring data artifacts, unequal spatial representation, or preprocessing changes
+- Calling a comparison independent when both evidence streams share substantial inputs or modeling assumptions.
+- Treating visual resemblance as sufficient evidence of construct correspondence.
+- Changing construct definitions between derivation and validation.
+- Interpreting agreement as proof of a unique physical mechanism.
+- Ignoring uneven observational quality or sampling when interpreting disagreement.
 
 ### Details that should not be transferred
 
-- Specific atmospheric seasons, regions, pressure levels, anomaly definitions, grids, and averaging intervals
-- Particular correlation-map, eigenvector, rotation, or pattern-acceptance procedures
-- Study-specific substitutions, bias corrections, and named circulation patterns
+- The atmospheric teleconnection labels, environmental storm proxies, and their domain-specific physical interpretations cannot be transferred unchanged.
+- The source papers' historical-period divisions, geographical restrictions, and observing-system limitations are study specific.
+- Independent-period replication and reanalysis-versus-sounding comparison test different sources of uncertainty and should not be treated as interchangeable validation designs.
 
 ### Source PaperCases and formation traces
 
-- Source 1: [John M. Wallace and David S. Gutzler, “Teleconnections in the Geopotential Height Field during the Northern Hemisphere Winter”](papers/01-wallace-gutzler-1981.md) · [Question-formation trace](formation_traces/01-wallace-gutzler-1981.md)
-- Source 2: [Barnston, Anthony G., and Robert E. Livezey. 1987. “Classification, Seasonality and Persistence of Low-Frequency Atmospheric Circulation Patterns.” Monthly Weather Review.](papers/02-barnston-livezey-1987.md) · [Question-formation trace](formation_traces/02-barnston-livezey-1987.md)
+- Source 1: [Wallace and Gutzler, “Teleconnections in the Geopotential Height Field during the Northern Hemisphere Winter” (1981)](papers/01-wallace-gutzler-1981.md) · [Question-formation trace](formation_traces/01-wallace-gutzler-1981.md)
+- Source 2: [Global climatology and trends in convective environments from ERA5 and rawinsonde data](papers/16-taszarek-et-al-2021.md) · [Question-formation trace](formation_traces/16-taszarek-et-al-2021.md)
 
-## Pattern 002: Pair aggregate activity measures with entity- or field-centered representations
+## Pattern 002: Test structural or relational consistency across contrasting regimes
 
 - Review authority: `ai_reviewed`
 - Transfer scope: `cross_paper`
 
 ### Starting scientific state
 
-- An established aggregate statistic summarizes where or when a phenomenon is active.
-- The aggregate omits the entities, spatial extent, trajectories, life cycles, or subtypes that generate the activity.
-- Prior literature supplies precedents for feature identification, tracking, or field-level construct definitions.
+- Prior studies report either similar structures in contrasting settings or a relationship between an established phenomenon and a broader system response.
+- Theory permits a common or reproducible organizing process but also predicts modulation by boundary conditions, season, background state, geography, or other regimes.
+- Prior evidence has not established whether the observed similarity or relationship is robust across relevant contexts rather than descriptive, sampling-dependent, or confined to a particular regime.
 
 ### Unresolved tension
 
-A broad activity signature may represent coherent entities and pathways, or it may combine distinct system types and life-cycle behaviors that cannot be interpreted from the aggregate alone.
+A resemblance between structures or a recurring state-conditioned relationship may reflect a robust organizing process, yet it may instead be superficial, unstable under expanded sampling, or dependent on season, background state, geography, or other contextual conditions.
 
 ### Dataset cues
 
-- Repeated spatial fields at sufficient temporal resolution to identify individual features
-- Resolved geometry that permits finite-area definitions rather than point-only summaries
-- Multiple variables or levels that can expose construct-dependent organization
+- Comparable observations exist across multiple contexts or theoretically relevant regimes within a shared analytical framework.
+- Observations can be aligned either by corresponding structures or by a meaningful phase or state variable that defines comparable conditioned states.
+- The dataset resolves dimensions relevant to interpretation, such as vertical structure, seasonality, spatial symmetry, mean and component contributions, persistence, or sampling robustness.
+- Contrasting contexts provide a natural reproducibility test without requiring identical manifestations across them.
 
 ### Question-forming move
 
-Apply aggregate and entity- or field-centered diagnostics to the same record, then compare their spatial organization and use linking or tracking as a complementary layer for genesis, propagation, decay, and subtype questions.
+Place either independently recognized similar structures or state-conditioned expressions of one established relationship into a common observational framework, then test their consistency across contrasting regimes. Compare structure, seasonality, vertical expression, persistence, and relevant decompositions; these may include separating an aggregate or zonal-mean response from wave or other component contributions. Treat multidimensional consistency as evidence for a robust commonality or reproducible association, and systematic heterogeneity or sampling instability as evidence that the expression is conditional, without treating observational agreement alone as definitive causal identification.
 
 ### Scientific payoff
 
-Connects climatological summaries to the systems that produce them while revealing hidden structure, life-cycle organization, and dependence on the chosen field or level.
+Moves beyond naming similar patterns or reporting a single conditioned contrast to determine whether a structure or relationship represents reproducible system behavior, while identifying the regimes and component contributions that delimit its expression.
 
 ### What different outcomes would mean
 
-- Positive: Convergence would show that aggregate signatures correspond to coherent and reproducible entities or pathways. Complementary tracking could explain occurrence through origins, passages, and termination regions.
-- Negative: Divergence would demonstrate that the aggregate conceals entity type, spatial influence, life cycle, or diagnostic sensitivity, thereby refining rather than simply invalidating the climatology.
+- Positive: Consistent structure or state-conditioned responses across several mechanistically relevant dimensions and contrasting regimes support a robust organizing process or reproducible system-level association despite contextual differences.
+- Negative: Restricted, inconsistent, or sampling-sensitive agreement shows that context, season, background state, geography, component structure, or general variability is essential to the observed expression and limits claims of broad commonality or reproducibility.
 
 ### Common failure modes
 
-- Assuming point density, track density, and area-of-influence measure the same construct
-- Using tracking choices without sensitivity analysis
-- Treating diagnostic convergence as proof of mechanism
-- Ignoring short-lived or weak features that identification rules preferentially exclude
-- Comparing variables or levels with incompatible feature definitions
+- Equating similar maps, composites, or summary patterns with a shared mechanism.
+- Treating independently recognized structures and state-conditioned expressions as interchangeable without defining what is being compared.
+- Forcing identical definitions onto contexts where measurement or physical meaning differs.
+- Ignoring unequal sample sizes, coverage, or data quality across contexts or conditioned states.
+- Treating conditional agreement in one season, hemisphere, or component as universal commonality.
+- Interpreting observational consistency as definitive causal identification or as discrimination among mechanisms that make similar predictions.
 
 ### Details that should not be transferred
 
-- Cyclone contour definitions, meteorological extrema, filtering specifications, and trajectory constraints
-- Particular reanalysis systems, atmospheric levels, and background-removal choices
-- Region-specific genesis, lysis, and pathway findings
+- The hemispheric atmospheric settings, stratospheric coupling constructs, phase classifier, and wave-dynamical interpretations are specific to the source cases.
+- Different reference variables, state definitions, seasonal groupings, and active-period definitions may be required across contexts.
+- Historical high-latitude, record-length, and station-network limitations constrain the particular comparisons represented by these traces.
+- The specific use of zonal-mean and planetary-wave decompositions grounds one source comparison but should transfer only where analogous component separation is scientifically meaningful.
 
 ### Source PaperCases and formation traces
 
-- Source 1: [Brian J. Hoskins and Kevin I. Hodges, “New Perspectives on the Northern Hemisphere Winter Storm Tracks” (2002)](papers/05-hoskins-hodges-2002.md) · [Question-formation trace](formation_traces/05-hoskins-hodges-2002.md)
-- Source 2: [Wernli and Schwierz, “Surface Cyclones in the ERA-40 Dataset (1958-2001). Part I: Novel Identification Method and Global Climatology”](papers/13-wernli-schwierz-2006.md) · [Question-formation trace](formation_traces/13-wernli-schwierz-2006.md)
+- Source 1: [Thompson and Wallace (2000), “Annular Modes in the Extratropical Circulation. Part I: Month-to-Month Variability”](papers/07-thompson-wallace-2000-part-i.md) · [Question-formation trace](formation_traces/07-thompson-wallace-2000-part-i.md)
+- Source 2: [James R. Holton and Hsiu-Chi Tan (1980), “The Influence of the Equatorial Quasi-Biennial Oscillation on the Global Circulation at 50 mb”](papers/10-holton-tan-1980.md) · [Question-formation trace](formation_traces/10-holton-tan-1980.md)
 
-## Pattern 003: Generalize a case-based relationship with recurrent modes and mechanism-sensitive diagnostics
+## Pattern 003: Condition on meaningful system states and test regime dependence
 
 - Review authority: `ai_reviewed`
 - Transfer scope: `cross_paper`
 
 ### Starting scientific state
 
-- Prior climatologies or selected events suggest a relationship between fast and slow components or between upstream and downstream system states.
-- Case studies cannot establish whether the relationship characterizes the wider population.
-- Competing interpretations include passive response, shared forcing, feedback, or active forcing.
+- A recognized phase, mode, or recurring circulation state may organize remote or regional outcomes.
+- Prior studies report associations, but limited records or aggregate analyses leave reproducibility and regime dependence unresolved.
+- Theory indicates that the association may vary by season, location, component, or persistence.
 
 ### Unresolved tension
 
-An apparent relationship may be a recurrent system property with mechanistic significance or an exceptional configuration selected by the cases studied.
+An apparent state-dependent response may be a reproducible system relationship, or it may arise from background variability, limited sampling, unstable classification, or averaging across regimes with different behavior.
 
 ### Dataset cues
 
-- A long repeatedly sampled record containing many candidate events or intervals
-- Measurements of both the proposed antecedent or slow state and the associated response
-- Diagnostics capable of distinguishing simple covariation from plausible feedback or forcing
+- Repeated observations can be assigned to physically meaningful phases or recurring states.
+- The record resolves theoretically relevant regimes and permits comparison of state persistence or duration.
+- Outcome fields are observed in the same longitudinal record, allowing state-conditioned spatial and temporal contrasts.
 
 ### Question-forming move
 
-Derive recurrent modes or define events across the full record, relate them to concurrent or subsequent structural states, and add mechanism-sensitive diagnostics that test whether the case-derived interpretation generalizes.
+Define states independently of the focal outcome, compare outcome and mechanism-relevant fields across those states, and repeat the comparison across seasons, regions, components, persistence classes, or expanded samples. Use consistency and heterogeneity to assess whether the association is general, conditional, or unstable.
 
 ### Scientific payoff
 
-Converts illustrative evidence into a population-level test and identifies whether a proposed interaction is general, regime-specific, or exceptional.
+Turns an ambiguous aggregate association into a structured test of when and where a candidate system-level relationship is expressed.
 
 ### What different outcomes would mean
 
-- Positive: A recurring association with aligned diagnostics would support a general interaction or predictive relationship and would motivate stronger mechanistic tests.
-- Negative: Weak recurrence or different diagnostic geometry would show that the case-based interpretation is exceptional, aggregation-dependent, or incomplete.
+- Positive: Stable state-conditioned contrasts across relevant regimes support a reproducible large-scale association and constrain plausible mechanisms.
+- Negative: Weak, unstable, or regime-specific contrasts caution against a general interpretation and preserve background variability, classification sensitivity, or alternative mechanisms as explanations.
 
 ### Common failure modes
 
-- Selecting events after inspecting downstream outcomes
-- Treating composites as independent observations when events overlap
-- Equating diagnostic alignment or temporal precedence with causal identification
-- Ignoring boundary-spanning events or aggregation artifacts
-- Reporting only mean contrasts while omitting distributional or regime changes
+- Defining states using the outcome later claimed to be explained.
+- Using arbitrary categories with no physical or empirical justification.
+- Ignoring transitions, ambiguous cases, or unequal state frequencies.
+- Treating composite differences as causal effects.
+- Selecting regimes after inspecting the preferred outcome.
 
 ### Details that should not be transferred
 
-- Specific storm-track sectors, atmospheric filters, event thresholds, post-event windows, and eddy diagnostics
-- Domain-specific approximations such as neglecting particular flow components
-- Named atmospheric regimes and their regional weather impacts
+- The equatorial oscillation phases and Eurasian jet configurations are domain-specific state definitions.
+- Seasonal groupings, persistence definitions, circulation classifications, and regional outcome metrics are study-specific choices.
+- The source designs are observational and do not determine causal direction among interacting circulation states.
 
 ### Source PaperCases and formation traces
 
-- Source 1: [Variability of the Observed Midlatitude Storm Tracks in Relation to Low-Frequency Changes in the Circulation Pattern](papers/04-lau-1988.md) · [Question-formation trace](formation_traces/04-lau-1988.md)
-- Source 2: [Stratospheric Harbingers of Anomalous Weather Regimes — Mark P. Baldwin and Timothy J. Dunkerton](papers/11-baldwin-dunkerton-2001.md) · [Question-formation trace](formation_traces/11-baldwin-dunkerton-2001.md)
+- Source 1: [James R. Holton and Hsiu-Chi Tan (1980), “The Influence of the Equatorial Quasi-Biennial Oscillation on the Global Circulation at 50 mb”](papers/10-holton-tan-1980.md) · [Question-formation trace](formation_traces/10-holton-tan-1980.md)
+- Source 2: [Rousi et al. (2022), “Accelerated western European heatwave trends linked to more-persistent double jets over Eurasia”](papers/19-rousi-et-al-2022.md) · [Question-formation trace](formation_traces/19-rousi-et-al-2022.md)
 
-## Pattern 004: Test whether apparent structure is robust across physical settings or diagnostic perspectives
+## Pattern 004: Test whether recurring dynamics organize an anomalous regional trend
 
 - Review authority: `ai_reviewed`
 - Transfer scope: `cross_paper`
 
 ### Starting scientific state
 
-- Prior studies report comparable structures across contrasting physical settings, or complementary diagnostics portray related organization within the same setting.
-- A shared process or coherent physical organization has been proposed, but resemblance across settings or agreement in one representation is insufficient evidence.
-- A common observational record supports comparison across settings, or application of complementary diagnostic representations to the same phenomenon, with relevant variables, levels, or regimes available for discrimination.
+- A regional trend or anomaly is scientifically consequential but is not adequately explained by a broad background process or an established indicator.
+- Paper-local literature offers a recurring large-scale mode or state as a candidate organizing influence while retaining alternative thermodynamic, remote-forcing, or local explanations.
+- A longitudinal dataset jointly represents the candidate dynamics and regional outcomes.
 
 ### Unresolved tension
 
-Apparent structural coherence may reflect a process robust across contrasting physical settings, convergence among complementary diagnostic representations of the same setting, or a superficial resemblance produced by setting-specific mechanisms, hidden system structure, or construct-dependent diagnostics.
+The regional pattern may primarily reflect a recurring dynamical mode, a common externally forced background, local feedbacks, remote influences, or some combination; observational correspondence alone cannot uniquely identify forcing.
 
 ### Dataset cues
 
-- Comparable observations across contrasting physical settings, or a shared record that can be examined through complementary aggregate and entity-centered diagnostics
-- Multiple fields, variables, or levels that reveal whether apparent organization is coherent or representation-dependent
-- Temporal or contextual subsets that expose relevant changes in coupling or activity, where supported
-- Information permitting assessment of unequal data quality, sampling, or analysis-system sensitivity
+- Long records jointly cover large-scale circulation and spatially resolved regional outcomes.
+- State frequency, phase, or persistence can be compared with regional anomalies and trends.
+- Complementary diagnostics represent plausible pathways such as transport, storm activity, or other mechanism-relevant fields.
 
 ### Question-forming move
 
-First identify the supported axis of contrast: analogous structures across different physical settings, or complementary diagnostic representations within the same setting. Then compare the candidate organization using shared criteria across relevant fields, levels, temporal regimes, or representations, framing convergence and divergence as discriminating evidence for robust organization versus setting-specific, hidden, or diagnostic-dependent structure.
+Isolate or classify the candidate dynamical mode, test whether its spatial and temporal signatures align with the regional outcome, and add pathway-relevant diagnostics or background-trend comparisons. Ask how much of the distinctive regional pattern is coherently organized by the mode without treating observational consistency as unique attribution.
 
 ### Scientific payoff
 
-Tests whether a scientific construct or inferred organization survives major contextual or representational changes, clarifies when resemblance or diagnostic convergence warrants a broader physical interpretation, and reveals where conclusions depend on setting, field, level, or diagnostic choice.
+Clarifies whether a regional trend contains a distinct dynamical contribution and connects statistical association to physically interpretable pathways.
 
 ### What different outcomes would mean
 
-- Positive: Robust convergence across the supported axis of contrast would strengthen the case for coherent physical organization and constrain explanations to processes capable of producing consistent structure across contrasting settings or complementary diagnostic perspectives.
-- Negative: Systematic divergence would indicate that similar summaries can arise from setting-specific mechanisms, that aggregate and entity-centered views capture different organization, or that the construct has narrower contextual or diagnostic scope than assumed.
+- Positive: Coherent circulation, outcome, and pathway signatures support interpreting an important portion of the regional anomaly as dynamically organized rather than as an undifferentiated background trend.
+- Negative: Weak or inconsistent correspondence increases the plausibility of alternative forcings, local feedbacks, or other circulation mechanisms and limits mode-based interpretation.
 
 ### Common failure modes
 
-- Comparing outputs derived with incompatible sampling or methods without accounting for those differences
-- Inferring a common mechanism from visual resemblance or diagnostic agreement alone
-- Treating convergence between nonindependent representations as independent confirmation
-- Ignoring unequal data quality, effective sample size, filtering choices, or analysis-system sensitivity
-- Averaging over fields, levels, seasons, or regimes where organization or coupling differs
-- Suppressing setting-specific or representation-specific structure to maximize apparent similarity
+- Subtracting a presumed background trend and labeling the residual as uniquely caused by dynamics.
+- Using the same observations to define the mode and validate every consequence without additional checks.
+- Ignoring spatial mismatches that contradict the proposed pathway.
+- Conflating association with external-forcing attribution.
+- Overlooking differences in temporal coverage among complementary evidence streams.
 
 ### Details that should not be transferred
 
-- The hemispheric geometry, seasonal windows, atmospheric mode definitions, and vertical-coupling constructs of the Thompson-Wallace source case
-- The Thompson-Wallace source's supplementary observations, high-latitude data limitations, and hemisphere-specific sampling constraints
-- EOF- or PCA-based mode definitions as universal requirements
-- The objective spherical feature-tracking algorithm, filtering and tracking constraints, and aggregate-variance diagnostics used in the Hoskins-Hodges source case
-- The specific meteorological fields, atmospheric levels, cyclone and anticyclone extrema, and potential-vorticity-surface construct selected by Hoskins-Hodges
-- The Hoskins-Hodges finding that inferred upper-tropospheric organization was especially sensitive to the analysis system
+- The particular circulation modes, heatwave definitions, moisture pathways, and regional climate contrasts are specific to the source papers.
+- The source-specific seasonal domains and trend decompositions should not be reused without independent justification.
+- Neither observational design resolves all remote, oceanic, land-surface, or forcing mechanisms.
 
 ### Source PaperCases and formation traces
 
-- Source 1: [Thompson, D. W. J., and J. M. Wallace. Annular Modes in the Extratropical Circulation. Part I: Month-to-Month Variability.](papers/07-thompson-wallace-2000-part-i.md) · [Question-formation trace](formation_traces/07-thompson-wallace-2000-part-i.md)
-- Source 2: [Brian J. Hoskins and Kevin I. Hodges, “New Perspectives on the Northern Hemisphere Winter Storm Tracks” (2002)](papers/05-hoskins-hodges-2002.md) · [Question-formation trace](formation_traces/05-hoskins-hodges-2002.md)
+- Source 1: [Decadal Trends in the North Atlantic Oscillation: Regional Temperatures and Precipitation](papers/06-hurrell-1995.md) · [Question-formation trace](formation_traces/06-hurrell-1995.md)
+- Source 2: [Rousi et al. (2022), “Accelerated western European heatwave trends linked to more-persistent double jets over Eurasia”](papers/19-rousi-et-al-2022.md) · [Question-formation trace](formation_traces/19-rousi-et-al-2022.md)
 
-## Pattern 005: Decompose observed change into reference-congruent and unexplained structure
-
-- Review authority: `ai_reviewed`
-- Transfer scope: `cross_paper`
-
-### Starting scientific state
-
-- A recognized variability pattern or modeled response provides a reference structure for interpreting longer-term change.
-- Observed trends resemble that reference, but several mechanisms or internal variability could produce similar patterns.
-- Repeated model realizations or multivariate observations permit estimation of expected structure and variability.
-
-### Unresolved tension
-
-Observed change may primarily represent movement along an established mode or modeled response, an unusual realization of internal variability, a biased reference response, or additional structure requiring another explanation.
-
-### Dataset cues
-
-- Long records across related variables or meaningful strata
-- A previously established reference mode, forced response, or ensemble distribution
-- Multiple realizations or other information for characterizing expected variability
-- Joint fields suitable for identifying coherent residual patterns
-
-### Question-forming move
-
-Estimate the component of observed change congruent with the reference, inspect the residual across variables, contexts, and lags, and where ensembles exist compare both components with the distribution of internal realizations.
-
-### Scientific payoff
-
-Separates shared organization from unexplained remainder without treating visual similarity or projection as complete attribution.
-
-### What different outcomes would mean
-
-- Positive: A strong reference-congruent component would show that an established mode or response organizes an important part of the change; observations within the variability distribution would preserve an unusual-realization explanation.
-- Negative: Large coherent residuals or observations outside the modeled distribution would motivate additional forcings, response bias, or misrepresented variability, while narrowing the scope of the reference interpretation.
-
-### Common failure modes
-
-- Equating projection onto a mode with causation
-- Treating the residual as pure error rather than structured evidence
-- Using an ensemble spread that does not adequately represent relevant variability
-- Ignoring observational uncertainty and unequal record lengths
-- Choosing the reference pattern after observing the target trend
-- Assuming exclusion from a modeled distribution uniquely identifies the missing mechanism
-
-### Details that should not be transferred
-
-- Specific annular-mode indices, climate variables, trend periods, ensemble systems, and signal-to-noise algorithms
-- Ozone-memory interpretations and hemisphere-specific data limitations
-- Climate-model assumptions linking shared forcing, ensemble means, and initial-condition spread
-
-### Source PaperCases and formation traces
-
-- Source 1: [Annular Modes in the Extratropical Circulation. Part II: Trends — David W. J. Thompson and John M. Wallace](papers/08-thompson-wallace-hegerl-2000-part-ii.md) · [Question-formation trace](formation_traces/08-thompson-wallace-hegerl-2000-part-ii.md)
-- Source 2: [Systematic climate model biases in the large-scale pattern of recent sea-surface temperature and sea-level pressure change](papers/17-wills-et-al-2022-author-manuscript.md) · [Question-formation trace](formation_traces/17-wills-et-al-2022-author-manuscript.md)
-
-## Pattern 006: Build a broad environmental proxy and qualify it with independent observations
+## Pattern 005: Repair an aggregate representation that obscures localized structure
 
 - Review authority: `ai_reviewed`
 - Transfer scope: `paper_specific`
 
 ### Starting scientific state
 
-- Direct event records are sparse, uneven, or unsuitable for broad trend assessment.
-- Regional studies and theory motivate a multi-ingredient environmental proxy, but its global credibility is uncertain.
-- A continuous broad-coverage dataset and a differently sampled observational source are both available.
+- An established decomposition summarizes transport or variability into broad aggregate components.
+- Paper-local prior work identifies coherent, spatially concentrated structures that may be smoothed or mixed by the conventional representation.
+- High-resolution fields preserve the spatial and temporal organization needed to represent those structures directly.
 
 ### Unresolved tension
 
-A broad proxy trend may reflect real changes in favorable conditions or artifacts of model formulation, assimilation, sampling, or construct transfer beyond the settings where the proxy was validated.
+The aggregate decomposition may adequately describe total variation while failing to represent the physically important structures that carry or organize it.
 
 ### Dataset cues
 
-- Continuous broad-domain environmental fields over many years
-- Mechanistically related ingredients that jointly define favorable conditions
-- Independent observations with different coverage and error structure
+- Spatially resolved, time-varying vector or flux fields preserve localized features.
+- The data permit a transparent partition between concentrated structures and a broader residual.
+- Both the proposed and conventional representations can be compared on contribution, concentration, and physical correspondence.
 
 ### Question-forming move
 
-Construct the target state from multiple physically motivated ingredients in the continuous record, estimate broad climatological changes, and compare them with independent observations before relating them to theoretical expectations.
+Treat representational mismatch as an empirical problem: construct a structure-sensitive partition, compare it with the conventional decomposition, and test whether the newly isolated structures account for a concentrated share of the process and correspond to recognizable physical systems.
 
 ### Scientific payoff
 
-Transforms fragmented event evidence into a qualified broad assessment while making data credibility and proxy validity part of the scientific question.
+Shows whether a conventional summary hides the physical organization responsible for an important system-level process and can motivate more interpretable analytical representations.
 
 ### What different outcomes would mean
 
-- Positive: Agreement across data sources would strengthen confidence in the supported trends and their comparison with theoretical or projected expectations.
-- Negative: Disagreement would identify where reanalysis, proxy construction, or sampling limits interpretation and would prevent unsupported generalization from apparent broad coverage.
+- Positive: A large, spatially concentrated contribution with coherent physical correspondence indicates that the established aggregate view obscures consequential structure.
+- Negative: A small, diffuse, or physically incoherent contribution suggests that the conventional representation remains adequate or that the proposed partition lacks explanatory value.
 
 ### Common failure modes
 
-- Treating favorable environments as realized events
-- Validating only where the proxy was originally calibrated and then claiming universal validity
-- Using a single ingredient for a multicausal phenomenon
-- Ignoring correlated errors between the broad dataset and observations
-- Interpreting sparse validation coverage as global confirmation
-- Confusing changing data assimilation or measurement practices with environmental trends
+- Choosing a threshold solely because it reproduces a preferred example.
+- Treating a data-driven partition as a natural category without sensitivity analysis.
+- Comparing components that do not conserve or summarize the same quantity.
+- Confusing improved visual preservation with improved physical explanation.
+- Generalizing a partition beyond the spatial and temporal resolution that made it possible.
 
 ### Details that should not be transferred
 
-- The source's convective-environment ingredients, thresholds, land-only scope, and hazard interpretations
-- Specific reanalysis and sounding characteristics
-- Midlatitude calibration assumptions and tropical limitations
+- This pattern has single-trace support and is paper-specific because the demonstrated mismatch concerns filamentary atmospheric moisture transport and an established transport decomposition.
+- The atmospheric-river and conveyor-belt interpretations depend on storm, front, and moisture-flux physics.
+- The source threshold was tuned on limited examples and is not a transferable numerical rule.
+- The source data resolution and vector-field structure are essential to the partition.
 
 ### Source PaperCases and formation traces
 
-- Source 1: [Mateusz Taszarek, John T. Allen, Mattia Marchio, and Harold E. Brooks (2021), “Global climatology and trends in convective environments from ERA5 and rawinsonde data,” npj Climate and Atmospheric Science.](papers/16-taszarek-et-al-2021.md) · [Question-formation trace](formation_traces/16-taszarek-et-al-2021.md)
+- Source 1: [A Proposed Algorithm for Moisture Fluxes from Atmospheric Rivers — Yong Zhu and Reginald E. Newell](papers/14-zhu-newell-1998.md) · [Question-formation trace](formation_traces/14-zhu-newell-1998.md)
 
-## Pattern 007: Organize observations by upstream phase or event before testing remote downstream regimes
+## Pattern 006: Build a mechanistic proxy and audit it against observations
 
 - Review authority: `ai_reviewed`
-- Transfer scope: `cross_paper`
+- Transfer scope: `paper_specific`
 
 ### Starting scientific state
 
-- Prior studies report remote or cross-level associations, often from short records or selected cases.
-- A plausible coupling pathway exists, but the direction and mechanism remain ambiguous.
-- The record permits upstream state classification before downstream outcomes are examined.
+- Direct event records are sparse, uneven, or unsuitable for a broad historical assessment.
+- Paper-local literature defines complementary physical ingredients that represent potential, initiation, and organization rather than direct event occurrence.
+- A continuous modeled or assimilated record is available together with a more limited observational record.
 
 ### Unresolved tension
 
-The downstream signal may be a reproducible, context-dependent response to an upstream state, ordinary variability, sampling noise, or a sequence generated by reverse or common forcing.
+A broad proxy record can reveal otherwise unobservable patterns, but its trends may reflect proxy inadequacy, model formulation, or observing-system changes rather than changes in the underlying phenomenon.
 
 ### Dataset cues
 
-- Time-resolved measurements spanning upstream and downstream system components
-- A defensible phase label or event-onset definition
-- Seasonal, hemispheric, or regime partitions relevant to the proposed pathway
-- Outcome components with distinct theoretical interpretations
+- A continuous spatial record contains variables corresponding to multiple physical ingredients.
+- An independent observational system measures at least some ingredients over part of the domain.
+- Prior expectations provide a substantive comparison but not a presumption that historical changes must follow projections.
 
 ### Question-forming move
 
-Define upstream phases or salient events independently of downstream outcomes, form matched or lagged contrasts, decompose downstream responses into theoretically meaningful components, and test recurrence across contexts or additional samples.
+Construct the proxy from complementary physical ingredients, examine both the combined measure and its components, compare historical patterns with prior expectations, and audit selected trends against independent observations. Interpret agreement and disagreement as evidence about both the phenomenon and the measurement system.
 
 ### Scientific payoff
 
-Makes remote-coupling claims discriminating by combining temporal ordering, context dependence, decomposition, and reproducibility while preserving the distinction between prediction and causation.
+Enables broad historical inference where direct records are incomplete while retaining explicit tests of physical interpretation and data credibility.
 
 ### What different outcomes would mean
 
-- Positive: Stable phase- or event-dependent downstream shifts would support predictive coupling and constrain plausible mechanisms through their timing and component structure.
-- Negative: Weak, unstable, or context-limited contrasts would restrict claims of general influence and suggest sampling variability, reverse forcing, or an omitted conditioning regime.
+- Positive: Component-wise coherence and observational agreement strengthen confidence that proxy changes represent meaningful environmental change.
+- Negative: Disagreement identifies suspect components, regions, or periods and prevents modeled proxy trends from being treated as direct event trends.
 
 ### Common failure modes
 
-- Defining phases or events using downstream outcomes
-- Ignoring autocorrelation, unequal phase occupancy, or overlapping event windows
-- Treating temporal precedence as causal proof
-- Generalizing a response found in one season or component to the full system
-- Failing to test reported signals in additional observations
+- Equating favorable conditions with observed event occurrence.
+- Using one ingredient as a complete representation of a multistage phenomenon.
+- Validating only where agreement is expected or observations are densest.
+- Ignoring model or assimilation changes that can create artificial trends.
+- Treating projection expectations as a required sign for historical change.
 
 ### Details that should not be transferred
 
-- Specific oscillation labels, atmospheric levels, station-based phase records, and vortex thresholds
-- Particular harmonic components, seasons, hemispheric networks, and post-onset windows
-- Named circulation indices and weather regimes
+- This pattern has single-trace support and is paper-specific because its demonstrated proxy architecture is tailored to convective-environment physics.
+- The source proxies have geographically and physically limited applicability and do not directly count hazards.
+- The observational check is uneven in space and time, and the reanalysis contains model and assimilation dependencies.
+- Excluded environments and domain-specific initiation assumptions limit broad transfer.
 
 ### Source PaperCases and formation traces
 
-- Source 1: [The Influence of the Equatorial Quasi-Biennial Oscillation on the Global Circulation at 50 mb — James R. Holton and Hsiu-Chi Tan](papers/10-holton-tan-1980.md) · [Question-formation trace](formation_traces/10-holton-tan-1980.md)
-- Source 2: [Stratospheric Harbingers of Anomalous Weather Regimes — Mark P. Baldwin and Timothy J. Dunkerton](papers/11-baldwin-dunkerton-2001.md) · [Question-formation trace](formation_traces/11-baldwin-dunkerton-2001.md)
+- Source 1: [Global climatology and trends in convective environments from ERA5 and rawinsonde data](papers/16-taszarek-et-al-2021.md) · [Question-formation trace](formation_traces/16-taszarek-et-al-2021.md)
 
-## Pattern 008: Replace a coarse representation with a resolved spatial-structure representation
+## Pattern 007: Use replicated simulations to distinguish expected variability from systematic mismatch
 
 - Review authority: `ai_reviewed`
-- Transfer scope: `cross_paper`
+- Transfer scope: `paper_specific`
 
 ### Starting scientific state
 
-- A conventional summary represents a spatially extended phenomenon through aggregate components, point locations, tracks, or other reduced descriptors.
-- Prior observations or physical reasoning indicate that the phenomenon's geometry, extent, or localized concentration may be scientifically meaningful but obscured by the conventional representation.
-- Resolved spatial fields make finite-area structures directly measurable and repeated observations allow their occurrence or contribution to be aggregated.
+- Observations disagree with the response commonly produced by models.
+- Competing explanations attribute the mismatch either to an unusual realization of internal variability or to limitations in the modeled forced response or variability.
+- Replicated simulations share external conditions while differing in initial conditions.
 
 ### Unresolved tension
 
-A resolved structure representation may reveal meaningful spatial organization, concentration, or area of influence that reduced summaries obscure, or it may add little stable or interpretable information beyond those summaries.
+A single observed trajectory may lie within the modeled range of internal variability, or it may be too persistent or extreme to reconcile with that range, but either interpretation depends on whether the ensemble represents variability adequately.
 
 ### Dataset cues
 
-- Spatially resolved fields that retain feature geometry, extent, and magnitude where relevant
-- Repeated observations for assessing occurrence, recurrence, or concentration
-- Tracking, circulation, or other linking information that can provide complementary life-cycle or physical interpretation
+- Multiple initial-condition realizations provide a distribution under approximately common forcing.
+- Ensemble means and spreads can operationalize modeled forced response and internal variability, respectively.
+- Multiple models, observables, or multivariate patterns permit assessment of whether discrepancies are systematic.
 
 ### Question-forming move
 
-Define a field-level representation using scientifically motivated spatial structure, aggregate the identified structures into interpretable occurrence or contribution measures, and compare their descriptive and physical interpretation with conventional aggregate, point-based, or track-based summaries. Where the measured process supports an additive partition, separately evaluate the structured and residual components without treating that accounting requirement as universal.
+Locate the observed signal within distributions generated by replicated simulations, compare results across models and related observables, and use pattern-based diagnostics to isolate discrepancies poorly represented by the ensembles. Frame out-of-range behavior as evidence for model limitation without assuming whether the limitation lies in forced response or variability.
 
 ### Scientific payoff
 
-Tests whether directly representing spatial extent and organization yields scientifically meaningful information that is hidden or blurred by reduced summaries, while clarifying when conventional representations remain sufficient or provide necessary complementary information.
+Converts an observation–model mismatch into a discriminating test between plausible internal variability and systematic deficiencies with direct implications for attribution and projection confidence.
 
 ### What different outcomes would mean
 
-- Positive: Stable, interpretable structure-based patterns would show that resolved geometry, area of influence, or localized concentration adds information beyond conventional summaries and could improve attribution of occurrence or contributions to physical organization and life-cycle context.
-- Negative: Unstable, weakly interpretable, or largely redundant structure-based patterns would support retaining conventional summaries, using the resolved representation only as a complement, or revising the proposed construct and identification choices.
+- Positive: If observations fall within modeled distributions, an unusual but represented realization of internal variability remains a sufficient explanation within the ensemble framework.
+- Negative: Persistent tail or out-of-range observations weaken an internal-variability-only account and indicate limitations in the modeled forced response, variability pattern, variability amplitude, or observational representation.
 
 ### Common failure modes
 
-- Choosing identification thresholds or boundaries to reproduce favored examples without independent assessment
-- Treating all identified structures, or any residual component in an additive partition, as physically homogeneous
-- Confusing preservation of visually recognizable geometry with construct validity
-- Ignoring sensitivity to resolution, contouring, filtering, terrain, or linking choices
-- Assuming that point, track, aggregate, and finite-area measures are interchangeable despite representing different properties
-- Failing to verify common accounting only when structured and residual components are intended to partition the same quantity
+- Assuming ensemble spread is a complete representation of real-world internal variability.
+- Treating the ensemble mean as a perfectly known forced response.
+- Declaring model bias from one observed realization without accounting for observational uncertainty.
+- Searching many regions or patterns without guarding against selective emphasis.
+- Collapsing distinct forced-response and variability deficiencies into a single diagnosis.
 
 ### Details that should not be transferred
 
-- Atmospheric-river thresholds, moisture-flux integration choices, and river-versus-broad-flux accounting
-- Cyclone definitions based on pressure minima and enclosing contours, along with specific tracking and terrain criteria
-- Specific meteorological associations with fronts, storms, storm tracks, pressure minima, genesis, or lysis
-- Source-specific sampling periods, trial dates, regional subsets, and reanalysis limitations
+- This pattern has single-trace support and is paper-specific because it depends on initial-condition climate-model large ensembles and a single realized climate trajectory.
+- The interpretation of ensemble mean and spread is a climate-model assumption that may not hold in other simulation systems.
+- The coupled relationships among ocean-surface patterns, atmospheric pressure, and circulation are domain specific.
+- Observational-product uncertainty and model dependence limit the source case's attribution.
 
 ### Source PaperCases and formation traces
 
-- Source 1: [Wernli and Schwierz, “Surface Cyclones in the ERA-40 Dataset (1958-2001). Part I: Novel Identification Method and Global Climatology”](papers/13-wernli-schwierz-2006.md) · [Question-formation trace](formation_traces/13-wernli-schwierz-2006.md)
-- Source 2: [A Proposed Algorithm for Moisture Fluxes from Atmospheric Rivers — Yong Zhu and Reginald E. Newell](papers/14-zhu-newell-1998.md) · [Question-formation trace](formation_traces/14-zhu-newell-1998.md)
+- Source 1: [Wills, Dong, Proistosescu, Armour, and Battisti (2022), "Systematic climate model biases in the large-scale pattern of recent sea-surface temperature and sea-level pressure change"](papers/17-wills-et-al-2022-author-manuscript.md) · [Question-formation trace](formation_traces/17-wills-et-al-2022-author-manuscript.md)
+
+## Pattern 008: Extend an established mean response to the consequential tail and its mechanism
+
+- Review authority: `ai_reviewed`
+- Transfer scope: `paper_specific`
+
+### Starting scientific state
+
+- Paper-local literature establishes a robust change in a distributional mean or average state.
+- Analogous literatures provide contrasting precedents in which extremes either track the mean or change disproportionately.
+- Relevant state variables are available to test a physical explanation for the tail response.
+
+### Unresolved tension
+
+The scientifically consequential tail may undergo a common additive shift with the mean or a multiplicative change in distribution shape, and a simple correlation with a proximate variable may not identify the responsible mechanism.
+
+### Dataset cues
+
+- Repeated values under contrasting conditions expose the full distribution rather than only its mean.
+- Multiple model frameworks or comparison datasets permit robustness checks.
+- Thermodynamic or other mechanism-relevant fields support a physically interpretable decomposition.
+
+### Question-forming move
+
+Compare changes across the distribution to distinguish an approximately uniform shift from disproportionate tail change, then decompose the response using physically motivated state variables. Check whether the distributional and mechanistic result persists across modeling frameworks rather than relying on a mean-response extrapolation.
+
+### Scientific payoff
+
+Reveals whether average changes understate consequential extremes and links any altered tail behavior to a testable physical account.
+
+### What different outcomes would mean
+
+- Positive: Disproportionate tail change shows that mean-response projections understate extreme behavior; a coherent physical decomposition strengthens confidence in its interpretation.
+- Negative: A tail that tracks the mean supports an additive response, while failure of the proposed decomposition indicates that other processes or interactions are needed to explain the change.
+
+### Common failure modes
+
+- Defining the tail after examining the projected response.
+- Comparing raw tail changes across systems without accounting for baseline distribution differences.
+- Inferring mechanism from temperature or another proximate correlate alone.
+- Treating multimodel agreement as observational confirmation.
+- Ignoring whether changes arise from location shifts, scale changes, skewness, or mixtures of regimes.
+
+### Details that should not be transferred
+
+- This pattern has single-trace support and is paper-specific because the demonstrated mechanism relies on atmospheric moist-thermodynamic relationships.
+- The source definition of fast winds, selected atmospheric level, scenario contrasts, and spatial aggregation are application-specific.
+- Model projections and reanalysis play different evidential roles and are not interchangeable.
+- The source implications for circulation-related hazards require domain-specific validation.
+
+### Source PaperCases and formation traces
+
+- Source 1: [Tiffany A. Shaw &amp; Osamu Miyawaki, “Fast upper-level jet stream winds get faster under climate change”](papers/20-shaw-miyawaki-2024.md) · [Question-formation trace](formation_traces/20-shaw-miyawaki-2024.md)

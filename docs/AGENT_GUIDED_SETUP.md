@@ -193,8 +193,10 @@ Before authorizing a run, confirm that the coding agent has shown you:
 7. the estimated model calls and planner launches; and
 8. any evidence limitation that lowers scientific authority.
 
-`maieusis check` makes no paid model or coding-agent call. Once it passes and
-you accept the disclosed cost and egress, run:
+`maieusis check` launches no coding agent and runs no stage. It does send one minimal request per configured provider — `max_tokens: 1`, a single full stop for content — because an API key is not a balance:
+a key that authenticates but cannot be billed fails here rather than three hours into a run. The
+cost is a fraction of a cent per provider, and it is the only spend `check` makes. Once it passes
+and you accept the disclosed cost and egress, run:
 
 ```bash
 maieusis run --project maieusis.yaml

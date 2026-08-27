@@ -96,19 +96,46 @@ cannot be answered responsibly with that data. That is often the most useful thi
 
 A provider outage, an exhausted account, or an unreadable file is not a verdict about your science.
 
+Neither is a review budget running out. A reviewer that keeps asking for a change has not decided
+anything yet, so a stop of that kind is labelled as a fault rather than a finding, resuming is valid,
+and the lever is `run.max_revise_rounds` in your project file. A `reject` is the opposite: it is the
+reviewer's decision, and raising a budget will not change it.
+
 Maieusis labels these differently on purpose, and a family terminal states which one it is. If you
 are reading a summary that presents an infrastructure fault as a scientific finding, that summary
 is wrong, and you should open the family's own page rather than trust it.
 
+## Where the run id and the summary are
+
+Every command that follows takes a `<run-id>`, and nothing so far has said where you get one.
+
+It is the **name of the directory** the run created under your `run.output_root` — a timestamp and
+a short hash, like `20260823T124544Z-1acbc808`. `maieusis run` prints it on the last line when it
+finishes, as part of the path to the summary, and it is printed again by every `resume`. If you
+lost the output, list the directory: the run ids are the directory names, and the newest is the one
+you just ran.
+
+`summary.md` sits at the top of that directory and is the page to open first. It is the run
+narrating itself: which stages ran, which families it produced, what happened to each, and the
+terminal it reached. `README.md` beside it is the reader-facing index into the artifacts. Neither
+is generated for a run that never got past preflight, and their absence is itself a diagnosis.
+
 ## What to do when a run stops
 
 1. Run `maieusis status <run-id>`. It reports what each stage did and whether resuming is valid,
-   without making any paid call.
-2. Read the run's own `README.md` and `summary.md`, then the per-family pages.
+   and makes no paid call. It is read-only except on a run whose indexed artifacts no longer match
+   their digests, where it records that integrity failure rather than reporting a healthy run.
+2. Read the run's own `summary.md` first, then `README.md`, then the per-family pages.
 3. Then act on what kind of stop it was:
    - **a family-level scientific terminal** is a result — do not re-run it;
-   - **a family-level infrastructure warning** is a fault — siblings continued, and
-     `maieusis resume <run-id>` may finish it;
+   - **a family-level infrastructure warning** is a fault, and what `resume` does with it depends
+     on which of the two the run wrote. A family that kept a readable dossier — the page says
+     *completed with a family-level warning* — is a finished terminal to `resume`: it is reused,
+     not re-run, because a dossier the reader can already open is not something to spend money
+     replacing. A family the run could not finish at all — *run incomplete, an infrastructure issue
+     and not a scientific rejection* — has no completion record, and that is the one `resume`
+     re-enters. Read which sentence the page carries before deciding whether resuming will change
+     anything;
    - **a run-level terminal** names its own next action — follow that.
 
 `maieusis resume` re-enters an existing run and reuses the stages already proven complete with

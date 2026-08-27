@@ -24,133 +24,309 @@ dataset:
   note: The one-dimensional derived product is not redistributed and its derivation from ERA5 is not published
     here.
 demo_provenance:
-  qualification_class: candidate_demonstration
-  note: These artifacts come from a demonstration run on the release-candidate source tree, not from the
-    byte-qualification run of the published package.
-  run_id: 20260806T144407Z-c6f4bf64
-  science_build_sha256: cb6744aec5a9e30d2190bf8920338e27b0a3e61e5e1953779e78182935caece8
-  science_build_version: 0.1.0
+  qualification_class: qualification_run
+  note: 'These artifacts are the output of the byte-qualification run of the published package: the wheel
+    these bytes were produced by is the wheel this release publishes.'
+  run_id: 20260823T080305Z-1ff154d2
+  science_build_sha256: 47fbc4e278542e54bfc36a5747caea2a8776890b92ff538ddb2b087249cf9310
+  science_build_version: 0.1.1
   presentation_build_sha256: null
   leg_receipt: withheld_private_operator_record
-  leg_receipt_note: The scientific leg receipt is an internal operator record and is not published. Its digest is kept so it can be verified if it is ever released.
-  leg_receipt_sha256: c042b68bbdaef07382bee98be06d4a7bb39e0a94e005678e3c5bc3c081b23726
+  leg_receipt_note: The scientific leg receipt is an internal operator record and is not published. Its
+    digest is kept so it can be verified if it is ever released.
+  leg_receipt_sha256: 0562e1aa2441822463355fcdf2b7d7f3085a185f9437ff477749bb367c3b8c5e
 artifacts:
   status: curated
   root: artifacts
-  file_count: 50
-  inventory_sha256: 94e1376fba6a9683cb869b788064bff973138b14fd1eae996975eeec094bf8a0
   showcase_family_ids:
-  - wave-forcing-and-state-dependence
+  - lifecycle-asymmetry-memory
   showcase_selection_status: operator_selected
+  redaction_contract: deletion_with_declared_substitutions/v1
   sanitization:
   - remove_internal_citation_identifiers
-  - replace_redaction_residue_with_readable_prose
+  - remove_internal_evidence_context_identifiers
+  - remove_internal_review_change_identifiers
   - remove_internal_evidence_request_labels
   - remove_reviewer_note_lines
-  - summarize_excluded_candidate_diagnostic
   - strip_internal_family_prefix_from_directory_names
+  - strip_internal_family_prefix_from_prose
+  - strip_internal_pattern_prefix_from_prose
+  redaction_notices:
+  - Public citation details are represented by the paper context; internal citation identifiers are omitted
+    from this gallery.
+  redaction_substitutions:
+  - this citation
+  - this evidence context
+  - this required change
+  - this family
+  file_count: 53
+  inventory_sha256: 1a7022ab79704c64489dbefde3d01dde112a1a691ee7d1ab625b2a5a1439daee
   sanitized_inventory:
   - path: dataset/dataset_narrative.md
-    sha256: a349514a7f8f3d7dcc7693e665580a27afd054877dbfa74a21f0adf51f53ace3
-  - path: families/extreme-event-lifecycle-heterogeneity/dossier.md
-    sha256: 7bc925fbaea13209b9d7d9f24e403462c4d923c6ed6fea693a8527305920aaf3
-  - path: families/extreme-event-lifecycle-heterogeneity/dossier_detailed.md
-    sha256: 849e235c64f63d448ba8dc43c98a61ce921848613963398bcef0d84635f2cea4
-  - path: families/historical-change-in-dynamical-organization/dossier.md
-    sha256: 4fb99ffa0779ca8f04222cb381035eab0c92405b1f2e92354764a324b1ede947
-  - path: families/historical-change-in-dynamical-organization/dossier_detailed.md
-    sha256: ac1ec83316d9eff072f22bf4d68dc37d837531813ebd9ddca257c5b4e193d730
-  - path: families/persistence-memory-and-hysteresis/dossier.md
-    sha256: 3d63fa228a55055f897061af727454e805c710e915f0d23c91c752bf12a3a0a7
-  - path: families/persistence-memory-and-hysteresis/dossier_detailed.md
-    sha256: 4c1440f9b97f73bfbbb9bd8ed7df01f3fb420e7a696caeed5b04d1c469d2c939
-  - path: families/state-versus-transition-organization/dossier.md
-    sha256: 73ee5f41ed93018180b440357b1881d5e45053d49ad1be20940cbbe05b085932
-  - path: families/state-versus-transition-organization/dossier_detailed.md
-    sha256: ce5d0d81d3a29220424e80ba604f0b24616c8adc5126da8f1fb5480d6abc3a71
-  - path: families/vertical-coupling-representations/dossier.md
-    sha256: d1f97c245856f073cdbcce767b8a7441e5b2ef0d1048b70cf7d2283a7204aab8
-  - path: families/vertical-coupling-representations/dossier_detailed.md
-    sha256: 151a1b6edaefb0eb49dae549a3eb341fed8b71ef7c3504a3023940acc8d7661c
-  - path: families/wave-forcing-and-state-dependence/dossier.md
-    sha256: 4bb7b3f6431fa2b9112aa2803f38012c1575dd366b0fab22e0a7c8361540e7d3
-  - path: families/wave-forcing-and-state-dependence/dossier_detailed.md
-    sha256: 2b1567f582acfeb3277fb822923068f4b10f014a025a780ab10dcbce76de1e9c
+    sha256: 998e7be0bbcfc12e6b96b085cda49109a429780448969942dddb8a62336bf13e
+    source_path: dataset/dataset_narrative.md
+    source_sha256: 998e7be0bbcfc12e6b96b085cda49109a429780448969942dddb8a62336bf13e
+    origin: redacted
+  - path: families/definition-robustness/dossier.md
+    sha256: 65114281a34d56d935f5a32e17dee754e721291449418123197a95fa0603bc86
+    source_path: families/qfamily-02-definition-robustness/dossier.md
+    source_sha256: 65114281a34d56d935f5a32e17dee754e721291449418123197a95fa0603bc86
+    origin: redacted
+  - path: families/definition-robustness/dossier_detailed.md
+    sha256: cc8e0dd10b271590af21b3faf6b0e413e1cabfd3a1073a06fd6be723368a1be3
+    source_path: families/qfamily-02-definition-robustness/dossier_detailed.md
+    source_sha256: cc8e0dd10b271590af21b3faf6b0e413e1cabfd3a1073a06fd6be723368a1be3
+    origin: redacted
+  - path: families/distributional-stability/dossier.md
+    sha256: 3744b33d404cd4ec1ab2951ee4c275f663954d8fad9480ba23c399e209a5557b
+    source_path: families/qfamily-05-distributional-stability/dossier.md
+    source_sha256: 3744b33d404cd4ec1ab2951ee4c275f663954d8fad9480ba23c399e209a5557b
+    origin: redacted
+  - path: families/distributional-stability/dossier_detailed.md
+    sha256: 4e595a06125d29dd0f74e1b43e0ceaa10434f874b3219fd449e35780c1749af9
+    source_path: families/qfamily-05-distributional-stability/dossier_detailed.md
+    source_sha256: 4e595a06125d29dd0f74e1b43e0ceaa10434f874b3219fd449e35780c1749af9
+    origin: redacted
+  - path: families/downward-propagation-proxies/dossier.md
+    sha256: 5b90dbc74560c19f31830ac1d56645a0d0173195ddfe50df3d4b4b3ab74d5dde
+    source_path: families/qfamily-06-downward-propagation-proxies/dossier.md
+    source_sha256: 5b90dbc74560c19f31830ac1d56645a0d0173195ddfe50df3d4b4b3ab74d5dde
+    origin: redacted
+  - path: families/downward-propagation-proxies/dossier_detailed.md
+    sha256: 6ea1d4bec7bda3eb40b4242b46b32fef117f47f2cf71978f02601d029e0728a3
+    source_path: families/qfamily-06-downward-propagation-proxies/dossier_detailed.md
+    source_sha256: 6ea1d4bec7bda3eb40b4242b46b32fef117f47f2cf71978f02601d029e0728a3
+    origin: redacted
+  - path: families/lifecycle-asymmetry-memory/dossier.md
+    sha256: 843f2ac49376abf5d5ea695fd5518e99e52dec8559705e961b3cb75e174f7f46
+    source_path: families/qfamily-03-lifecycle-asymmetry-memory/dossier.md
+    source_sha256: 843f2ac49376abf5d5ea695fd5518e99e52dec8559705e961b3cb75e174f7f46
+    origin: redacted
+  - path: families/lifecycle-asymmetry-memory/dossier_detailed.md
+    sha256: e8c0710ce6d5b99bde7ed64a8160154d3f4e710e3872e5aaed3ff885d52b6022
+    source_path: families/qfamily-03-lifecycle-asymmetry-memory/dossier_detailed.md
+    source_sha256: e8c0710ce6d5b99bde7ed64a8160154d3f4e710e3872e5aaed3ff885d52b6022
+    origin: redacted
+  - path: families/precursor-susceptibility/dossier.md
+    sha256: f6384805334adf1f140da785b853c8f87c8b66b19f9c41d9b173367334d91114
+    source_path: families/qfamily-01-precursor-susceptibility/dossier.md
+    source_sha256: f6384805334adf1f140da785b853c8f87c8b66b19f9c41d9b173367334d91114
+    origin: redacted
+  - path: families/precursor-susceptibility/dossier_detailed.md
+    sha256: 16f6ffd046cfb8150c9ba667fd721e0c1e28d5531e9143313d3c68f8bb4b0fd9
+    source_path: families/qfamily-01-precursor-susceptibility/dossier_detailed.md
+    source_sha256: 16f6ffd046cfb8150c9ba667fd721e0c1e28d5531e9143313d3c68f8bb4b0fd9
+    origin: redacted
+  - path: families/wave-mean-flow-regimes/dossier.md
+    sha256: 46463f47a77b869b091f108c215230fd6ff770dfceaa21a1c1254404ffb16059
+    source_path: families/qfamily-04-wave-mean-flow-regimes/dossier.md
+    source_sha256: 46463f47a77b869b091f108c215230fd6ff770dfceaa21a1c1254404ffb16059
+    origin: redacted
+  - path: families/wave-mean-flow-regimes/dossier_detailed.md
+    sha256: b473f95398227052da6424f6adfcc8a60793d17eea51c361667fae0618c697fb
+    source_path: families/qfamily-04-wave-mean-flow-regimes/dossier_detailed.md
+    source_sha256: b473f95398227052da6424f6adfcc8a60793d17eea51c361667fae0618c697fb
+    origin: redacted
   - path: literature/research_scope.md
-    sha256: 8aedffb6a0e014c60b09c98aa12fe9d26ff26ef208e4f8ddfd0a9c3ae136a3c8
+    sha256: b99f1d1d2e9cf0da883f8ee6717a3d32a5fd99d90bc03121b7f8c9c5c3aa6f24
+    source_path: literature/research_scope.md
+    source_sha256: 1be6ab01938daf0d7597a0a9f8faebe0a4042533d74a8351c7ba97ff4b37ecd6
+    origin: redacted
   - path: literature/retrieval_summary.md
-    sha256: 5d695e0f96d8f1a776927132010f5dd633e0ffd937363375bce849aabe09050e
+    sha256: 7d0479da5a783d08fb3469188a7af95149b7f348db2a1a84d3a9e624030740ad
+    source_path: literature/retrieval_summary.md
+    source_sha256: 7d0479da5a783d08fb3469188a7af95149b7f348db2a1a84d3a9e624030740ad
+    origin: redacted
   - path: literature/topic_evidence_summary.md
-    sha256: e010d28ea454f211604a7ac904c7792280795cfbc5e17f979c260d9488e897c6
+    sha256: 297b1963dd3b6cb16437daff9fef18ced0a071e5a52cc22a04130cf68fc92cc5
+    source_path: literature/topic_evidence_summary.md
+    source_sha256: 297b1963dd3b6cb16437daff9fef18ced0a071e5a52cc22a04130cf68fc92cc5
+    origin: redacted
   - path: paperbank/formation_traces/01-wallace-gutzler-1981.md
-    sha256: b1bace91ca7cf9a9b5f194dde2bdf6aed4b3e1a4668ce89e8434f75e34717b6e
-  - path: paperbank/formation_traces/02-barnston-livezey-1987.md
-    sha256: f8084917512dfd728f1ec65f5bfac482a555b93c2d87159f85abb0c9859481c4
-  - path: paperbank/formation_traces/04-lau-1988.md
-    sha256: eb06eb7a2d096b0f79c32258e8be4a945e3398a7268a3f2daff53900d61d2d5f
-  - path: paperbank/formation_traces/05-hoskins-hodges-2002.md
-    sha256: 12110de65f62f749b9972249df1c36edfbaaffc90b7e23ee72d926364d29270a
+    sha256: b1834fff3a0d7c0da513fb13f07be9496dd70f6ba0e57c528fc5d44bd843103b
+    source_path: paperbank/formation_traces/01-wallace-gutzler-1981.md
+    source_sha256: b1834fff3a0d7c0da513fb13f07be9496dd70f6ba0e57c528fc5d44bd843103b
+    origin: redacted
+  - path: paperbank/formation_traces/06-hurrell-1995.md
+    sha256: 2b8cd18da8d12726d7216d7a202085ee017fae0be0cb15c72ccbace174a87e5b
+    source_path: paperbank/formation_traces/06-hurrell-1995.md
+    source_sha256: 2b8cd18da8d12726d7216d7a202085ee017fae0be0cb15c72ccbace174a87e5b
+    origin: redacted
   - path: paperbank/formation_traces/07-thompson-wallace-2000-part-i.md
-    sha256: 989af8bb3330a04f5b1f0594fc2ae348d497c701a532fcf8cb12c5b8da044631
-  - path: paperbank/formation_traces/08-thompson-wallace-hegerl-2000-part-ii.md
-    sha256: 9b791ca70eea385bc22913d55503db5e4ee7c0bef0cde1235b993eb5bec0e3d7
+    sha256: bd2caefb16ceb9ce2dd8fcbf92c4f71590f775f8a85e90274ae42e49b147dc3f
+    source_path: paperbank/formation_traces/07-thompson-wallace-2000-part-i.md
+    source_sha256: bd2caefb16ceb9ce2dd8fcbf92c4f71590f775f8a85e90274ae42e49b147dc3f
+    origin: redacted
   - path: paperbank/formation_traces/10-holton-tan-1980.md
-    sha256: a3957ca6307b8c9161aad0caa4874545d85907082bddfcd47a67d251972bdf45
-  - path: paperbank/formation_traces/11-baldwin-dunkerton-2001.md
-    sha256: 5cbee11e52f4fd1400d485e13d762f485b4b29e7079a0139f6993124243c8ddd
-  - path: paperbank/formation_traces/13-wernli-schwierz-2006.md
-    sha256: b042d56af4a49b2b2ccdf14e4ca6bc3eb99d5d28fd1656007d05583dd091ea93
+    sha256: d23ffe7588d8acf1a2216c2f87e0b3b20f33559fac0e734183e7db4b3d267143
+    source_path: paperbank/formation_traces/10-holton-tan-1980.md
+    source_sha256: d23ffe7588d8acf1a2216c2f87e0b3b20f33559fac0e734183e7db4b3d267143
+    origin: redacted
   - path: paperbank/formation_traces/14-zhu-newell-1998.md
-    sha256: 48ddb4ba786dafb893afc032b83f3f91bc7f8f40e10a539d1955de35312a0d46
+    sha256: b6ef42f24f6997974903b0bf6ed4ab8c2466abc8685b8271fd65155398ea353f
+    source_path: paperbank/formation_traces/14-zhu-newell-1998.md
+    source_sha256: b6ef42f24f6997974903b0bf6ed4ab8c2466abc8685b8271fd65155398ea353f
+    origin: redacted
   - path: paperbank/formation_traces/16-taszarek-et-al-2021.md
-    sha256: e05056b0712b5bd607832564fb861df713d1e84ac935a42ebfe425e6672dbab7
+    sha256: 716bb606e02ca6482230ed2a225fcbb638e281588a7f504c229fd36ae202a482
+    source_path: paperbank/formation_traces/16-taszarek-et-al-2021.md
+    source_sha256: 716bb606e02ca6482230ed2a225fcbb638e281588a7f504c229fd36ae202a482
+    origin: redacted
   - path: paperbank/formation_traces/17-wills-et-al-2022-author-manuscript.md
-    sha256: c85263050d26a658303fd41ac77c5880527cbb5f524f4a29736b923464e0a122
+    sha256: fc98c301ceccd9372530b26d7ad78a52f3fc6e45f09f5ec881e58c0026768e1c
+    source_path: paperbank/formation_traces/17-wills-et-al-2022-author-manuscript.md
+    source_sha256: fc98c301ceccd9372530b26d7ad78a52f3fc6e45f09f5ec881e58c0026768e1c
+    origin: redacted
+  - path: paperbank/formation_traces/19-rousi-et-al-2022.md
+    sha256: c96786e941e00c9000c0b1ce21fa58d3c0de493b070d395e8ee2fd52e38fb8fd
+    source_path: paperbank/formation_traces/19-rousi-et-al-2022.md
+    source_sha256: c96786e941e00c9000c0b1ce21fa58d3c0de493b070d395e8ee2fd52e38fb8fd
+    origin: redacted
+  - path: paperbank/formation_traces/20-shaw-miyawaki-2024.md
+    sha256: 8ca7619b2854256031767a5eea5ebd42b6ffba975b9e577a3da3250b9ddf5c60
+    source_path: paperbank/formation_traces/20-shaw-miyawaki-2024.md
+    source_sha256: 8ca7619b2854256031767a5eea5ebd42b6ffba975b9e577a3da3250b9ddf5c60
+    origin: redacted
   - path: paperbank/paperbank_summary.md
-    sha256: 42b8c01b73df54218290fd12381d83505fce8f89e681b032d132a132f4a9046c
+    sha256: 728e366a172bcf9cf75a6a3dfa6ddbec5e853330fb877ec7eb995bb309960359
+    source_path: paperbank/paperbank_summary.md
+    source_sha256: cb572630f46b97e64bffe9688b9b0f48612ed612b68a224552f7fbd24e05bce4
+    origin: redacted
   - path: paperbank/papers/01-wallace-gutzler-1981.md
-    sha256: 30b5244be42e5e3c6d15ba5b20d4b3dc11e3ea436e823bddb6491ff8431e8e90
+    sha256: bb6ea46422fe63db8b1aff303660d2e8e00e5c653d3c9a02b6e3bbf3b0ad40cb
+    source_path: paperbank/papers/01-wallace-gutzler-1981.md
+    source_sha256: 2da0a15ebffd9a45b9d858649547ebdcdb580943bc83184f45f969b0d46b3a01
+    origin: redacted
   - path: paperbank/papers/02-barnston-livezey-1987.md
-    sha256: 7e80737eefac72d7d94f60a829ba93e324d8d45fd60f1584668d43f44b4a34b9
+    sha256: 04d0302080d472dec7fbdf6a7729a057ce651d74d004dd9a5b7a58f8f1b5fd02
+    source_path: paperbank/papers/02-barnston-livezey-1987.md
+    source_sha256: 3b2300880e31eaf29832c99ca98f84ea946465e2a67264c2f6a38f2a3b2f7f86
+    origin: redacted
   - path: paperbank/papers/03-blackmon-et-al-1977.md
-    sha256: e595b69bfb055ad182f0076c246a7e91893c958e097c99db82ea870cced95e25
+    sha256: c90f47316dcab29e66db8ee83ec9e94c61b476851ad0be2527b0dec5023406b6
+    source_path: paperbank/papers/03-blackmon-et-al-1977.md
+    source_sha256: 522a272b3756c07e8182bbd750faecc4f2cfb6b9e132792e66b5e110828d1bab
+    origin: redacted
   - path: paperbank/papers/04-lau-1988.md
-    sha256: 3062802aa952d0ce082dff025e2161dcfbb15d16a95433cd58a2db8b0364c440
+    sha256: b5fa17718c9414bef8791418b24cd7d269b564b79c265d4d17ed4e7e2c269743
+    source_path: paperbank/papers/04-lau-1988.md
+    source_sha256: 4ff5305f576ea523ed899c96182ac436ade31e270b5f2e476eb87ff9c97b42f5
+    origin: redacted
   - path: paperbank/papers/05-hoskins-hodges-2002.md
-    sha256: 8f1b031efe79e927be26cd3966e9f4f5a2bab785637a598b41557c3f4a42d1f7
+    sha256: 9b85376e08a1447c7a74afe99bd73a74530792820a107b994ab6e1db50023c5f
+    source_path: paperbank/papers/05-hoskins-hodges-2002.md
+    source_sha256: 8ec9404328e8d8c60254596c58de124513000ef4f07fb71e336f6e3ba04acecf
+    origin: redacted
   - path: paperbank/papers/06-hurrell-1995.md
-    sha256: 45aa5ede472ee8a760c9622e1adc08b36ac75cbb96798f8feb3b928c875327c3
+    sha256: 0c797e265072438e6c320e29b87ad771ad2aeca99ed0a4c16cde74303d7913ec
+    source_path: paperbank/papers/06-hurrell-1995.md
+    source_sha256: 778887ea5154537367cbf746a383481420d4f0d508aea4d905c7b379994853da
+    origin: redacted
   - path: paperbank/papers/07-thompson-wallace-2000-part-i.md
-    sha256: 91c55c97dfb8b1bc2151c4e4a49291c80fdf725e2506bf8127407335fed7a32f
+    sha256: 4c013af7843e8f6fad7c6dd3c622fd55a1d9898bb3fe386c4587a682641717d7
+    source_path: paperbank/papers/07-thompson-wallace-2000-part-i.md
+    source_sha256: d50d86e59cce2ea46c0fc3afab69ba6afae8f054c47e6bbef45f024158b93b7a
+    origin: redacted
   - path: paperbank/papers/08-thompson-wallace-hegerl-2000-part-ii.md
-    sha256: 8cf40faef4b95cd6674dfcd1c0e25044360d73395e7c9f01481f16807fb6f96a
+    sha256: 5d864a4f4d9f585132d523d2886057c5aed9d82419c6864e917f1f61a47b0a02
+    source_path: paperbank/papers/08-thompson-wallace-hegerl-2000-part-ii.md
+    source_sha256: eea4f7c23eddf434c466a2de8cabfe5af9fde41eff84812c7654fcb44787e134
+    origin: redacted
+  - path: paperbank/papers/09-lorenz-hartmann-2001.md
+    sha256: b00d0874bbda8382e8d94a51425a9b1e4d2108d910efd05ac181f9ccf39aacc5
+    source_path: paperbank/papers/09-lorenz-hartmann-2001.md
+    source_sha256: f83b0c3ddf38a7e86e9f9002f6b14f9fb7ec6d28a82c82e055db8481b6781f00
+    origin: redacted
   - path: paperbank/papers/10-holton-tan-1980.md
-    sha256: 4e35bc0f9c74766c0e797f6c89c22bf3e0111adf2cbd4b750c066115c14472d3
+    sha256: f0906940864a85494d27353d00a7b32fc75090fda784570181a612ccfb052218
+    source_path: paperbank/papers/10-holton-tan-1980.md
+    source_sha256: 6e20942d8ec38654ed64018eac67b7b88e920a7ace8437420a0afc5e9f117628
+    origin: redacted
   - path: paperbank/papers/11-baldwin-dunkerton-2001.md
-    sha256: 21ac129b99191aebf4b516a4bce86fbcb960c59b0225dee91aed35189286ee5e
+    sha256: e07eca408ae420a9d2f20853a48f4125cc210264f491993efc1f01553b545a44
+    source_path: paperbank/papers/11-baldwin-dunkerton-2001.md
+    source_sha256: be9983156a9c07d561ac452448e9ac4c3128efed14c5e0dc538001616110796b
+    origin: redacted
+  - path: paperbank/papers/12-charlton-polvani-2007.md
+    sha256: c08c07abd248d31efdddca31ff7d0d99ff24ade03bf33037325180c216c72bd4
+    source_path: paperbank/papers/12-charlton-polvani-2007.md
+    source_sha256: 053674be6c82435c4747bd7744f70b8e8aa36406e7d27f22cc1dc4d142671a79
+    origin: redacted
   - path: paperbank/papers/13-wernli-schwierz-2006.md
-    sha256: bbdf50d95b608cdfadf8e82ab10e4b5f9adac827a54375caad88cd6c10392012
+    sha256: 42d91cb65abe0d13b95f922286a10d687b9e2dc0a023c71a5269a3bdf8b7cdd2
+    source_path: paperbank/papers/13-wernli-schwierz-2006.md
+    source_sha256: 42d91cb65abe0d13b95f922286a10d687b9e2dc0a023c71a5269a3bdf8b7cdd2
+    origin: redacted
   - path: paperbank/papers/14-zhu-newell-1998.md
-    sha256: e8b075ced1d7bae63368bcd56369bd298e21d6490d5cecb35d94b903fb482332
+    sha256: d2136e504767c297587a3b518b28c2b670574bca77f1e87a800a1827d56f10f6
+    source_path: paperbank/papers/14-zhu-newell-1998.md
+    source_sha256: e2239a03455a650d54578f249f1c76e50ed5331173fc4db3284c1215b23af5eb
+    origin: redacted
   - path: paperbank/papers/15-held-soden-2006.md
-    sha256: 39593a8ea0bae33fb081ea5cc2fd79c889e0ee1fc6e5fd07ed18b1eb1893b75c
+    sha256: 16e7743b3666d976b9a740341bbc7f9fcd7a5489a50fc06f836797fab13e0017
+    source_path: paperbank/papers/15-held-soden-2006.md
+    source_sha256: 25dab04eec1e30ffa671a98bc898dc1a235388fc7d9775cecb90b567f45f4ab5
+    origin: redacted
   - path: paperbank/papers/16-taszarek-et-al-2021.md
-    sha256: 29629733834709bac2f718b1d80413ede71289c2c8d514bc03db27b8fd04c356
+    sha256: 2cc6ec9b94e5d4ca51c8f48ffa0f4878f650fe93df3f782ed6e3236734c2b709
+    source_path: paperbank/papers/16-taszarek-et-al-2021.md
+    source_sha256: d7318f4cee14f4db567f6b6ec7cf4c6022d871d198f8d9bda040f4ebe43403e7
+    origin: redacted
   - path: paperbank/papers/17-wills-et-al-2022-author-manuscript.md
-    sha256: d120078eed58278c9e575400535b59be7025e2e94884dddb06eb6cfba94e8cf9
+    sha256: 083aba652af1eb3e9c461f6a977ec8313eccef9abffff1b39e358ef8890dc5d5
+    source_path: paperbank/papers/17-wills-et-al-2022-author-manuscript.md
+    source_sha256: 8153f0f4708200fcf8507fff118ade6463449d8d69beb3dcf17bf9ce00a69069
+    origin: redacted
   - path: paperbank/papers/18-thackeray-et-al-2022.md
-    sha256: bc82a2a1f1ba1e8a6fb71e6a904f1b22aec02ffde346284ceaaf81bca90a0258
+    sha256: 2deb7c9f025bad89eda4a6fdfab34873647e31531db5cc3fc4fd0260746e5ba2
+    source_path: paperbank/papers/18-thackeray-et-al-2022.md
+    source_sha256: eddfa773fadfec9294a18615f60af729b8041cfceeaaa4312d770dadc545a55f
+    origin: redacted
+  - path: paperbank/papers/19-rousi-et-al-2022.md
+    sha256: 16499466edc06574b5a86d03d57609de354ecf012d7b11193b0a8552dfc09631
+    source_path: paperbank/papers/19-rousi-et-al-2022.md
+    source_sha256: c4fe68d254ec34778a2ac5aec56cad46f9983613ab2c6bbca94ec7fd2258a5bb
+    origin: redacted
   - path: paperbank/papers/20-shaw-miyawaki-2024.md
-    sha256: 00715d4b4aba481ea298e3e6415faaf2d7719ea562a1aa9f5accfa5bac6cdb7c
+    sha256: 84865012c69d247be6b527cff2ea82f99a211cc52f05856f1bc809ddd9b16ca6
+    source_path: paperbank/papers/20-shaw-miyawaki-2024.md
+    source_sha256: 112cb75e917e8f1634333efe428cb80f5ce78be3633d25d556d7ee387a227e39
+    origin: redacted
   - path: paperbank/question_patterns.md
-    sha256: 0c4c55a82d777e51b57e8b8632fa76c4922c87c76cea05b41bfa66cfbe7b901b
+    sha256: b661a7c69e7bceca45bb00c732276063155af1e744d5d3f7f9d8cc38905bec9f
+    source_path: paperbank/question_patterns.md
+    source_sha256: b661a7c69e7bceca45bb00c732276063155af1e744d5d3f7f9d8cc38905bec9f
+    origin: redacted
   - path: paperbank/question_patterns_detailed.md
-    sha256: 18c18dec2313ca2480268dff7db35de93537372d170dd5f306285e1aa88ab4d0
+    sha256: 94c1b8bd979d82f74e2fc57383cb0a01dd784b3c388092f7294711387bdcae29
+    source_path: paperbank/question_patterns_detailed.md
+    source_sha256: 94c1b8bd979d82f74e2fc57383cb0a01dd784b3c388092f7294711387bdcae29
+    origin: redacted
+  - path: questions/prior_art.md
+    sha256: 67254ab7e34c66869cef4fea1f5e109b3d477f4f078491ac7736329fa1253415
+    origin: derived
+    derived_from: corpus/question_families/novelty/*/ and questions/question_families_detailed.md
   - path: questions/question_families.md
-    sha256: ef1bba2dee7f25f4205c782ff4fc32ab8ef0b051b2aa24a9cebc9b1946345ef5
+    sha256: a3094fff321735426681278101c143614ae3e0e2ba94c4af605416d6f5954a98
+    source_path: questions/question_families.md
+    source_sha256: a3094fff321735426681278101c143614ae3e0e2ba94c4af605416d6f5954a98
+    origin: redacted
   - path: questions/question_families_detailed.md
-    sha256: ee24c439e3841fa9e08e44db02e162dbaf6efc62fe6f9cb736127b28c5c6fa28
+    sha256: ecf4238e637b8e8886c170d08469479b18d5bf14671ca949177c19c66e0cad61
+    source_path: questions/question_families_detailed.md
+    source_sha256: ecf4238e637b8e8886c170d08469479b18d5bf14671ca949177c19c66e0cad61
+    origin: redacted
+  - path: questions/review_decisions.md
+    sha256: 72c93d2fdb7124230ed131ec1a5558e323debcfe0c72420c6f1eea65b9a27c42
+    origin: derived
+    derived_from: families/*/artifacts/owner_plan_review.yaml, families/*/artifacts/independent_plan_review.yaml,
+      and questions/question_families_detailed.md
+  - path: questions/shortlist.md
+    sha256: 1409c5a8c0d9fb8556c6e30b70b8b72a6eae9e7734daa3dc5930b5ca6df21f41
+    source_path: questions/shortlist.md
+    source_sha256: d5d775e771c9262ffd4441998d8ba3ffce875a75df88595150770852e36a463b
+    origin: redacted
 presentation:
   status: produced_in_run
-  pattern_detailed_sha256: 18c18dec2313ca2480268dff7db35de93537372d170dd5f306285e1aa88ab4d0
-  question_families_detailed_sha256: ee24c439e3841fa9e08e44db02e162dbaf6efc62fe6f9cb736127b28c5c6fa28
+  pattern_detailed_sha256: 94c1b8bd979d82f74e2fc57383cb0a01dd784b3c388092f7294711387bdcae29
+  question_families_detailed_sha256: ecf4238e637b8e8886c170d08469479b18d5bf14671ca949177c19c66e0cad61

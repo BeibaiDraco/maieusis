@@ -40,16 +40,21 @@ from ...schemas.scientific_context import TopicEvidenceBrief, TopicEvidenceBrief
 from ..context.topic_evidence import (
     R5TopicEvidenceSourceTable,
     TopicFieldStateDraft,
+    field_state_dimension_representation_statements,
     rights_safe_source_text_and_kind,
 )
-from ..context.topic_evidence_readiness import evaluate_topic_evidence_readiness
+from ..context.topic_evidence_readiness import (
+    assess_topic_evidence_readiness,
+    evaluate_topic_evidence_readiness,
+    topic_evidence_readiness_statements,
+)
 from ..retrieval.generic_topic_lanes import GENERIC_REQUIRED_LANES
 from .gate_diagnostics import GateDiagnostic, build_gate_diagnostic
 from .gate_kernel import run_structured_gate_review
 from .promotion import assert_promoted_status_is_holdable, assert_promotion_binding
 from .reviewer_base import build_scientific_reviewer_provider_from_env
 
-TOPIC_EVIDENCE_REVIEWER_PROMPT_VERSION = "topic_evidence_reviewer/v5"
+TOPIC_EVIDENCE_REVIEWER_PROMPT_VERSION = "topic_evidence_reviewer/v6"
 TOPIC_EVIDENCE_GATE = "topic_evidence"
 
 TOPIC_EVIDENCE_CRITERIA: tuple[str, ...] = (
@@ -115,6 +120,10 @@ class TopicEvidenceTurnInput(BaseModel):
     # system prompt, so criterion_assessments can be keyed verbatim.
     required_criteria: list[str] = Field(default_factory=list)
     review_guidance: str = ""
+    # The deterministic readiness observations, as STATED FACTS. They carry no verdict: a brief with
+    # no typed close prior is exactly what a genuinely new area looks like AND exactly what a
+    # retrieval failure looks like, and only a reader of the actual sources can tell those apart.
+    host_readiness_facts: list[str] = Field(default_factory=list)
 
 
 _ENGINEERING_DIAGNOSTIC_PREFIXES = (
@@ -156,11 +165,18 @@ def build_topic_evidence_turn_input(
     research_intent: dict[str, Any],
     source_record_summaries: Sequence[TopicEvidenceSourceSummary],
     retrieval_lineage: dict[str, int],
+    source_record_ids: set[str],
+    claim_supporting_record_ids: set[str],
     field_state: TopicFieldStateDraft | None = None,
     semantic_dimensions: Sequence[str] = GENERIC_REQUIRED_LANES,
     review_guidance: str = "",
 ) -> TopicEvidenceTurnInput:
-    """Build the exact typed packet sent to the independent topic reviewer."""
+    """Build the exact typed packet sent to the independent topic reviewer.
+
+    The two id sets are REQUIRED rather than optional because the readiness facts are derived from
+    them here. A caller that could build this packet without them could build one that silently
+    omits the very fact the reviewer is now asked to judge.
+    """
 
     scientific_field_state, _engineering = split_topic_field_state_for_scientific_review(
         field_state
@@ -175,6 +191,18 @@ def build_topic_evidence_turn_input(
         field_state=scientific_field_state,
         required_criteria=list(TOPIC_EVIDENCE_CRITERIA),
         review_guidance=review_guidance,
+        host_readiness_facts=[
+            *topic_evidence_readiness_statements(
+                assess_topic_evidence_readiness(
+                    brief,
+                    source_record_ids=source_record_ids,
+                    claim_supporting_record_ids=claim_supporting_record_ids,
+                )
+            ),
+            # Derived from the SCIENTIFIC field state, the same object the reviewer is handed, so a
+            # statement about a section can always be checked against the section it names.
+            *field_state_dimension_representation_statements(scientific_field_state, brief),
+        ],
     )
 
 
@@ -207,13 +235,21 @@ def _evidence_resolved(
     source_record_ids: set[str],
     claim_supporting_record_ids: set[str],
 ) -> bool:
-    """Host-side pre-check for hard source/claim closure only."""
-    ready, _issues = evaluate_topic_evidence_readiness(
+    """Host-side pre-check for hard source/claim closure only.
+
+    It now means what it always said. Folding the completeness axis in here made a brief that
+    reported no already-answered prior work UNFAITHFUL by the gate kernel's definition
+    (``gate_kernel.py``: ``unfaithful = hallucination_findings or not evidence_resolved``), so the
+    only verdict such a brief could earn was a downgrade to reject -- for a fact about what the
+    literature contained, not about whether the brief told the truth about it. The completeness axis
+    still decides the authority ceiling upstream; it travels to the reviewer as a stated fact.
+    """
+    readiness = assess_topic_evidence_readiness(
         brief,
         source_record_ids=source_record_ids,
         claim_supporting_record_ids=claim_supporting_record_ids,
     )
-    return ready
+    return readiness.evidence_closed
 
 
 def build_topic_evidence_reviewer_source_summaries(
@@ -348,12 +384,30 @@ def review_topic_evidence(
         research_intent=research_intent,
         source_record_summaries=source_record_summaries,
         retrieval_lineage=retrieval_lineage,
+        source_record_ids=source_record_ids,
+        claim_supporting_record_ids=claim_supporting_record_ids,
         field_state=field_state,
         semantic_dimensions=semantic_dimensions,
         review_guidance=review_guidance,
     )
     if turn_input.recommended_brief != brief or turn_input.resolved_scope != scope:
         raise ValueError("prepared topic-review input is not bound to the supplied brief and scope")
+    # A prepared packet is built by the caller, one revision round at a time. If its readiness facts
+    # were computed against a different brief or a different source table, the reviewer would be
+    # judging one artifact while reading a host observation about another -- and the host observation
+    # is precisely what this gate now defers to instead of deciding alone.
+    expected_readiness_facts = topic_evidence_readiness_statements(
+        assess_topic_evidence_readiness(
+            brief,
+            source_record_ids=source_record_ids,
+            claim_supporting_record_ids=claim_supporting_record_ids,
+        )
+    )
+    if turn_input.host_readiness_facts != expected_readiness_facts:
+        raise ValueError(
+            "prepared topic-review input carries readiness facts that do not describe the "
+            "supplied brief and source table"
+        )
     if turn_input_path is not None:
         dump_data(turn_input, turn_input_path)
     return run_structured_gate_review(

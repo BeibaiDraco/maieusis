@@ -9,6 +9,7 @@ from pydantic import ValidationError
 from ...io import dump_data, load_data, load_model
 from ...provenance import sha256_file, stable_hash
 from ...schemas.dataset_narrative import DatasetNarrative
+from ...schemas.front_half_authority import FrontHalfCeilingCause, FrontHalfCeilingReason
 from ...schemas.question_pattern import QuestionPatternCard
 from ...schemas.question_scientist_context_v2 import (
     ClaimLevel,
@@ -71,11 +72,18 @@ from .topic_evidence_readiness import evaluate_topic_evidence_readiness
 
 
 class QuestionScientistContextReadinessError(ValueError):
-    """Verified topic evidence is scientifically unready for proposer export.
+    """Verified topic evidence no longer satisfies the structural readiness predicate.
 
-    This typed exception separates an expected scientific readiness terminal from compiler,
-    schema, provenance, and identity invariant failures.  Only this exception is eligible for the
-    Stage-C scientific-terminal path.
+    This typed exception separates an expected readiness terminal from compiler, schema,
+    provenance, and identity invariant failures.  Only this exception is eligible for the Stage-C
+    contained-terminal path; everything else reaches the run envelope as incomplete.
+
+    N3: it is NOT a scientific verdict.  ``evaluate_topic_evidence_readiness`` is a deterministic
+    host predicate; the topic-evidence gate runs it as its own pre-check, and the dataset half runs
+    it too, where a failure merely CAPS the run at provisional inspiration.  A brief that reaches
+    this raise therefore passed the predicate when a reviewer judged it and fails it now, which is a
+    machinery inconsistency -- a rights-safe projection that dropped sources, a brief and table that
+    disagree -- not a judgement that the science is wanting.
     """
 
 
@@ -270,6 +278,7 @@ def build_question_scientist_context_payload_v2(
     max_topic_sources: int = 30,
     provisional_inspiration: bool = False,
     rights_safe_topic_source_projection: RightsSafeTopicSourceProjection | None = None,
+    ceiling_cause: FrontHalfCeilingCause | None = None,
 ) -> QuestionScientistContextPayloadV2:
     root = Path(corpus_root)
     intent_path = Path(intent_path)
@@ -348,6 +357,7 @@ def build_question_scientist_context_payload_v2(
             if rights_safe_topic_source_projection is not None
             else None
         ),
+        ceiling_cause=ceiling_cause,
     )
     dataset_pack = _compile_dataset_context_pack(dataset_narrative)
 
@@ -611,6 +621,25 @@ def _pattern_for_proposer(pattern: QuestionPatternCard) -> QuestionPatternForPro
     )
 
 
+# The two semantic dimensions an OpenGapCard makes an assertion ABOUT.  `close_prior_already_answered`
+# is the card's own precondition; `open_gaps` is the finding itself.  Residual absence of either is
+# the state in which the card would over-claim, so the export withholds it.  Names come from the
+# inquiry's own semantic-dimension vocabulary (`_TOPIC_DIMENSION_PUBLIC_LABELS` in `end_to_end.py`).
+_GAP_CARD_ASSERTED_DIMENSIONS = frozenset({"close_prior_already_answered", "open_gaps"})
+
+
+def _reviewed_coverage_gap_undercuts_gap_cards(
+    ceiling_cause: FrontHalfCeilingCause | None,
+) -> bool:
+    """True when a reviewed-coverage cap left unmet exactly what an OpenGapCard asserts."""
+
+    if ceiling_cause is None:
+        return False
+    if ceiling_cause.reason is not FrontHalfCeilingReason.REVIEWED_COVERAGE_GAP:
+        return False
+    return bool(set(ceiling_cause.residual_dimensions) & _GAP_CARD_ASSERTED_DIMENSIONS)
+
+
 def _compile_topic_literature_context_pack(
     brief: TopicEvidenceBrief,
     source_table: R5TopicEvidenceSourceTable,
@@ -619,6 +648,7 @@ def _compile_topic_literature_context_pack(
     provisional_inspiration: bool = False,
     original_source_table_digest: str | None = None,
     excluded_source_record_ids: set[str] | None = None,
+    ceiling_cause: FrontHalfCeilingCause | None = None,
 ) -> TopicLiteratureContextPack:
     source_record_ids = [record.source_record_id for record in source_table.records]
     if len(source_record_ids) != len(set(source_record_ids)):
@@ -701,9 +731,34 @@ def _compile_topic_literature_context_pack(
     # stronger card explicitly asserts that close-prior status has been checked.  Keep the claim and
     # its source card visible, but omit both the gap card and its reciprocal source linkage.  Verified
     # input never reaches this branch because readiness above remains strict.
-    exported_open_gap_claims = (
-        [] if provisional_inspiration and not close_prior_claims else open_gap_claims
-    )
+    #
+    # The absence of a close prior is not the only way that assertion can be unbacked.  A run capped
+    # because independent review found the coverage short reaches here WITH close priors and would
+    # otherwise ship full-strength gap cards -- measured worst case, one of the two 2026-08-11
+    # qualification legs would have exported an open-question claim as a source-backed open gap
+    # while its own inquiry rated that very dimension `indeterminate`.  So when the
+    # dimensions the inquiry could not establish are the two the card asserts about, the same
+    # suppression fires on the same mechanism.  A cap for any other residual dimension still ships
+    # them: this is a targeted guard, not a blanket ban on gap cards from capped runs.
+    # Operator ruling, 2026-08-17: a proposer must not be starved. The previous behaviour DELETED
+    # these cards, and it deleted them at exactly the worst moment -- a run whose literature was
+    # judged short is the run whose proposer most needs to be told where the field is open. The
+    # concern behind the deletion is real and is kept: an OpenGapCard asserts that close-prior
+    # status WAS checked, and a capped run has not earned that assertion. But the card was already
+    # built to carry a downgrade (`review_status`, `forbidden_overclaims`), so the honest move is to
+    # label it, not to remove it -- degrade honestly rather than discard a traceable artifact.
+    #
+    # TWO different situations hide behind the old single condition, and only one of them was ever
+    # a policy choice:
+    #   * no close prior AT ALL -- `OpenGapCard.require_evidence_and_close_prior` refuses to
+    #     construct the card (`schemas/question_scientist_context_v2.py:388`). Nothing to rule on;
+    #     the type does not exist in that state. The open question still reaches the proposer as an
+    #     `open_question` claim card with its sources, so nothing is lost but the assertion.
+    #   * close priors EXIST and the cap touched the dimensions the card asserts about -- here the
+    #     card is constructible and the old code chose to drop it. That is the choice now reversed.
+    unbacked_gap_assertion = _reviewed_coverage_gap_undercuts_gap_cards(ceiling_cause)
+    gap_assertion_unearned = provisional_inspiration and unbacked_gap_assertion
+    exported_open_gap_claims = [] if not close_prior_claims else open_gap_claims
     exported_open_gap_claim_ids = {claim.claim_id for claim in exported_open_gap_claims}
     method_limit_claims = [
         claim
@@ -727,17 +782,33 @@ def _compile_topic_literature_context_pack(
                 method_limit_ids_by_source.setdefault(source_id, []).append(
                     f"limit-{claim.claim_id}"
                 )
-    source_ids = _rank_topic_source_ids(working_brief, source_table)
-    if provisional_inspiration:
-        source_ids = list(
-            dict.fromkeys(
-                [
-                    *source_ids,
-                    *sorted(claim_supporting_ids),
-                ]
-            )
-        )
-    source_ids = source_ids[:max_topic_sources]
+    # EVERY id this returns is cited by a retained claim -- the function filters the source table
+    # down to `cited_set` and raises on a citation it cannot resolve. These are not optional.
+    cited_source_ids = _rank_topic_source_ids(working_brief, source_table)
+    # `max_topic_sources` bounds what the PROPOSER is handed, and it used to be applied to the whole
+    # list including the cited ids. That truncation could never be correct: `_evidence_basis` below
+    # requires every cited source to be an exported card and raises otherwise, so a brief citing
+    # more than the cap crashed the run outright.
+    #
+    # It was one bad draw away for four qualification sets. The corpus grew from 20 records to
+    # 45-59 as retrieval widened, and the cited count tracked it -- 15, then 21, then 26, 25, 26 --
+    # against a cap of 30. The 2026-08-23 climate leg retrieved 59 records, cited 43, and died at
+    # 1h21m with `source topic-source-record-44194e35d502 is not an exported source card`. The leg
+    # before it, byte-identical in config and prompt, cited 26 and cleared the cliff by four.
+    #
+    # So the cap now bounds only the PADDING: the claim-supporting sources a provisional-inspiration
+    # export adds beyond what the brief actually cites. Raising the constant would have bought one
+    # more corpus-growth cycle; this removes the cliff.
+    padding = (
+        [
+            source_id
+            for source_id in sorted(claim_supporting_ids)
+            if source_id not in set(cited_source_ids)
+        ]
+        if provisional_inspiration
+        else []
+    )
+    source_ids = [*cited_source_ids, *padding[: max(max_topic_sources - len(cited_source_ids), 0)]]
     proposer_cards: list[ProposerSourceEvidenceCard] = []
     blocked_count = 0
     for source_id in source_ids:
@@ -845,8 +916,27 @@ def _compile_topic_literature_context_pack(
                 ClaimLevel.PREDICTIVE,
             ],
             forbidden_overclaims=[
-                "Do not infer causal mechanism from public observational data alone."
+                "Do not infer causal mechanism from public observational data alone.",
+                # The card's whole point is the assertion "and nobody has answered this". On a
+                # capped run that assertion was not earned, so it is withdrawn here IN THE CARD
+                # rather than by removing the card: the open question and its sources remain usable
+                # material for proposing, and only the unanswered-ness claim is forbidden.
+                *(
+                    [
+                        "Do not treat this as an established gap in the literature. The close-prior "
+                        "check this card's unanswered-ness rests on was not met by this run's "
+                        "reviewed coverage. Use it as a lead worth asking about, and state that "
+                        "the prior work is unverified."
+                    ]
+                    if gap_assertion_unearned
+                    else []
+                ),
             ],
+            # NOT downgraded here, deliberately: `topic_card_review_status` is already
+            # `provisional` whenever `provisional_inspiration` holds (see its derivation above), and
+            # `gap_assertion_unearned` requires that flag -- so an override would be a line that can
+            # never change a value. The withdrawal above is what carries the downgrade, and a
+            # mutation test proved it is the load-bearing half.
             review_status=topic_card_review_status,
             evidence_basis=_evidence_basis(_claim_source_ids(claim)),
         )
@@ -864,7 +954,14 @@ def _compile_topic_literature_context_pack(
         brief_id=brief.brief_id,
         brief_prompt_version=brief.prompt_version,
         review_status=topic_card_review_status,
-        field_state_prompt_version="reviewed_compiled_field_state",
+        # NOT a prompt version, and it never was. The capsule below is recompiled from the reviewed
+        # BRIEF by `_field_state_capsule_from_brief`; the run's actual field-state synthesis -- an
+        # 11-section, ~10-13k-character dossier written by `topic_field_state_synthesizer` and graded
+        # by the independent reviewer under its own `field_state_complete` criterion -- is persisted
+        # at `context/topic_evidence/sources/research_intent.topic_field_state.yaml` and is not
+        # opened by this projection at all. Naming a prompt here asserted a provenance this value
+        # does not have. Corrected 2026-08-17 to say what actually produced it.
+        field_state_prompt_version=f"compiled_from_brief:{brief.prompt_version or 'unversioned'}",
         lane_coverage=[
             LaneCoverageSummary(
                 lane_id=lane,
@@ -892,7 +989,13 @@ def _compile_topic_literature_context_pack(
             export_with_warning_count=warnings,
             blocked_source_count=blocked_count + source_counts["blocked"],
             notes=[
-                "Full abstracts are not exported; selected excerpts only.",
+                # Measured on the 2026-08-14 ibl leg: 17 of 20 exported excerpts sit at 795-800
+                # characters against an 800-character ceiling, median 800. They are abstracts cut at
+                # a length limit, not passages anyone selected, and the previous wording -- "Full
+                # abstracts are not exported; selected excerpts only" -- told the reader the
+                # opposite of both halves of that.
+                "Source excerpts are truncated at a fixed character limit, not curated passages; an "
+                "excerpt at the limit is a cut abstract and may end mid-sentence.",
                 *(
                     ["Partial literature coverage; provisional inspiration only."]
                     if provisional_inspiration
@@ -901,6 +1004,37 @@ def _compile_topic_literature_context_pack(
                 *(
                     [f"Provisional topic readiness issue: {issue}" for issue in issues]
                     if provisional_inspiration and issues
+                    else []
+                ),
+                # Say WHY the pack is provisional when the answer is "it was reviewed", because the
+                # note above and the published ceiling label otherwise read as "nobody looked".  The
+                # sentence is rendered upstream from controlled semantic labels only.
+                *(
+                    [
+                        "This topic literature WAS independently reviewed and was capped because "
+                        f"{ceiling_cause.public_reason}."
+                        if ceiling_cause is not None and ceiling_cause.public_reason
+                        else "This topic literature was independently reviewed and found short of "
+                        "the coverage this scope needs."
+                    ]
+                    if ceiling_cause is not None
+                    and ceiling_cause.reason is FrontHalfCeilingReason.REVIEWED_COVERAGE_GAP
+                    else []
+                ),
+                *(
+                    [
+                        "Open-gap cards are exported at `provisional` with their unanswered-ness "
+                        "claim explicitly withdrawn: the reviewed coverage those cards assert "
+                        "about was among the unmet dimensions, so each card carries the open "
+                        "question and its sources but forbids treating it as an established gap."
+                    ]
+                    # `and open_gap_cards`: the sentence describes cards the reader can open, and a
+                    # run with no open-question claim -- or no close prior, which
+                    # `OpenGapCard.require_evidence_and_close_prior` refuses to build a card without
+                    # -- exports none. Saying how they were labelled when there are none is a
+                    # statement about something that does not exist, and this pack is read by a
+                    # model that cannot go and check.
+                    if gap_assertion_unearned and open_gap_cards
                     else []
                 ),
                 *(
@@ -930,6 +1064,25 @@ def _compile_topic_literature_context_pack(
     )
 
 
+def _item_sources(
+    narrative: DatasetNarrative, field: str, index: int, fallback: list[str]
+) -> list[str]:
+    """The source(s) that authored a single list item, not the sources that touched its field.
+
+    Measured before this existed: 7/7 story, 11/11 opportunity and 10/10 limitation cards in both
+    recorded two-source runs carried the same two-source id list, so a card only one lane ever wrote
+    reached the Question Scientist as jointly asserted by two independent sources. Narratives fused
+    from a single source, and every artifact written before ``list_item_source_ids`` existed, have no
+    per-item map; there the field-level list is already per-item and is used unchanged.
+    """
+
+    per_item = narrative.list_item_source_ids.get(field)
+    if per_item is not None and index < len(per_item) and per_item[index]:
+        return list(per_item[index])
+    field_level = narrative.field_evidence_source_ids.get(field)
+    return list(field_level) if field_level else list(fallback[:2])
+
+
 def _compile_dataset_context_pack(narrative: DatasetNarrative) -> DatasetContextPack:
     source_ids = [source.source_id for source in narrative.source_refs]
     field_sources = narrative.field_evidence_source_ids or {}
@@ -951,7 +1104,11 @@ def _compile_dataset_context_pack(narrative: DatasetNarrative) -> DatasetContext
             section_id=f"dataset-story-{field}",
             heading=heading,
             text=text,
-            source_ids=field_sources.get(field) or source_ids[:2],
+            # A scalar field carries a single source's text. ``field_evidence_source_ids`` lists every
+            # source that offered a value, including the ones _pick_scalar discarded, so stamping
+            # the whole list onto the card asserts corroboration that never happened. The winner is
+            # first: both loops walk ``present`` in trust order and the winner is the first non-empty.
+            source_ids=(field_sources.get(field) or source_ids)[:1],
         )
         for field, heading, text in story_fields
         if text.strip()
@@ -972,7 +1129,7 @@ def _compile_dataset_context_pack(narrative: DatasetNarrative) -> DatasetContext
                 scale_fact_id="dataset-scale-broad",
                 quantity_kind="broad_scale",
                 value_text=narrative.broad_scale,
-                source_ids=field_sources.get("broad_scale") or source_ids[:2],
+                source_ids=(field_sources.get("broad_scale") or source_ids)[:1],
             )
         ]
     return DatasetContextPack(
@@ -987,7 +1144,7 @@ def _compile_dataset_context_pack(narrative: DatasetNarrative) -> DatasetContext
             DatasetOpportunityCard(
                 opportunity_id=f"dataset-opportunity-{index:02d}",
                 statement=value,
-                source_ids=field_sources.get("reuse_opportunities") or source_ids[:2],
+                source_ids=_item_sources(narrative, "reuse_opportunities", index - 1, source_ids),
             )
             for index, value in enumerate(narrative.reuse_opportunities, start=1)
         ],
@@ -995,7 +1152,9 @@ def _compile_dataset_context_pack(narrative: DatasetNarrative) -> DatasetContext
             DatasetLimitationCard(
                 limitation_id=f"dataset-limitation-{index:02d}",
                 statement=value,
-                source_ids=field_sources.get("known_high_level_limitations") or source_ids[:2],
+                source_ids=_item_sources(
+                    narrative, "known_high_level_limitations", index - 1, source_ids
+                ),
             )
             for index, value in enumerate(narrative.known_high_level_limitations, start=1)
         ],
@@ -1090,13 +1249,26 @@ def _source_roles_for_claims(
 
 
 def _field_state_capsule_from_brief(brief: TopicEvidenceBrief) -> list[ReviewedSynthesisSection]:
+    """Two sections rebuilt from the brief. This is NOT the run's field-state synthesis.
+
+    Measured on the 2026-08-14 ibl leg: this capsule is 1,919 characters, of which the first section
+    is `canonical_scope` -- which the drafter writes as the comma-joined search-term list, so the
+    field named `synthesis` there contained the run's own INPUT echoed back. The run's real field
+    synthesis is 11 sections and ~12.6k characters, is independently graded, and is not opened by
+    this projection. Delivering it is a separate, measured change; until then this function must at
+    least not present a term list to the proposer as though the field had been synthesised.
+    """
+
     sections: list[ReviewedSynthesisSection] = []
     if brief.canonical_scope.strip():
         sections.append(
             ReviewedSynthesisSection(
                 section_id="topic-field-state-scope",
-                heading="Scope",
-                synthesis=brief.canonical_scope,
+                heading="Search scope (terms, not synthesis)",
+                synthesis=(
+                    "The literature below was retrieved for these terms. This is the scope "
+                    f"statement itself, not a synthesis of the field: {brief.canonical_scope}"
+                ),
                 claim_ids=[claim.claim_id for claim in brief.claims[:6]],
                 source_record_ids=list(
                     dict.fromkeys(

@@ -1,15 +1,19 @@
-"""Coarse, proposal-safe dataset facts — the shared product of the two-source narrator.
+"""Coarse, proposal-safe dataset facts — the shared product of the narrator's source feeds.
 
-The coarse ``DatasetNarrative`` is built from up to three feeds into a single shared coarse-facts
+The coarse ``DatasetNarrative`` is built from up to four feeds into a single shared coarse-facts
 shape, distinguished only by a provenance URI:
 
 - **Source A** (documentation fetch, ``documentation-fetch://``) — ``CoarseDocumentationFacts``;
+  WIRED;
 - **Source B** (local-sample agent exploration, ``local-sample-exploration://``) — GF-2a's
-  ``CoarseLocalDatasetFacts``;
+  ``CoarseLocalDatasetFacts``; NOT WIRED in v0.1 (no caller passes it);
 - **Source C** (model self-research via web search, ``api-model-self-research://``) —
-  ``CoarseModelResearchFacts``.
+  ``CoarseModelResearchFacts``; NOT WIRED in the product driver, which supplies no web-search
+  provider;
+- **Source D** (the user's own description docs, ``user-provided-description://``) —
+  ``CoarseUserDescriptionFacts``; WIRED, and highest trust.
 
-All three subclass ``CoarseDatasetFacts``, which holds the shared coarse CONTENT (the story fields
+All four subclass ``CoarseDatasetFacts``, which holds the shared coarse CONTENT (the story fields
 mirroring ``DatasetNarrative``, with every number quarantined inside the reused
 ``DatasetNarrativeScaleFact``) plus the proposal-safe firewall validator. There is no ``columns`` /
 ``table_schema`` / ``row_counts`` field and ``extra="forbid"`` rejects any the caller invents, so a
@@ -45,7 +49,25 @@ class CoarseDatasetFacts(BaseModel):
     dataset_id: str
     modalities: list[str] = Field(default_factory=list)
     broad_scale: str = ""
+    #: Temporal structure ONLY. Until 2026-08-12 the source-A mapper joined the narrator's temporal
+    #: and hierarchical answers into this one string, and `fusion.py` then filed the join under
+    #: `temporal_structure`, leaving `DatasetNarrative.hierarchical_structure` empty in every run
+    #: ever produced. The independent fidelity reviewer, correctly, saw an entity hierarchy in a
+    #: field labelled temporal and returned `revise` -- which at that gate ends the run. Two of five
+    #: live legs died that way on 2026-08-12, and the three that survived promoted the mislabelled
+    #: narrative. The entity hierarchy now travels beside this field instead of inside it.
     coarse_structure: str = ""
+    hierarchical_structure: list[str] = Field(default_factory=list)
+    #: The task/stimulus/event vocabulary the dataset exposes -- what was manipulated or delivered,
+    #: named coarsely. The narrator model has always answered it (`DatasetNarrativeModelOutput.
+    #: broad_interventions`, and live responses carry real content, e.g. the NLB narrator's "No
+    #: intervention is described ... task-based delayed-reaching recording"), but until this field
+    #: existed there was nowhere in the coarse layer to put the answer, so the source-A mapper
+    #: dropped it and every fused narrative wrote `broad_interventions: []`. The Question Scientist's
+    #: `DatasetContextPack.task_event_vocabulary` reads exactly that field, so the questioner was
+    #: shown an empty task vocabulary in 26 of 26 narratives on disk. Same mechanism as the
+    #: `hierarchical_structure` defect above; the general guard now covers the whole mapping.
+    broad_interventions: list[str] = Field(default_factory=list)
     task_or_design: str = ""
     spatial_or_anatomical_coverage: str = ""
     standardization: str = ""

@@ -4,26 +4,25 @@
 
 ## Starting background
 
-- Recent observed Indo-Pacific and Southern Ocean SST patterns, together with Walker-circulation changes, differ from the patterns generally produced by climate models under anthropogenic forcing.
-- Paper-local prior work supports competing interpretations: some studies explain recent Pacific and Southern Ocean anomalies through internal atmosphere–ocean variability, whereas others associate persistent model–observation discrepancies with biases in the forced response.
-- Large ensembles and pattern-based methods provide established ways to compare observations with modeled forced responses and internal-variability realizations.
+- Recent observations show spatial SST and SLP trends, including enhanced Indo-Pacific Warm Pool warming, eastern-equatorial-Pacific cooling or reduced warming, Southern Ocean cooling, and Walker-circulation strengthening, that contrast with broad climate-model expectations.
+- The paper-local literature situation presents competing explanations for observed–modeled trend differences: anomalous atmosphere–ocean variability versus biases in the modeled response to external forcing.
 
 ## Unresolved gap
 
-It remains unclear whether the recent observed SST and SLP trend discrepancies can be explained by an unusual realization of internal multi-decadal variability represented in climate models, or whether they indicate systematic biases in the models' transient response to external forcing. A related unresolved possibility is that models misrepresent the amplitude or spatial pattern of internal variability itself.
+It remains unclear whether the recent observed–modeled discrepancies in large-scale SST and SLP trends can be explained by an unusual realization of internal multi-decadal variability, or whether they reveal systematic biases in models' transient forced response or variability amplitude and pattern.
 
 ## Dataset opportunity
 
-The study could combine observational and reanalysis products with multiple initial-condition realizations from climate-model large ensembles, including joint SST and SLP trend fields and derived large-scale patterns.
+Initial-condition climate-model large ensembles provide multiple simulations under the same forcing but different initial conditions, while observational and reanalysis products provide corresponding SST and SLP trends for comparison.
 
-Because ensemble members share external forcing but differ in initial conditions, their mean and spread provide an operational comparison between modeled forced response and modeled internal-variability realizations. Comparing those distributions with observed multi-field trends, and using signal-to-noise-maximizing patterns, makes it possible to identify observed changes that are difficult to reconcile with modeled variability alone.
+Because ensemble means approximate the modeled forced response and ensemble spreads represent modeled realizations of internal variability, the large ensembles allow the observed trends to be located within distributions of internally generated outcomes. Cross-model, multi-field comparisons and signal-to-noise-maximizing pattern analysis further allow discrepancies that are not represented across the simulations to be isolated.
 
 ## Resulting question
 
-Can modeled internal multi-decadal variability account for the recent observed large-scale SST and SLP trend patterns, or do discrepancies that remain outside the modeled variability range indicate systematic biases in the modeled transient response to external forcing, potentially alongside biases in simulated variability?
+Can internal multi-decadal variability, as represented in initial-condition climate-model large ensembles, explain the mismatch between observed and modeled SST and SLP trends over 1979–2020, or do persistent and unusually large discrepancies indicate systematic biases in the modeled transient response to external forcing or in the representation of multi-decadal variability?
 
 ## Scientific consequence
 
-If observations fall within the modeled internal-variability distribution, the discrepancy could reflect an unusual but plausible climate realization and would not by itself establish a forced-response bias. If observed patterns remain outside that distribution, especially where modeled variability is weak, the evidence supports a contribution from systematic forced-response bias or misrepresented variability. Either outcome changes how recent trends should be interpreted and how confidently models can inform regional and multi-decadal projections.
+If observations fall within the modeled internal-variability distributions, the discrepancies could be interpreted mainly as an unusual realization of natural variability. If they lie in the tails, particularly in regions or indices with weak modeled multi-decadal variability, internal variability alone becomes insufficient and model bias in the forced response or variability representation becomes a more plausible contributor. The distinction affects interpretation of recent regional climate change, attribution, and confidence in future SST patterns, atmospheric circulation, and regional-climate projections.
 
-The question links an observed model–data discrepancy to competing physical explanations rather than treating mismatch as evidence of model failure by default. Resolving that distinction matters for interpreting recent climate change, evaluating model credibility, and understanding uncertainty in regional circulation, ocean warming patterns, and future projections. It is also a valuable question-formation pattern because a dataset with repeated realizations under common forcing can turn an observational anomaly into a mechanistic comparison.
+The question connects a mechanistic attribution problem to a dataset structure that can partially separate forced change from internal variability. It is scientifically valuable because distinguishing these explanations changes how recent observations are interpreted and whether model-based projections of circulation, precipitation, and regional climate impacts are trusted. It also illustrates how combining multiple realizations, models, observables, and pattern-based diagnostics can turn an observed–simulated mismatch into a test of competing explanations.

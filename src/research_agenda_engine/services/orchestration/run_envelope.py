@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING
 from uuid import uuid4
 
 if TYPE_CHECKING:
+    from ...schemas.front_half_authority import FrontHalfCeilingReason
     from ...schemas.question_scientist_context_v2 import FrontHalfAuthorityCeiling
     from ...schemas.run_outcome import FamilyRunOutcome
 
@@ -927,6 +928,7 @@ def seal_run_summary(
     *,
     development_surrogate: bool,
     authority_ceiling: FrontHalfAuthorityCeiling | None = None,
+    ceiling_reason: FrontHalfCeilingReason | None = None,
     evidence_basis_line: str = "",
     resume_note: str = "",
     all_family_processing_finished: bool = True,
@@ -952,6 +954,7 @@ def seal_run_summary(
         context.paths,
         outcomes,
         development_surrogate=development_surrogate,
+        ceiling_reason=ceiling_reason,
         evidence_basis_line=evidence_basis_line,
         resume_note=resume_note,
         all_family_processing_finished=all_family_processing_finished,

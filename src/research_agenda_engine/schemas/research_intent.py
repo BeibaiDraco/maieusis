@@ -26,6 +26,30 @@ class NoveltyDistance(StrEnum):
     EXPLORATORY = "exploratory"
 
 
+class ScopeDerivationMode(StrEnum):
+    """Who decides which literature this run searches for.
+
+    Added 2026-08-17 after two release configs were found searching the same eight generic terms for
+    two unrelated datasets, with both candidate pools exhausted and the dimensions the independent
+    reviewer grades on absent from the corpus. See
+    ``schemas/derived_dataset_scope.py`` for the measurement.
+
+    ``never`` turns off the MODEL, not derivation: an ``open``-mode run with no declared terms still
+    falls back to deterministic keyword extraction from the same narrative. The only way to search
+    exactly what you wrote is to write it.
+    """
+
+    #: Declared terms win outright and no model is asked. Only a mode with nothing declared -- that
+    #: is, ``open`` -- reaches the deriver. This is the default because it leaves every existing
+    #: config's retrieval byte-identical and costs it nothing.
+    AUTO = "auto"
+    #: Declared terms are kept, in order and unrewritten, and the deriver's terms are appended. For
+    #: the case that produced this feature: a user who knows three terms and wants the rest filled.
+    AUGMENT = "augment"
+    #: No model call on this path, ever.
+    NEVER = "never"
+
+
 class ResearchIntent(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -35,6 +59,7 @@ class ResearchIntent(BaseModel):
     topic_description: str = ""
     seed_question: str = ""
     novelty_distance: NoveltyDistance = NoveltyDistance.ADJACENT
+    scope_derivation: ScopeDerivationMode = ScopeDerivationMode.AUTO
     include_concepts: list[str] = Field(default_factory=list)
     exclude_concepts: list[str] = Field(default_factory=list)
     preferred_epistemic_moves: list[str] = Field(default_factory=list)

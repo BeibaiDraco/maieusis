@@ -74,7 +74,7 @@ PYTHON=python3.11  # change to python3.12 or python3.13 when appropriate
 "$PYTHON" -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
-python -m pip install "maieusis[openai,anthropic,mcp,pdf]==0.1.1"
+python -m pip install "maieusis[openai,anthropic,mcp,pdf]"
 
 maieusis --help
 maieusis init
@@ -98,9 +98,12 @@ dataset:
     source_tree_root: /absolute/path/to/maieusis-source
 ```
 
-This is the single most common first-run failure. `maieusis check` will stop on it, and running
-`git init` inside your own project does **not** satisfy it -- the checkout has to be Maieusis.
-Leave the clone alone after cloning; a dirty checkout changes the recorded identity.
+This is the single most common first-run failure, and it is **yours to get right**: `maieusis check`
+verifies that the path is a usable Git checkout with a `HEAD`, and nothing more. It does not read
+the remote, the package name, or any marker file, so `git init` plus one commit inside your own
+project passes this check and then binds *your* project as the source identity of the run. Point it
+at the Maieusis clone. Leave the clone alone after cloning; a dirty checkout changes the recorded
+identity, and the digest is taken before and after every planner spawn.
 
 Installing both provider extras matches the standard cross-provider review
 path. If you deliberately configure different supported providers, install the
@@ -157,6 +160,15 @@ PROJECT_LAYOUT.md
 The two `SKILL.md` files are one file written twice, so both coding hosts get the identical setup
 interview. Opening either host in this directory and saying "help me set up this Maieusis project"
 starts it.
+
+`PROJECT_LAYOUT.md` is the only one of these written fresh rather than copied from a template, so
+you cannot read it before you run `init`. It is short — a numbered path from the scaffolded
+directory to a first run: start a coding host here, put lawfully obtained PDFs in
+`paperbank.inbox_dir`, edit `maieusis.yaml` (the real dataset link, a read-only dataset root,
+distinct Owner and Reviewer providers, and the clean Maieusis checkout that installing from the
+package index does not give you), then `maieusis check`. It also names which files are yours to
+edit and which are generated. Nothing in it is unique to your project; it is the same text for
+everyone, which is why it is safe to overwrite and is skipped if it already exists.
 
 It does not create credentials, download papers or data, call a model, or run
 an analysis.

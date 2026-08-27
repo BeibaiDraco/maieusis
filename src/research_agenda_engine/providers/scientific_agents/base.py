@@ -12,6 +12,10 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 from ...provenance import stable_hash
 from ...schemas.gate_outcome import ReviewerExecutionKind
 
+# Re-exported: this lane's two adapters import it from here, and it is now shared with the
+# generation lane so one predicate decides "the account is empty" for both.
+from ..models.base import is_account_exhaustion_error as is_account_exhaustion_error
+
 T = TypeVar("T", bound=BaseModel)
 R = TypeVar("R")
 
@@ -58,54 +62,6 @@ class ScientificAgentFailureKind(StrEnum):
     #: artifact. Its absence is why every measured gate truncation reached the run as
     #: `invalid_response`, indistinguishable from a garbled reply.
     OUTPUT_TRUNCATED = "output_truncated"
-
-
-_ACCOUNT_EXHAUSTION_CODES = frozenset(
-    {
-        "billing_hard_limit_reached",
-        "credit_balance_too_low",
-        "insufficient_credit",
-        "insufficient_credits",
-        "insufficient_quota",
-    }
-)
-_ACCOUNT_EXHAUSTION_PHRASES = (
-    "billing hard limit",
-    "credit balance is too low",
-    "credit balance too low",
-    "insufficient credit",
-    "insufficient quota",
-)
-
-
-def is_account_exhaustion_error(exc: BaseException) -> bool:
-    """Recognize explicit billing/account exhaustion without treating every 400/429 as billing.
-
-    SDKs expose the stable code in different places, so inspect the finite code/type fields first
-    and use the small provider phrase list only as a compatibility fallback. The caller may use the
-    result for classification, but capture must never persist any of these raw values.
-    """
-
-    candidates: list[str] = []
-    for attribute in ("code", "type"):
-        value = getattr(exc, attribute, None)
-        if value is not None:
-            candidates.append(str(value))
-    body = getattr(exc, "body", None)
-    if isinstance(body, dict):
-        error = body.get("error", body)
-        if isinstance(error, dict):
-            for key in ("code", "type", "message"):
-                value = error.get(key)
-                if value is not None:
-                    candidates.append(str(value))
-    candidates.append(str(exc))
-    normalized = " ".join(candidates).strip().lower().replace("-", "_")
-    tokens = set(normalized.replace(":", " ").replace(",", " ").split())
-    if tokens & _ACCOUNT_EXHAUSTION_CODES:
-        return True
-    phrase_view = normalized.replace("_", " ")
-    return any(phrase in phrase_view for phrase in _ACCOUNT_EXHAUSTION_PHRASES)
 
 
 class ScientificAgentSessionError(ScientificAgentInfrastructureError):

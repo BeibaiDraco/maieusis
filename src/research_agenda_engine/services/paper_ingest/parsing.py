@@ -345,6 +345,36 @@ def build_completeness_report(
     )
 
 
+#: The three heading classes ``build_completeness_report`` looks for. Missing ALL of them means no
+#: structure was recognised anywhere in the document; missing one is a journal-genre mismatch.
+_HEADING_CLASSES = ("abstract_not_detected", "methods_not_detected", "references_not_detected")
+
+
+def parse_degrade_is_material(report: ParseCompletenessReport) -> bool:
+    """Whether a degraded parse should cost the paper authority, or is only worth recording.
+
+    ``is_complete`` is false for essentially every real paper, so acting on it directly punished
+    every paper of every run: measured, all twenty papers of the published climate demonstration
+    carry ``is_complete: false``. The reason is ``_contains_heading``, which needs the heading alone
+    on its own line, while AMS journals title their methods section "2. Data and techniques". That
+    is a wording heuristic, and AGENTS.md rule 11 keeps wording heuristics soft.
+
+    Two things are NOT soft, and both stay hard here:
+
+    * any structural ``risk`` -- page-count mismatch, low page-text coverage, too little text, no
+      blocks;
+    * every heading class missing at once, which is the signature of an untrimmed multi-article
+      scan. Measured on the same cohort: thirteen of fifteen degraded papers miss exactly one class,
+      and the two that miss all three (``06-hurrell-1995``, ``11-baldwin-dunkerton-2001``) open with
+      a different article entirely and carried foreign spans into the paid extractor.
+    """
+
+    if report.risks:
+        return True
+    missing = set(report.missing_or_weak_sections)
+    return all(heading in missing for heading in _HEADING_CLASSES)
+
+
 def _run_text_command(args: list[str]) -> str:
     completed = subprocess.run(args, check=False, capture_output=True, text=True)
     if completed.returncode != 0:

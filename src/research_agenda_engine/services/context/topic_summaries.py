@@ -13,14 +13,39 @@ from ...schemas.scientific_context import TopicEvidenceBrief, TopicEvidenceClaim
 
 
 def render_retrieval_summary(
-    *, topic_terms: list[str], lane_coverage: dict[str, int], source_count: int
+    *,
+    topic_terms: list[str],
+    lane_coverage: dict[str, int],
+    kept_count: int,
+    retrieved_count: int | None,
 ) -> str:
-    """Diagnostic summary of acquisition lineage and source counts."""
+    """Diagnostic summary of acquisition lineage and source counts.
+
+    Both counts are REQUIRED and they are different facts. One parameter fed by the kept count
+    published "Sources retrieved: 47" on the end-user file for a run that retrieved 200 candidates
+    and paid for all of them -- in 6 of 6 measured runs, with pools of 200 narrowed to 47-64.
+
+    ``retrieved_count=None`` means the pool size was not recorded for this run (a resume or
+    projection path that never saw the selector). It prints as "not recorded", never as the kept
+    count: a number this function cannot know must not be reconstructed from the one it can.
+    """
+    if retrieved_count is None:
+        acquisition = [
+            f"- Sources kept for review: {kept_count}",
+            "- Candidate pool size: not recorded for this run",
+        ]
+    elif retrieved_count == kept_count:
+        acquisition = [f"- Sources retrieved and kept for review: {kept_count}"]
+    else:
+        acquisition = [
+            f"- Candidate sources retrieved: {retrieved_count}",
+            f"- Sources kept for review: {kept_count}",
+        ]
     lines = [
         "# Literature retrieval",
         "",
         f"- Query terms: {', '.join(topic_terms) or '(none)'}",
-        f"- Sources retrieved: {source_count}",
+        *acquisition,
         "",
         "## Retrieval lineage",
         "",

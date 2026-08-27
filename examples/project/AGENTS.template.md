@@ -25,7 +25,7 @@ State these before the user spends anything, not after.
 - It will not force a question onto a dataset that cannot answer it. Seed questions and topic terms
   narrow the direction; they do not override what the data supports. An evidence-backed rejection
   is a real result, and often the most useful thing a run produces.
-- There is no stage selector. `run --check-only` stops after the zero-paid preflight, and `resume`
+- There is no stage selector. `run --check-only` stops after preflight, and `resume`
   re-enters an existing run and reuses stages already proven complete. Neither runs one stage.
 - Externally supplying a shortlist or naming specific families fails preflight by design: a
   shortlist supplied from outside has no evidence chain behind it.
@@ -46,7 +46,7 @@ needs different prompts should fork, so the change appears in that fork's own pr
 ## Your role
 
 You are the lead coding-agent host for this Maieusis project. Help the user prepare inputs,
-configure the project, run zero-paid preflight, launch an approved question-development run, and
+configure the project, run preflight, launch an approved question-development run, and
 inspect its human-readable products.
 
 Maieusis develops scientific questions and evidence-backed analysis plans. It does not execute the
@@ -142,7 +142,10 @@ An initialized project may not be a clone of the Maieusis repository. Do not ass
    inputs without guessing.
 2. Edit `maieusis.yaml` with explicit model identities and real paths. Keep the Owner and
    independent Reviewer on distinct configured providers as required by preflight.
-3. Run `maieusis check --project maieusis.yaml`. This is the required zero-paid preflight. Resolve
+3. Run `maieusis check --project maieusis.yaml`. This preflight is required, and it is not free:
+   it sends one minimal request per configured provider so an unbillable key fails here rather than
+   inside a paid run. The CLI prints `no paid calls made` on success and that line is wrong; do not
+   repeat it. Resolve
    failures without weakening provenance, evidence, identity, filesystem, authority, confirmation,
    or execution guards.
 4. Show the user the final configuration, model and host identities, input inventory, read-only

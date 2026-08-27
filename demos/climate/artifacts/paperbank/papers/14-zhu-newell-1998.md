@@ -4,45 +4,44 @@
 
 ## Question the system extracted
 
-Can a new flux-partitioning algorithm isolate filamentary atmospheric-river moisture fluxes from residual broad fluxes and thereby assess their magnitude, spatial concentration, and relation to cyclonic disturbances more realistically than the traditional mean/transient decomposition?
+How can atmospheric water-vapor fluxes be analyzed so that filamentary atmospheric-river structures are properly represented, and what magnitude and fraction of total meridional transport do those rivers carry relative to broad fluxes and conventional transport components?
 
 ## The scientific contrast
 
-Traditional decomposition into time-mean motions, transient perturbations, and stationary eddies versus a structure-based decomposition into filamentary river fluxes and residual broad fluxes.
+A filament-sensitive partition of moisture fluxes into atmospheric rivers and broad fluxes versus the conventional Reynolds-type decomposition into mean motions, stationary eddies, and transient perturbations.
 
 Competing explanations the paper weighed:
-- Meridional moisture transport may be represented mainly by mean motions, as suggested by traditional analyses.
-- A substantial share of transport may instead occur in transient filamentary rivers that are smoothed or missed by the traditional decomposition.
-- Apparent river structures may be associated with baroclinic cyclones and storm tracks, while their formation may also be independent of cyclone genesis and development.
-- In tropical regions, river-like fluxes may be related to large-scale convergence near boundary regions such as the intertropical convergence zone rather than to extratropical baroclinic perturbations.
+- Apparent transport associated with transient disturbances may be adequately represented by the conventional mean-flow and transient-eddy decomposition.
+- The major transport may be broadly distributed rather than concentrated in filamentary rivers.
+- Poleward moisture transport may be associated primarily with baroclinic cyclones, whereas river formation may be independent of cyclone genesis and development.
+- In tropical regions, river-like structures may contribute less than broad fluxes and may arise from large-scale convergence rather than extratropical baroclinic perturbations.
 
-What would tell them apart: A structure-based partition should reveal coherent filamentary fluxes, quantify their share of total meridional transport and their limited longitudinal coverage, and show their spatial relationship to storm tracks and cyclonic disturbances; comparison with traditional flux maps tests whether the latter smooth or reassign these contributions.
+What would tell them apart: A method that isolates high-magnitude filamentary fluxes can be compared with the conventional decomposition by examining their contribution to total meridional transport, longitudinal coverage, spatial structure, and correspondence with storm tracks and cyclonic disturbances.
 
 ## Background and motivation
 
-- Traditional atmospheric water-vapor transport studies classify fluxes into time-mean and zonal-mean flows, stationary eddies, and transient perturbations.
-- The transport role of baroclinic eddies and the amount transported by different types of disturbances had not been adequately quantified, including an absence of statistical estimates of global water-vapor transport by baroclinic cyclones alone.
-- Earlier analyses suggested that water-vapor transport has a filamentary structure called tropospheric rivers, and that a small number of such rivers could carry a large fraction of global meridional transport.
-- The traditional transient-eddy maps smooth out filamentary middle-latitude oceanic fluxes, while the mean and transient maps can omit physical mechanisms that are thought to be important in regions such as the Asian summer monsoon.
+- Traditional atmospheric moisture-transport studies classify fluxes into time-mean and zonal-mean flows, stationary eddies, and transient perturbations.
+- The traditional resolution smooths the filamentary structure evident in atmospheric moisture-transport fields and can omit physical mechanisms important to transport, including transient filamentary fluxes and storm-related disturbances.
+- Earlier work suggested that tropospheric moisture transport has a filamentary structure called tropospheric rivers, and that a small number of such rivers could carry a majority of global meridional fluxes.
+- High-frequency moisture transports show correspondence with middle-latitude storm tracks and can be much larger locally than the transient perturbation transports produced by the conventional resolution.
 
 ## Why this question mattered
 
-The analysis makes it possible to determine whether a geographically concentrated and physically recognizable class of structures accounts for a substantial share of global and middle-latitude moisture transport. It also clarifies how transport relates to storm tracks and rapidly developing cyclones, where moisture-flux convergence and latent-heat liberation may be scientifically and practically relevant.
+The question makes it possible to determine whether atmospheric rivers account for a substantial part of global meridional moisture transport while occupying only a small fraction of longitudinal extent. This can clarify how transport is organized physically, reveal what conventional decompositions omit, and potentially support day-to-day tracking of moisture convergence associated with rapidly developing cyclones.
 
 ## What the dataset offered (as the paper used it)
 
-Retrospective atmospheric moisture-flux analysis using daily ECMWF data at 0000 and 1200 UTC across multiple pressure levels; July samples from 1991, 1994, and 1995 and multi-year January, July, and June–May periods are analyzed.
+Application of a new algorithm that partitions vertically integrated atmospheric water-vapor fluxes into filamentary river fluxes and residual broad fluxes, using selected January and July periods and multi-year summaries.
 
-- Population: Global tropospheric atmospheric conditions represented on ECMWF gridpoints, including extratropical and tropical regions
-- Measurements: vertically integrated zonal and meridional moisture transport, flux magnitude, meridional transport, zonal extent or scale of river structures, geographical correspondence with storm tracks and cyclonic disturbances
+- Population: The global troposphere, with analysis of extratropical and tropical atmospheric regions.
+- Measurements: Zonal and meridional moisture fluxes, Vertical-integrated transport, River and broad flux magnitudes, Meridional transport, Zonal scale of rivers, Geographical correspondence with storm tracks and cyclonic disturbances
 
 ## Key citations used in forming the question
 
 Public citation details are represented by the paper context; internal citation identifiers are omitted from this gallery.
+
 ## Open uncertainties (unmet evidence)
 
-- The source spans do not establish whether the ECMWF data constitute a reuse of a named parent dataset paper or provide a parent-dataset relationship; verify dataset provenance and relation from source-backed material if required.
-- parser-owned text was usable, but the parse completeness report recorded limitations; review before authority raise.
 
 ## If this looks wrong
 

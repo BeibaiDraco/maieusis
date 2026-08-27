@@ -2,7 +2,7 @@
 
 Maieusis follows semantic versioning. This file records public releases.
 
-## 0.1.1 — Maintenance (2026-08-07)
+## 0.1.1 — Maintenance (2026-08-27)
 
 A maintenance release. It corrects how evidence authority is earned, adds a
 prior-art review, defines how an agent-driven run is carried through failure,

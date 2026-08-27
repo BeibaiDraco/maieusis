@@ -11,11 +11,12 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import TypeVar
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 from ...io import load_model
 from ...provenance import sha256_file
 from ...schemas.novelty_admission import FamilyNoveltyAdmission, VariantNoveltyAssessment
+from ...schemas.planner_run import PlannerArtifactImportManifest
 from ...schemas.planning_dialogue import (
     IndependentPlanReviewMessage,
     PlanDraftMessage,
@@ -257,6 +258,9 @@ def materialize_detailed_presentation(context: RunContext) -> PresentationAddonR
     # named neither the page nor the cause, and told every reader to run a resume that could not fix
     # a content-level warning.
     warning_codes: list[PresentationWarningCode] = []
+    #: One line per page that threw: its label and the exception class. Secret-free by
+    #: construction -- no message, no provider text, no identifier.
+    render_failures: list[str] = []
 
     def promote_page(
         *,
@@ -292,10 +296,18 @@ def materialize_detailed_presentation(context: RunContext) -> PresentationAddonR
                     family_id=family_id,
                 )
             )
-        except Exception:  # noqa: BLE001 - page isolation is the add-on's public contract
+        except Exception as exc:  # noqa: BLE001 - page isolation is the add-on's public contract
             # A page that threw does not exist at all; that is a different fact from a page that
             # rendered with an unresolved entry, and it earns the opposite advice.
             warning_codes.append(PresentationWarningCode.PAGE_RENDER_FAILED)
+            # WHICH page, and WHAT class of failure. Only the code was recorded until 2026-08-15,
+            # and on the qualification set that cost a full investigation: three reading guides
+            # were missing, the receipt said `page_render_failed` once, and finding out that two
+            # were a redaction/validation disagreement and the third a meaningless variant-order
+            # comparison took re-rendering every family by hand against the run's own artifacts.
+            # The exception CLASS and the page label carry no provider text and no identifier, so
+            # this stays inside the same privacy boundary the page itself is held to.
+            render_failures.append(f"{label}: {type(exc).__name__}")
 
     if sources.patterns:
         promote_page(
@@ -372,6 +384,7 @@ def materialize_detailed_presentation(context: RunContext) -> PresentationAddonR
         output_digests=output_digests,
         warning=warning,
         warning_codes=warning_codes,
+        render_failures=render_failures,
         started_at=started_at,
         ended_at=ended_at,
     )
@@ -382,6 +395,7 @@ def materialize_detailed_presentation(context: RunContext) -> PresentationAddonR
         outputs=outputs,
         warning=warning,
         warning_codes=warning_codes,
+        render_failures=render_failures,
     )
     manifest = load_run_manifest(context.paths)
     manifest.presentation_addon = record
@@ -555,9 +569,8 @@ def _load_family_sources(
             if independent_path.is_file()
             else None
         )
-        evidence = tuple(
-            _load_source(paths, path, QuestionFamilyInspectionEvidence, source_paths)
-            for path in sorted(imported_dir.glob("*-evidence-*.yaml"))
+        evidence = _load_family_inspection_evidence(
+            paths, artifact_dir=artifact_dir, imported_dir=imported_dir, source_paths=source_paths
         )
         _require_existing_link_target(paths, paths.family_dossier(completion.slug))
         sources.append(
@@ -572,6 +585,71 @@ def _load_family_sources(
             )
         )
     return tuple(sources)
+
+
+def _load_family_inspection_evidence(
+    paths: RunPaths,
+    *,
+    artifact_dir: Path,
+    imported_dir: Path,
+    source_paths: set[Path],
+) -> tuple[QuestionFamilyInspectionEvidence, ...]:
+    """Discover typed inspection evidence BY TYPE, and check the result against the import manifest.
+
+    This used to be ``imported_dir.glob("*-evidence-*.yaml")``. Nothing ever prescribed that name:
+    the handoff contract gives the planner a DIRECTORY, the literal ``-evidence-`` appears exactly
+    once in all of ``src/``, and every other consumer keys on ``evidence_id``. The planner writes
+    ``<digest>-ev-<slug>.yaml``, so the glob matched **none** of them for whole families.
+
+    Measured across every family in every retained run: the import manifests declare **262**
+    evidence records, discovery by type finds **262** with zero mismatches, and the glob found
+    **207** -- 55 lost, 21%, with **nine families (12.9%) loading zero of their own evidence**.
+    A family that loaded zero then printed "No safely resolved, typed inspection statement was
+    available for this view" onto a delivered scientific reading guide while five to seven
+    receipt-bound statements sat in its own directory: 16 of the 17 occurrences of that sentence
+    corpus-wide were false.
+
+    The receipt could not catch it, because ``expected_output_paths`` is derived from the same glob
+    output -- so ``EXPECTED_PAGE_MISSING`` was structurally unable to fire and d3p5:nlb recorded
+    ``status: produced, warning: '', warning_codes: []`` over six blank families.
+
+    Hence the assertion, and not merely the wider discovery: the manifest is the independent record
+    of what was imported, so a page can be required to account for all of it. **A page may not
+    assert an absence it did not verify against a manifest.**
+    """
+
+    manifest_path = artifact_dir / "artifact_import_manifest.yaml"
+    if not manifest_path.is_file():
+        # No planner artifact import ran for this family; there is nothing to account against and
+        # an empty inspection section is the honest rendering.
+        return ()
+    manifest = _load_source(paths, manifest_path, PlannerArtifactImportManifest, source_paths)
+    discovered: dict[str, Path] = {}
+    for path in sorted(imported_dir.glob("*.yaml")):
+        if path == manifest_path:
+            continue
+        try:
+            probe = load_model(path, QuestionFamilyInspectionEvidence)
+        except ValidationError:
+            # The directory also holds the plan draft, run record and validation report. Failing to
+            # validate as inspection evidence is the ordinary case here, not an error -- and it is
+            # the ONLY failure swallowed: an unreadable or malformed file still raises, because a
+            # file this loader could not read is exactly the case the manifest check exists to
+            # catch, and swallowing it would restore the silence being removed.
+            continue
+        discovered[probe.evidence_id] = path
+    declared = list(dict.fromkeys(manifest.evidence_ids))
+    missing = [evidence_id for evidence_id in declared if evidence_id not in discovered]
+    undeclared = sorted(set(discovered) - set(declared))
+    if missing or undeclared:
+        raise ValueError(
+            "family inspection evidence does not account for its import manifest "
+            f"({manifest_path}): declared-but-absent={missing}, present-but-undeclared={undeclared}"
+        )
+    return tuple(
+        _load_source(paths, discovered[evidence_id], QuestionFamilyInspectionEvidence, source_paths)
+        for evidence_id in declared
+    )
 
 
 def _load_source(

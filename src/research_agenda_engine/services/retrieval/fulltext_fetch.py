@@ -232,6 +232,36 @@ class FulltextEnrichmentCounts:
             "failed_error": self.failed_error,
         }
 
+    def outcome_note(self, *, requested: bool) -> str:
+        """The honest sentence about what this batch actually grounded; empty when it grounded some.
+
+        Measured on 2026-08-13 over the live corpus on this machine: 24 of 24 legs carrying counts
+        attempted at least one full-text target and NONE ever succeeded (113 attempts, 0 successes;
+        per-attempt statuses across the same 24 batch receipts were no_eligible_assertion 59,
+        rights_rejected 41, http_error 9, media_type_rejected 4 — the word `succeeded` does not
+        appear once). The config knob now defaults off, but a reader of a receipt should not have to
+        infer the outcome from four counters either way.
+
+        ``requested`` is the run's own ``literature.enabled and literature.fulltext_enrichment``. It
+        is not optional politeness: with the lane off the driver still tallies eligible TARGETS
+        against a null fetcher, so ``attempted`` is non-zero on a run that issued no fetch at all,
+        and a warning phrased as "attempted N and enriched none" would itself be the kind of false
+        claim this card exists to remove.
+        """
+        if self.succeeded > 0:
+            return ""
+        if not requested:
+            return (
+                "full-text enrichment was not requested (literature.fulltext_enrichment is off); "
+                "this run's topic evidence is abstract-only"
+            )
+        if self.attempted <= 0:
+            return ""
+        return (
+            f"WARNING: full-text enrichment attempted {self.attempted} target(s) and enriched none; "
+            "this run's topic evidence is abstract-only"
+        )
+
     def build_batch_receipt(self) -> ExternalEvidenceBatchReceipt:
         return build_external_evidence_batch_receipt(
             self.attempt_receipts,

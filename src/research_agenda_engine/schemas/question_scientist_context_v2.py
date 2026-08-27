@@ -490,8 +490,26 @@ class TopicLiteratureContextPack(BaseModel):
                 raise ValueError(
                     "provisional topic pack cannot report exported sources without source cards"
                 )
-        if len(self.source_cards) > MAX_DEFAULT_TOPIC_SOURCE_CARDS:
-            raise ValueError("default TopicLiteratureContextPack exceeds source card budget")
+        # The budget is a CONTEXT-SIZE heuristic, not a truth boundary, so it may only bound the
+        # sources this pack does not actually need. Every id below is required to be present as a
+        # card by ``_require_known_sources`` further down; a budget that could drop one of them
+        # would contradict that hard rule and kill the run instead of trimming its context. The
+        # 2026-08-23 climate leg died at 1h21m for exactly that reason -- retrieval widened to 59
+        # records, the reviewed brief cited 43, and 43 > 30.
+        required_source_ids = {
+            *(sid for card in self.claim_cards for sid in card.source_record_ids),
+            *(sid for card in self.close_prior_cards for sid in card.source_record_ids),
+            *(sid for card in self.method_limit_cards for sid in card.source_record_ids),
+            *(sid for card in self.open_gap_cards for sid in card.support_source_record_ids),
+            *(sid for section in self.field_state_capsule for sid in section.source_record_ids),
+        }
+        budget = max(MAX_DEFAULT_TOPIC_SOURCE_CARDS, len(required_source_ids))
+        if len(self.source_cards) > budget:
+            raise ValueError(
+                "default TopicLiteratureContextPack exceeds source card budget: "
+                f"{len(self.source_cards)} cards for {len(required_source_ids)} required sources "
+                f"(budget {budget})"
+            )
         _require_unique([card.source_record_id for card in self.source_cards], "source_record_id")
         _require_unique([card.claim_id for card in self.claim_cards], "claim_id")
         _require_unique([card.gap_id for card in self.open_gap_cards], "gap_id")

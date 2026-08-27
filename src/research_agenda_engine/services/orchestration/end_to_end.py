@@ -33,7 +33,7 @@ from pydantic import TypeAdapter, ValidationError
 from yaml import YAMLError
 
 from ...io import dump_data, load_data, load_model
-from ...provenance import semantic_hash, sha256_file, stable_hash
+from ...provenance import sha256_file, stable_hash
 from ...providers.coding_agents.planner_host import CodingAgentPlannerHost
 from ...providers.models.base import (
     ModelConfigurationError,
@@ -65,6 +65,11 @@ from ...schemas.dataset_context_terminal import (
 )
 from ...schemas.dataset_narrative import DatasetNarrative
 from ...schemas.dataset_seed import DatasetSeed
+from ...schemas.derived_dataset_scope import (
+    DATASET_SCOPE_DERIVER_PROMPT_VERSION,
+    DerivedDatasetScope,
+    DerivedScopeStatus,
+)
 from ...schemas.external_evidence import (
     ExternalEvidenceAttemptStatus,
 )
@@ -74,7 +79,11 @@ from ...schemas.family_failure import (
     BackHalfLineage,
     sanitize_family_failure_text,
 )
-from ...schemas.front_half_authority import FrontHalfAuthorityCeiling
+from ...schemas.front_half_authority import (
+    FrontHalfAuthorityCeiling,
+    FrontHalfCeilingCause,
+    FrontHalfCeilingReason,
+)
 from ...schemas.gate_outcome import (
     GateDecision,
     GateOutcome,
@@ -152,6 +161,7 @@ from ...schemas.stage_d import (
 )
 from ...schemas.stage_receipt import FailureClass, StageReceipt, StageStatus
 from ...schemas.topic_evidence_inquiry import (
+    TopicEvidenceGapDisposition,
     TopicEvidenceInquiryDisposition,
     TopicEvidenceTerminalInquiryRecord,
 )
@@ -166,7 +176,9 @@ from ..agents.citation_importance_reviewer import (
 )
 from ..agents.dataset_narrative_reviewer import (
     DATASET_NARRATIVE_FIDELITY_REVIEWER_PROMPT_VERSION,
+    DatasetNarrativeFidelityReview,
     load_dataset_narrative_fidelity_reviewer_prompt,
+    review_dataset_narrative_fidelity,
 )
 from ..agents.formation_trace_reviewer import (
     FORMATION_TRACE_CRITERIA,
@@ -208,6 +220,7 @@ from ..agents.promotion import (
     build_promotion_receipt,
 )
 from ..agents.question_scientist_family import (
+    HOST_STRUCTURAL_FAMILY_BLOCKER_KINDS,
     NoValidFamilies,
     StageDPromptBudgetError,
     build_question_family_quality_report,
@@ -242,6 +255,7 @@ from ..context.question_scientist_export import (
     RightsSafeTopicSourceProjection,
 )
 from ..context.research_scope import resolve_research_scope
+from ..context.scope_derivation import derive_dataset_scope
 from ..context.topic_evidence import (
     TOPIC_EVIDENCE_BRIEF_SYNTHESIZER_PROMPT_VERSION,
     R5TopicEvidenceSourceTable,
@@ -249,7 +263,7 @@ from ..context.topic_evidence import (
     build_topic_evidence_brief_draft_bundle,
     claim_supporting_source_ids,
 )
-from ..context.topic_evidence_readiness import evaluate_topic_evidence_readiness
+from ..context.topic_evidence_readiness import assess_topic_evidence_readiness
 from ..context.topic_evidence_revision import (
     TopicEvidenceRevisionError,
     TopicEvidenceRevisionHistory,
@@ -267,11 +281,24 @@ from ..context.topic_evidence_terminal_inquiry import (
 from ..dossier.development_review_dossier import DevelopmentReviewNotAccepted
 from ..narrative_sources.fusion import SourceKind
 from ..narrative_sources.narrative_persistence import (
+    NarrativeFidelityNonAccept,
     persist_reviewed_narrator_result,
     promote_narrator_result_to_reviewed,
     reviewed_dataset_narrative_path,
 )
-from ..narrative_sources.narrator import NarratorResult, gather_and_fuse_dataset_narrative
+from ..narrative_sources.narrative_revision import (
+    DATASET_NARRATIVE_REVISER_PROMPT_VERSION,
+    DatasetNarrativeRevisionRound,
+    NarrativeRepairLoopResult,
+    narrative_repair_review_guidance,
+    revise_dataset_narrative,
+    run_narrative_fidelity_repair_loop,
+)
+from ..narrative_sources.narrator import (
+    NarratorResult,
+    gather_and_fuse_dataset_narrative,
+    narrative_generator_provider_ids,
+)
 from ..paper_ingest.external_lookup import OpenAlexRequestCoordinator
 from ..paper_ingest.extraction import _formation_trace_span_verifiable
 from ..paper_ingest.paperbank_gate import (
@@ -318,6 +345,10 @@ from ..retrieval.novelty_sources import (
     NoveltySearchProvider,
     OpenAlexNoveltySearchProvider,
 )
+from ..retrieval.topic_source_selection import (
+    TopicSourceSelectionActivity,
+    select_topic_sources,
+)
 from .front_half_persist import (
     build_shortlist_manifest,
     persist_reviewed_topic_evidence,
@@ -341,6 +372,8 @@ from .resume import (
     persist_topic_rights_degradation_receipt,
     relative_output_digests,
     relative_semantic_output_digests,
+    shortlist_context_digest,
+    shortlist_entry_digest,
     stage_config_version,
     stage_model_versions,
     stage_prompt_versions,
@@ -375,10 +408,10 @@ from .run_envelope import (
 )
 from .run_layout import (
     DEV_SURROGATE_DOSSIER_BANNER,
-    PROVISIONAL_INSPIRATION_DOSSIER_BANNER,
     RunPaths,
     assign_family_slugs,
     family_slug,
+    provisional_inspiration_dossier_banner,
     read_stage_receipt,
     render_question_families,
     render_shortlist,
@@ -416,6 +449,30 @@ if TYPE_CHECKING:
 # unregistered gate: a front-half gate reviewer must never run with an empty system prompt (that is
 # exactly the live bug this map fixes — a promptless reviewer cannot know the required criteria keys,
 # so every model-accept was structurally downgraded).
+#: What retrieval brings back, and what survives selection. The gap between them is the whole point:
+#: the pool is ranked by topical relevance, and the kept corpus must also cover the eight semantic
+#: dimensions the independent reviewer grades. Only reading the abstracts can tell those apart, so
+#: `select_topic_sources` reads them. The pool costs no extra request -- these results were already
+#: retrieved and then discarded unread.
+TOPIC_SOURCE_CANDIDATE_POOL = 200
+#: Raised from 20 on 2026-08-17 at operator request, and measured rather than assumed, because the
+#: evidence pointed both ways. FOR: the reviewer's hard `generic_lane_coverage` criterion asks the
+#: kept corpus to cover eight semantic dimensions, and more slots let the selector cover more of
+#: them. AGAINST: supply is not obviously the bottleneck -- across the 2026-08-14 legs the drafter
+#: bound only 10-15 of the 20 it was given (climate 15, ibl 10, nlb 10), so 5-10 papers per leg were
+#: already retrieved, selected, and exported to the proposer without entering a single claim; and
+#: the reviewer cites unbound sources IN a `scope_fidelity` failure ("8 of 20 supplied sources bound
+#: to claims"), so a larger corpus with unchanged binding could read as a wider unmet promise -- the
+#: same shape as the term count going 15 -> 22 and taking `scope_fidelity` from 0/15 to 13/14.
+#: Raised 20 -> 64 on 2026-08-19 at operator decision, with the prompt budget raised in the same
+#: change because the two are one setting. The 20 was chosen when a scope was eight hand-written
+#: terms (2.5 records per term); scope derivation widened a scope to eighteen, and 20 kept records
+#: is 1.1 per term -- measured on the nlb leg, where the reviewer's blockers moved from drafting
+#: complaints to sixteen `essential evidence absent` findings, including "core resolved-scope
+#: construct has no source directly testing it". More slots is not a quality claim on its own; it
+#: restores the per-term density the 20 was picked for.
+TOPIC_SOURCE_KEPT_COUNT = 64
+
 _FRONT_HALF_GATE_PROMPTS: dict[str, tuple[str, Callable[[], str]]] = {
     "paper_case_fidelity": (
         PAPER_CASE_FIDELITY_REVIEWER_PROMPT_VERSION,
@@ -522,7 +579,13 @@ class StageExecutor:
         )
 
     def web_search_provider(self) -> WebSearchModelProvider | None:
-        """The narrator Source-C (model web research) provider; None ⇒ Source C is skipped (V1: off)."""
+        """The narrator Source-C (model web research) provider — unconditionally ``None`` in v0.1.
+
+        This is a hardcoded off, NOT a configuration gate: there is no knob that turns Source C on
+        for a product run, so every run files ``model_research: inactive`` in its source activity
+        (26 of 26 recorded runs do). Wiring it means giving this method a provider and a config
+        surface, not flipping a setting.
+        """
         return None
 
     def novelty_search_providers(self) -> list[NoveltySearchProvider]:
@@ -669,6 +732,10 @@ class PaperHalfResult:
     # Set only when trace/pattern machinery exhausted bounded provider/validation recovery and no
     # reviewed pattern survived. Zero patterns caused by honest scientific insufficiency leave it unset.
     pattern_generation_failure_class: FailureClass | None = None
+    # True when at least one independent trace/pattern gate returned a non-accept. It is what makes
+    # a zero-pattern half a SCIENTIFIC terminal; false means every candidate was dropped by a host
+    # predicate and no reviewer ever judged the science (N3).
+    pattern_stage_gate_judged: bool = False
 
 
 def _capture_receipt(
@@ -703,9 +770,15 @@ _QUESTION_PATTERN_INDUCTION_DIAGNOSTIC = "question_pattern_induction"
 _QUESTION_FAMILY_GENERATION_DIAGNOSTIC = "question_family_generation"
 # Non-review diagnostic labels; constants keep the gate-prompt source sweep scoped to real gates.
 _TOPIC_EVIDENCE_AVAILABILITY_DIAGNOSTIC = "topic_evidence_availability"
-_TOPIC_EVIDENCE_PROVISIONAL_DIAGNOSTIC = "topic_evidence_provisional"
+# The run-manifest diagnostic CODE for a readiness cap. Until 2026-08-13 it was also a gate_name on
+# a synthetic `topic_evidence_provisional.yaml` written INSTEAD of calling the reviewer; that file is
+# gone, because the readiness cap now happens after a real review and the real gate diagnostic (with
+# the reviewer's identity, criteria and rationale) is written in its place. The code is unchanged so
+# a reader that already knows it keeps working.
+_TOPIC_EVIDENCE_PROVISIONAL_DIAGNOSTIC_CODE = "topic_evidence_provisional"
 _TOPIC_EVIDENCE_TERMINAL_INQUIRY_DIAGNOSTIC = "topic_evidence_terminal_inquiry"
 _QUESTION_FAMILY_RETRY_DIAGNOSTIC = "question_family_retry"
+_QUESTION_FAMILY_FIRST_CALL_DIAGNOSTIC = "question_family_first_call_reask"
 _PROVISIONAL_PLANNING_BOUNDARY_DIAGNOSTIC = "provisional_planning_boundary"
 _STAGE_D_CURRENT_BATCH_ATTRIBUTE = "_maieusis_stage_d_current_batch_path"
 
@@ -804,6 +877,18 @@ def run_paper_half(
     gate_receipts: dict[int, list[PromotionReceipt]] = {}
     gate_receipts_lock = threading.Lock()
 
+    # A gate diagnostic path is built from its artifact_label, and io writes with `write_text`, so
+    # two rounds sharing a label means round 2 overwrites round 1. Observed: a citation review in
+    # d3p3/ibl kept only its round-2 verdict; round 1, which named a different failed criterion, is
+    # gone from the run's own bytes. Every sibling gate already carries a round component
+    # (`dataset_narrative.review-{i}`, `{brief_id}.review-{i}`); these two never did.
+    review_rounds: dict[tuple[str, str], int] = {}
+
+    def _round_label(gate: str, paper_case_id: str) -> str:
+        seen = review_rounds.get((gate, paper_case_id), 0)
+        review_rounds[(gate, paper_case_id)] = seen + 1
+        return f"{paper_case_id}.round-{seen}"
+
     def _bucket_gate_receipt(
         paper_case: PaperCase,
         *,
@@ -848,7 +933,7 @@ def run_paper_half(
             outcome,
             PAPER_CASE_FIDELITY_CRITERIA,
             run_corpus=run_corpus,
-            artifact_label=paper_case.paper_case_id,
+            artifact_label=_round_label("paper_case_fidelity", paper_case.paper_case_id),
         )
         return outcome
 
@@ -894,7 +979,7 @@ def run_paper_half(
             outcome,
             CITATION_IMPORTANCE_CRITERIA,
             run_corpus=run_corpus,
-            artifact_label=paper_case.paper_case_id,
+            artifact_label=_round_label("citation_importance", paper_case.paper_case_id),
         )
         return outcome
 
@@ -917,7 +1002,13 @@ def run_paper_half(
         run_corpus=run_corpus,
         development_surrogate=any_mock_reviewer(receipts),
     )
-    reviewed_patterns, reviewed_traces, pattern_revision_history, pattern_failure_class = (
+    (
+        reviewed_patterns,
+        reviewed_traces,
+        pattern_revision_history,
+        pattern_failure_class,
+        pattern_stage_gate_judged,
+    ) = (
         _traces_and_patterns(
             accepted_holder,
             executor=executor,
@@ -927,7 +1018,7 @@ def run_paper_half(
             max_revise_rounds=max_revise_rounds,
         )
         if gate_result.should_continue
-        else ([], [], [], None)
+        else ([], [], [], None, False)
     )
     if reviewed_patterns:
         manifest = write_question_pattern_bank(reviewed_patterns, corpus_root=run_corpus)
@@ -947,6 +1038,7 @@ def run_paper_half(
         pattern_revision_history=pattern_revision_history,
         receipts=receipts,
         pattern_generation_failure_class=pattern_failure_class,
+        pattern_stage_gate_judged=pattern_stage_gate_judged,
     )
 
 
@@ -1392,6 +1484,7 @@ def _traces_and_patterns(
     list[QuestionFormationTrace],
     list[PatternRevisionHistory],
     FailureClass | None,
+    bool,
 ]:
     # Fail closed if an active serious generator has no audited scope/normalization policy.
     generation_boundary("question_formation_trace_drafter/v3")
@@ -1408,6 +1501,12 @@ def _traces_and_patterns(
     reviewed_traces: list[QuestionFormationTrace] = []
     trace_infrastructure_failure_classes: list[FailureClass] = []
     pattern_infrastructure_failure_classes: list[FailureClass] = []
+    # N3: did any INDEPENDENT gate actually judge a trace or a pattern and decline it? Every other
+    # way a candidate leaves this function is a host predicate -- an unbindable literature context,
+    # a draft with no verifiable spans, a trace record graded unusable, an induction batch every
+    # paraphrase/firewall check emptied. When none of them was ever judged, a zero-pattern paper
+    # half is machinery, and calling it a scientific terminal would settle a question nobody asked.
+    gate_judged_a_non_accept = False
     paper_slugs = assign_family_slugs(item.paper_case.paper_case_id for item in accepted)
     context = _run_context_for_corpus(run_corpus)
     for item in accepted:
@@ -1612,6 +1711,9 @@ def _traces_and_patterns(
             artifact_label=paper_case.paper_case_id,
         )
         if not outcome.is_accept:
+            # An independent gate looked at this trace and did not accept it. That is the only kind
+            # of event that can make a zero-pattern paper half a SCIENTIFIC terminal (N3).
+            gate_judged_a_non_accept = True
             continue
         try:
             promoted_trace = promote_formation_trace_to_ai_reviewed(trace, outcome)
@@ -1677,7 +1779,7 @@ def _traces_and_patterns(
             if trace_infrastructure_failure_classes
             else None
         )
-        return [], reviewed_traces, [], trace_failure_class
+        return [], reviewed_traces, [], trace_failure_class, gate_judged_a_non_accept
     # Pattern INDUCTION rides its independent pattern-role model, not the per-paper extraction or
     # Question Scientist model: it is
     # one batch call over all traces and its QuestionPatternBank shapes all downstream question
@@ -1708,7 +1810,7 @@ def _traces_and_patterns(
             if trace_infrastructure_failure_classes
             else None
         )
-        return [], reviewed_traces, [], induction_failure_class
+        return [], reviewed_traces, [], induction_failure_class, gate_judged_a_non_accept
     except (StructuredModelProviderError, ValidationError) as exc:
         failure_class = _boundary_failure_class(exc)
         write_gate_diagnostic(
@@ -1725,6 +1827,7 @@ def _traces_and_patterns(
             reviewed_traces,
             [],
             _aggregate_failure_classes([*trace_infrastructure_failure_classes, failure_class]),
+            gate_judged_a_non_accept,
         )
     for warning in batch.warnings:
         if not warning.startswith(PATTERN_TRUNCATED_AT_CAP_WARNING):
@@ -1876,6 +1979,8 @@ def _traces_and_patterns(
                     else pattern.pattern_id
                 ),
             )
+            # As at the trace gate: an independent reviewer judged this pattern and declined it.
+            gate_judged_a_non_accept = True
             continue
         _record_non_accept_diagnostic(
             outcome,
@@ -1915,7 +2020,7 @@ def _traces_and_patterns(
         if not reviewed and unresolved_infrastructure
         else None
     )
-    return reviewed, reviewed_traces, revision_history, terminal_failure
+    return reviewed, reviewed_traces, revision_history, terminal_failure, gate_judged_a_non_accept
 
 
 def _aggregate_failure_classes(classes: Sequence[FailureClass]) -> FailureClass:
@@ -2252,6 +2357,7 @@ def run_stage_c(
     dataset_id: str,
     provisional_inspiration: bool = False,
     rights_safe_topic_source_projection: RightsSafeTopicSourceProjection | None = None,
+    ceiling_cause: FrontHalfCeilingCause | None = None,
 ) -> Path:
     """Stage C: build + persist the V2 Question Scientist context from the RUN-LOCAL reviewed corpus.
 
@@ -2270,6 +2376,7 @@ def run_stage_c(
         dataset_id=dataset_id,
         provisional_inspiration=provisional_inspiration,
         rights_safe_topic_source_projection=rights_safe_topic_source_projection,
+        ceiling_cause=ceiling_cause,
     )
     return write_question_scientist_context_payload_v2(payload, corpus_root=run_corpus)
 
@@ -2291,9 +2398,56 @@ class DatasetHalfResult:
     source_count: int
     scope: ResolvedResearchScope
     fulltext_counts: FulltextEnrichmentCounts
+    # The candidate pool `source_count` was selected from. Only this stage knows it, and a resume
+    # rewrites the reader's retrieval summary, so without carrying it a resumed run would replace a
+    # summary naming the real pool with one saying the pool was not recorded. 0 means genuinely
+    # unknown (an injected table), and renders as "not recorded", never as the kept count.
+    retrieved_count: int = 0
     topic_revision_history: TopicEvidenceRevisionHistory | None = None
     authority_ceiling: FrontHalfAuthorityCeiling = FrontHalfAuthorityCeiling.VERIFIED
     source_activity_path: Path | None = None
+    # Set on every PROVISIONAL_INSPIRATION return and only there.  A verified half leaves it None;
+    # a capped half that left it None would be indistinguishable from an unreviewed one downstream,
+    # which is the exact failure this field exists to remove.
+    ceiling_reason: FrontHalfCeilingReason | None = None
+    ceiling_residual_dimensions: tuple[str, ...] = ()
+    ceiling_reason_detail: str = ""
+
+
+def persisted_ceiling_reason(paths: RunPaths) -> FrontHalfCeilingReason | None:
+    """Read the cap's reason back off disk for the layout and summary surfaces.
+
+    The back half receives ``authority_ceiling`` from the shortlist manifest, which carries no
+    reason, and threading one through ``QuestionFamilyBatch`` and ``QuestionFamilyShortlistManifest``
+    would move persisted digests on every run for a value only the presentation layer reads.  The
+    dataset half already persisted it; read it from there.  Missing file or missing field means the
+    original wording stands, so no pre-existing surface changes bytes.
+    """
+
+    stage_output_path = paths.stage_output(STAGE_DATASET_HALF)
+    if not stage_output_path.is_file():
+        return None
+    return load_model(stage_output_path, DatasetHalfStageOutput).ceiling_reason
+
+
+def ceiling_cause_from_stage_output(
+    dataset_output: DatasetHalfStageOutput,
+) -> FrontHalfCeilingCause | None:
+    """Rehydrate the cap's reason from the persisted dataset half, for fresh runs and resumes alike.
+
+    Reading it back from ``stage_outputs/dataset-half.yaml`` rather than carrying it in memory is
+    deliberate: Stage C, the layout and the summary all run again on a resume, where the in-memory
+    ``DatasetHalfResult`` no longer exists.  A run that predates the field returns ``None``, which
+    every reader treats as "reason unknown" -- never as "verified".
+    """
+
+    if dataset_output.ceiling_reason is None:
+        return None
+    return FrontHalfCeilingCause(
+        reason=dataset_output.ceiling_reason,
+        residual_dimensions=tuple(dataset_output.ceiling_residual_dimensions),
+        public_reason=dataset_output.ceiling_reason_detail,
+    )
 
 
 def _scope_identity(scope: ResolvedResearchScope) -> tuple[str, str]:
@@ -2339,6 +2493,38 @@ def _persist_early_dataset_products(
         )
 
 
+def _topic_selection_detail(activity: TopicSourceSelectionActivity) -> str:
+    """One readable clause naming what the corpus selection actually did, or why it did nothing."""
+    if activity.status == "selected_by_model":
+        served = ", ".join(
+            f"{name} {count}" for name, count in sorted(activity.dimensions_served.items())
+        )
+        uncovered = (
+            f"; no record served {', '.join(activity.uncovered_dimensions)}"
+            if activity.uncovered_dimensions
+            else "; every required dimension has at least one record"
+        )
+        return (
+            f"; selected {activity.kept_by_model} of {activity.pool_size} candidates by content, "
+            f"{activity.rank_agreement} of which relevance ranking would also have kept"
+            # A padded corpus is a different corpus, and the reader is counting records. Saying
+            # only the model's own number would understate what the reviewer actually read.
+            f"{f', plus {activity.kept_by_ranking_fallback} filled from rank order' if activity.kept_by_ranking_fallback else ''}"
+            f"{f' ({served})' if served else ''}{uncovered}"
+            # The module's own docstring calls a fabricated identifier "the one thing this step is
+            # structurally forbidden to produce". It was counted and discarded: a selector that
+            # invented twenty of twenty identifiers left no record anywhere that it had. The
+            # activity model is not persisted, so this sentence is the only route to an artifact.
+            f"{f'; {len(activity.unknown_identifiers)} named identifier(s) the selector was never shown' if activity.unknown_identifiers else ''}"
+        )
+    if activity.status == "degraded_to_ranking":
+        return (
+            f"; corpus selection degraded to relevance ranking ({activity.degraded_reason}), "
+            f"{activity.kept_by_ranking_fallback} kept"
+        )
+    return f"; corpus selection {activity.status}"
+
+
 def _persist_dataset_source_activity(
     *,
     config: MaieusisProjectConfig,
@@ -2346,6 +2532,17 @@ def _persist_dataset_source_activity(
     narrator_result: NarratorResult,
     narrative: DatasetNarrative,
     scope: ResolvedResearchScope,
+    # REQUIRED, deliberately. This function has six call sites inside `run_dataset_half`, each
+    # overwriting the last, so a row threaded into only some of them is absent from the artifact a
+    # reader actually opens -- the "shipped inert" failure this repository has already paid for. A
+    # parameter with no default makes the type checker enumerate the call sites instead of me.
+    derived_scope: DerivedDatasetScope,
+    # REQUIRED for the same reason `derived_scope` is. The selector's counts reached exactly one of
+    # the eight `topic_detail=` sites, and `run_dataset_half`'s final write (the success path) used a
+    # bare sentence -- so on every completed run the numbers that prove the selection did anything
+    # were overwritten before the file was read. Building the clause inside this function makes it
+    # impossible to write the row without them.
+    topic_selection: TopicSourceSelectionActivity,
     topic_table: R5TopicEvidenceSourceTable | None = None,
     topic_status: SourceActivityStatus = SourceActivityStatus.INACTIVE,
     topic_detail: str = "not assessed",
@@ -2414,6 +2611,25 @@ def _persist_dataset_source_activity(
                 "configured user documentation" if docs else "inactive: no user docs supplied",
             ),
         ),
+        # Source B has never had a row here, which made it the one narrator source whose absence was
+        # invisible: a reader of source_activity.yaml saw A, D and C accounted for and no mention of
+        # B at all. It is recorded now, so "not wired in this version" is a written fact rather than
+        # something inferred from a missing line.
+        SourceActivityItem(
+            source_id=SourceKind.LOCAL_SAMPLE.value,
+            status=(
+                SourceActivityStatus.PRODUCED
+                if SourceKind.LOCAL_SAMPLE in narrator_result.sources
+                else SourceActivityStatus.INACTIVE
+            ),
+            artifact_paths=narrative_artifacts
+            if SourceKind.LOCAL_SAMPLE in narrator_result.sources
+            else [],
+            artifact_digests=narrative_digests
+            if SourceKind.LOCAL_SAMPLE in narrator_result.sources
+            else {},
+            detail=narrator_result.skipped.get(SourceKind.LOCAL_SAMPLE.value, "produced"),
+        ),
         SourceActivityItem(
             source_id=SourceKind.MODEL_RESEARCH.value,
             status=(
@@ -2450,7 +2666,44 @@ def _persist_dataset_source_activity(
             status=topic_status,
             artifact_paths=topic_paths,
             artifact_digests=topic_digests,
-            detail=topic_detail,
+            # The caller's sentence, then the selector's countable clause -- always, at every call
+            # site, rather than at whichever one the author remembered.
+            detail=topic_detail + _topic_selection_detail(topic_selection),
+        )
+    )
+    # PARTIAL, not FAILED, for a degradation. The step did not fail: it produced a usable scope by
+    # the deterministic route AND a real record naming what the model proposed and why the index
+    # refused it. `SourceActivityItem` forbids a FAILED row from claiming an artifact
+    # (`schemas/source_activity.py:85`), so filing it as failed would throw away the one artifact a
+    # reader needs to understand the degradation.
+    derived_scope_status = (
+        SourceActivityStatus.PRODUCED
+        if derived_scope.status is DerivedScopeStatus.DERIVED_BY_MODEL
+        else (
+            SourceActivityStatus.PARTIAL
+            if derived_scope.status is DerivedScopeStatus.DEGRADED_TO_DETERMINISTIC
+            else SourceActivityStatus.INACTIVE
+        )
+    )
+    derived_scope_path = (
+        run_corpus / "context" / "topic_evidence" / "sources" / "research_intent.derived_scope.yaml"
+    )
+    derived_scope_artifacts: list[str] = []
+    derived_scope_digests: dict[str, str] = {}
+    # An INACTIVE row may not bind an artifact (`SourceActivityItem` enforces it), and the record is
+    # written for every run including the ones where no model was asked -- so the file exists even
+    # when this step did nothing, and claiming it here would assert activity that did not happen.
+    if derived_scope_status != SourceActivityStatus.INACTIVE and derived_scope_path.is_file():
+        derived_relative = derived_scope_path.relative_to(run_root).as_posix()
+        derived_scope_artifacts = [derived_relative]
+        derived_scope_digests = {derived_relative: sha256_file(derived_scope_path)}
+    source_items.append(
+        SourceActivityItem(
+            source_id="scope_derivation",
+            status=derived_scope_status,
+            artifact_paths=derived_scope_artifacts,
+            artifact_digests=derived_scope_digests,
+            detail=derived_scope.activity_detail(),
         )
     )
     scope_id, scope_digest = _scope_identity(scope)
@@ -2487,6 +2740,142 @@ def _persist_dataset_source_activity(
     else:
         dump_data(activity, path)
     return path
+
+
+def _narrative_fidelity_diagnostic(
+    review: DatasetNarrativeFidelityReview, *, artifact_label: str = ""
+) -> GateDiagnostic:
+    """The reviewer's verdict on one narrative candidate, in the shared diagnostic shape.
+
+    Its reviewer uses accept/revise/reject — string-identical to ``GateDecision``. The reviewer
+    identity is recorded because with a repair loop there are now several of these per run, and
+    "which reviewer said this, about which round" is the first question an auditor asks.
+    """
+
+    return GateDiagnostic(
+        gate_name="narrative_fidelity",
+        artifact_label=artifact_label,
+        decision=GateDecision(review.decision.value),
+        downgraded_from=(
+            GateDecision(review.downgraded_from.value)
+            if review.downgraded_from is not None
+            else None
+        ),
+        rationale=review.rationale,
+        required_changes=list(review.required_changes),
+        hallucination_findings=list(review.hallucination_findings),
+        failed_criteria=[
+            item.criterion for item in review.criterion_assessments if not item.passed
+        ],
+        returned_criteria=[item.criterion for item in review.criterion_assessments],
+        criterion_audit=list(review.criterion_audit),
+        criterion_review_complete=review.criterion_review_complete,
+        reviewer_provider_id=review.provider_id,
+        reviewer_model_id=review.model_id,
+    )
+
+
+def _narrative_diagnostic_label(loop: NarrativeRepairLoopResult) -> str:
+    """Name the final narrative diagnostic after what actually ended the repair, not just 'final'."""
+
+    if loop.repair_refused:
+        return "dataset_narrative.repair-refused"
+    if loop.budget_exhausted:
+        return "dataset_narrative.repair-budget-exhausted"
+    if loop.rounds:
+        return f"dataset_narrative.after-{len(loop.rounds)}-repair-rounds"
+    return ""
+
+
+def _repair_reviewed_dataset_narrative(
+    narrator_result: NarratorResult,
+    *,
+    executor: StageExecutor,
+    run_corpus: Path,
+    seed: DatasetSeed,
+    narrator_provider: StructuredModelProvider,
+    narrator_gen_ids: Sequence[str],
+    max_revise_rounds: int,
+) -> NarrativeRepairLoopResult:
+    """Give the narrative fidelity gate the bounded revise loop it never had.
+
+    Modelled on the topic-evidence route directly below: the reviewer's own finding travels to a
+    source-locked reviser, the redraft is persisted before the next reviewer call can fail, and it
+    goes back to the SAME independent gate with the previous finding as ``review_guidance``. Nothing
+    here promotes anything — ``promote_narrator_result_to_reviewed`` remains the only authority, and
+    it still refuses everything it refused before.
+
+    A ``reject`` never enters the loop, and neither does a ``revise`` already survivable under N2.
+    """
+
+    generation_boundary(DATASET_NARRATIVE_REVISER_PROMPT_VERSION)
+    narrative_root = run_corpus / "context" / "dataset_narratives"
+    generator_ids = list(narrative_generator_provider_ids(narrator_result.sources))
+
+    # The guidance describes the repair round being re-reviewed, and the loop calls `_review` with
+    # the candidate alone. A one-slot handoff written by `_redraft` keeps both signatures unchanged.
+    pending_guidance = [""]
+
+    def _review(candidate: DatasetNarrative) -> DatasetNarrativeFidelityReview:
+        return review_dataset_narrative_fidelity(
+            session=executor.gate_session(
+                gate_name="narrative_fidelity", generator_provider_ids=narrator_gen_ids
+            ),
+            dataset_id=seed.dataset_id,
+            candidate=candidate,
+            sources=narrator_result.sources,
+            generator_provider_ids=generator_ids,
+            review_guidance=pending_guidance[0],
+        )
+
+    def _redraft(
+        candidate: DatasetNarrative,
+        review: DatasetNarrativeFidelityReview,
+        round_index: int,
+    ) -> tuple[DatasetNarrative, DatasetNarrativeRevisionRound]:
+        write_gate_diagnostic(
+            _narrative_fidelity_diagnostic(
+                review, artifact_label=f"dataset_narrative.review-{round_index - 1}"
+            ),
+            _diagnostics_dir(run_corpus),
+        )
+        revised, round_record = revise_dataset_narrative(
+            narrator_provider,
+            candidate=candidate,
+            sources=narrator_result.sources,
+            review=review,
+            round_index=round_index,
+            revision_output_path=(
+                narrative_root / "revisions" / f"round-{round_index:04d}.dataset_narrative.yaml"
+            ),
+            revision_output_reference=(
+                "corpus/context/dataset_narratives/revisions/"
+                f"round-{round_index:04d}.dataset_narrative.yaml"
+            ),
+        )
+        # Persist the round before the next reviewer call, so a transport failure still leaves the
+        # prior verdict, the exact candidate path/digests, and the generator identity on disk.
+        dump_data(
+            round_record,
+            narrative_root / "revisions" / f"round-{round_index:04d}.revision_round.yaml",
+        )
+        pending_guidance[0] = narrative_repair_review_guidance(
+            round_index=round_index, previous=review
+        )
+        return revised, round_record
+
+    loop = run_narrative_fidelity_repair_loop(
+        initial=narrator_result,
+        redraft=_redraft,
+        review=_review,
+        max_revise_rounds=max_revise_rounds,
+    )
+    if loop.rounds or loop.budget_exhausted or loop.repair_refused:
+        dump_data(
+            loop.history(),
+            narrative_root / "revisions" / "dataset_narrative_revision_history.yaml",
+        )
+    return loop
 
 
 def run_dataset_half(
@@ -2531,12 +2920,40 @@ def run_dataset_half(
             gate_name="narrative_fidelity", generator_provider_ids=narrator_gen_ids
         ),
     )
+    narrative_loop = _repair_reviewed_dataset_narrative(
+        narrator_result,
+        executor=executor,
+        run_corpus=run_corpus,
+        seed=seed,
+        narrator_provider=narrator_provider,
+        narrator_gen_ids=narrator_gen_ids,
+        max_revise_rounds=config.run.max_revise_rounds,
+    )
+    narrator_result = narrative_loop.result
     # Q3: promote (fail-closed) INSIDE the try so a revise/reject verdict writes its diagnostic BEFORE
     # the raise. The old order persisted (which promotes internally) BEFORE the try, so on a non-accept
     # the raise fired first and the diagnostic-writing block below was dead. Persist only AFTER a
     # successful promote (the accept path); the re-raise then flows into the dataset-half terminal (Q2).
     try:
         narrative = promote_narrator_result_to_reviewed(narrator_result)
+        # Record the verdict that PROMOTED, the way the five compliant front-half gates already do.
+        # Without it a promotion kept one prose line in `review_notes` and lost the rationale, the
+        # per-criterion audit and the required changes -- so "was this pass earned?" could not be
+        # answered from the run's own bytes. Measured before this line existed: 10 promoted
+        # narratives across 11 live runs, 9 of them with no `diagnostics/narrative_fidelity/` at
+        # all, and the two known false negatives among them left nothing to find. Every verdict
+        # that promotes is written, not only `accept`: a survivable `revise` promotes too and was
+        # equally silent. The `_accepted` directory keeps it from overwriting a non-accept record
+        # for the same artifact.
+        if narrator_result.review is not None:
+            write_gate_diagnostic(
+                _narrative_fidelity_diagnostic(
+                    narrator_result.review,
+                    artifact_label=_narrative_diagnostic_label(narrative_loop),
+                ),
+                _diagnostics_dir(run_corpus),
+                directory_name="narrative_fidelity_accepted",
+            )
     except ValueError as exc:
         # Surface-only: the narrative gate stays fail-closed; persist WHY from its review content
         # (its reviewer uses accept/revise/reject — string-identical to GateDecision).
@@ -2544,30 +2961,61 @@ def run_dataset_half(
         decision = GateDecision.REJECT
         if review is not None:
             decision = GateDecision(review.decision.value)
-            diagnostic = GateDiagnostic(
-                gate_name="narrative_fidelity",
-                decision=decision,
-                rationale=review.rationale,
-                failed_criteria=[a.criterion for a in review.criterion_assessments if not a.passed],
-                returned_criteria=[a.criterion for a in review.criterion_assessments],
+            write_gate_diagnostic(
+                _narrative_fidelity_diagnostic(
+                    review,
+                    artifact_label=_narrative_diagnostic_label(narrative_loop),
+                ),
+                _diagnostics_dir(run_corpus),
             )
-            write_gate_diagnostic(diagnostic, _diagnostics_dir(run_corpus))
-        scientific_non_accept = decision != GateDecision.ACCEPT
+        # N3: classify on the REFUSAL, not on the review's decision word. The promoter raises
+        # `NarrativeFidelityNonAccept` for the one refusal that is a verdict about the science and a
+        # plain ValueError for its structural refusals (no review at all, an unfinished criterion
+        # sweep, a reviewer sharing a provider family with a generator, no generator identity, no
+        # source_refs, an unholdable stamp). Reading `decision` here filed those as SCIENTIFIC --
+        # `decision` defaults to REJECT when no review exists, and a structural refusal following a
+        # survivable `revise` inherited that word -- which makes a host bug unrescuable, because a
+        # shepherd may not repair past a scientific verdict and resume REUSES a scientific terminal.
+        scientific_non_accept = isinstance(exc, NarrativeFidelityNonAccept)
+        # A refused redraft is the HOST speaking, not the gate, so it keeps a validation class and an
+        # infrastructure decision even though the reviewer's last word happened to be `revise`.
+        #
+        # Operator ruling, 2026-08-12: budget exhaustion is NOT equivalent to rejection, anywhere.
+        # The earlier reading here -- "the reviewer held its finding across every repair, which is a
+        # scientific verdict" -- contradicted this enum's own contract
+        # (`schemas/stage_receipt.py:25-27`): a scientific failure is work judged and found wanting,
+        # and a reviewer that keeps asking for a change has not delivered a final judgement. Filing
+        # it as science made a run unresumable and unshepherdable over a budget the operator can
+        # simply raise. It keeps its own KIND, so a reader can still tell it from a gate that refused
+        # on sight and can go read the persisted rounds, and it keeps the reviewer's actual decision
+        # word; only the class moves.
+        kind = DatasetContextTerminalKind.CONTEXT_VALIDATION_FAILED
+        failure_class = FailureClass.VALIDATION_FAILURE
+        gate_decision = GateDecision.INFRASTRUCTURE_FAILURE
+        if narrative_loop.repair_refused:
+            kind = DatasetContextTerminalKind.NARRATIVE_REVISION_INVALID
+        elif scientific_non_accept:
+            exhausted = narrative_loop.budget_exhausted
+            kind = (
+                DatasetContextTerminalKind.NARRATIVE_REVISION_BUDGET_EXHAUSTED
+                if exhausted
+                else DatasetContextTerminalKind.NARRATIVE_REVIEW_NON_ACCEPT
+            )
+            failure_class = FailureClass.PROMPT_BUDGET if exhausted else FailureClass.SCIENTIFIC
+            gate_decision = decision
         raise DatasetContextTerminalError(
-            (
-                DatasetContextTerminalKind.NARRATIVE_REVIEW_NON_ACCEPT
-                if scientific_non_accept
-                else DatasetContextTerminalKind.CONTEXT_VALIDATION_FAILED
+            kind,
+            failure_class=failure_class,
+            gate_decision=gate_decision,
+            internal_detail=(
+                f"{exc} | narrative-fidelity gate diagnostics persisted"
+                f" | repair rounds used: {len(narrative_loop.rounds)}"
+                + (
+                    f" | repair refused: {narrative_loop.repair_refused}"
+                    if narrative_loop.repair_refused
+                    else ""
+                )
             ),
-            failure_class=(
-                FailureClass.SCIENTIFIC
-                if scientific_non_accept
-                else FailureClass.VALIDATION_FAILURE
-            ),
-            gate_decision=(
-                decision if scientific_non_accept else GateDecision.INFRASTRUCTURE_FAILURE
-            ),
-            internal_detail=f"{exc} | narrative-fidelity gate diagnostics persisted",
         ) from exc
     persist_reviewed_narrator_result(narrator_result, corpus_root=run_corpus)
     _persist_early_dataset_products(
@@ -2576,11 +3024,53 @@ def run_dataset_half(
         intent=intent,
     )
 
+    # The scope is derived HERE, and it can only be derived here: the narrative it reads was
+    # promoted 70 lines above, and the literature it decides is retrieved 20 lines below. Before
+    # this point there is no dataset description to read; after it, the queries have been issued.
+    generation_boundary(DATASET_SCOPE_DERIVER_PROMPT_VERSION)
+    derived_scope = derive_dataset_scope(
+        provider=topic_provider,
+        narrative=narrative,
+        intent=intent,
+        research_field=config.literature.research_field,
+        openalex_email=config.literature.openalex_email,
+        openalex_api_key=os.getenv("OPENALEX_API_KEY", ""),
+        literature_enabled=config.literature.enabled and not config.is_demo,
+    )
+    # Written before scope resolution and before any retrieval, so a later failure cannot erase why
+    # this run searched what it searched.
+    dump_data(
+        derived_scope,
+        run_corpus
+        / "context"
+        / "topic_evidence"
+        / "sources"
+        / "research_intent.derived_scope.yaml",
+    )
+
     # Topic evidence: draft bundle → independent topic-evidence gate → AI_REVIEWED persist.
     resolved_scope = scope or resolve_research_scope(
         intent,
         reviewed_patterns=reviewed_patterns,
         dataset_narrative=narrative,
+        # THIS ARGUMENT IS THE WHOLE FEATURE. Without it the deriver still runs, still costs a model
+        # call, still writes `research_intent.derived_scope.yaml` with `status: derived_by_model`,
+        # and still files a source-activity row counting the terms it produced -- and the run
+        # searches none of them. Measured 2026-08-18 on a live `run_dataset_half`: the deriver wrote
+        # 17 terms, the source table searched one, and the harvest returned 16 records against a
+        # 200-record pool. It looked like a working feature in every artifact that describes it.
+        #
+        # It was lost to an editing accident: a cleanup removed every line reading
+        # `derived_scope=derived_scope,` to undo a bad bulk insertion, and the re-insertion put them
+        # back only at the `_persist_dataset_source_activity` call sites. Both the acceptance tests
+        # and the live artifact check missed it, because the tests call `resolve_research_scope`
+        # with the argument themselves and the artifacts they read are the deriver's own output.
+        # The guard that catches it drives this function and reads the scope handed to
+        # retrieval: `test_run_dataset_half_searches_the_terms_it_derived`. Its first version
+        # asserted an AST keyword, which `derived_scope=None` satisfies, and carried a capture
+        # harness that never ran because it never called this function -- so the comment that
+        # stood here, claiming it observed issued queries, was false when it was written.
+        derived_scope=derived_scope,
     )
     _persist_early_dataset_products(
         run_corpus=run_corpus,
@@ -2588,16 +3078,26 @@ def run_dataset_half(
         intent=intent,
         scope=resolved_scope,
     )
+    # Declared before the first activity write, not after it: this row is persisted several times as
+    # the stage progresses and every later write overwrites the earlier file, so the name has to
+    # exist at the first one.
+    topic_selection_activity = TopicSourceSelectionActivity(status="not_yet_retrieved")
     source_activity_path = _persist_dataset_source_activity(
         config=config,
         run_corpus=run_corpus,
         narrator_result=narrator_result,
         narrative=narrative,
         scope=resolved_scope,
+        derived_scope=derived_scope,
+        topic_selection=topic_selection_activity,
     )
-    resolved_topic_source_table = topic_source_table or retrieve_topic_source_table(
-        config, resolved_scope
-    )
+    topic_selection_activity = TopicSourceSelectionActivity(status="injected_table")
+    if topic_source_table is None:
+        resolved_topic_source_table, topic_selection_activity = retrieve_topic_source_table(
+            config, resolved_scope, selector_provider=topic_provider
+        )
+    else:
+        resolved_topic_source_table = topic_source_table
     bundle = build_topic_evidence_brief_draft_bundle(
         provider=topic_provider,
         intent=intent,
@@ -2651,6 +3151,16 @@ def run_dataset_half(
             bundle.field_state_draft,
             topic_root / "sources" / "research_intent.topic_field_state.yaml",
         )
+    # The selection's own record, typed, beside the table it produced. Until now this activity
+    # reached an artifact only as one English clause inside a free-text `detail` string, so the
+    # 136-153 candidates each run retrieved, paid for and discarded left no byte anywhere: measured
+    # on six runs, the distinct `topic-source-record-*` ids present in the ENTIRE run tree equalled
+    # the kept count exactly, 6 of 6. A reader could not ask afterwards whether a given record had
+    # been dropped, which is the question the 2026-08-16 climate leg turned on.
+    dump_data(
+        topic_selection_activity,
+        topic_root / "sources" / "research_intent.topic_source_selection.yaml",
+    )
     # Source activity describes retrieval, not whether the synthesized brief later earns review.
     # Persist the real table/count/lanes now so a downstream revise/reject cannot rewrite retrieved
     # records as an inactive zero-source lane. An empty table must remain honestly EMPTY.
@@ -2660,12 +3170,14 @@ def run_dataset_half(
         narrator_result=narrator_result,
         narrative=narrative,
         scope=resolved_scope,
+        derived_scope=derived_scope,
+        topic_selection=topic_selection_activity,
         topic_table=r5_table,
         topic_status=(
             SourceActivityStatus.PRODUCED if r5_table.records else SourceActivityStatus.EMPTY
         ),
         topic_detail=(
-            "source-bound topic literature retrieved; brief review pending"
+            ("source-bound topic literature retrieved; brief review pending")
             if r5_table.records
             else "no source-bound topic literature was available"
         ),
@@ -2673,21 +3185,36 @@ def run_dataset_half(
     # Retrieval is already a completed, reader-relevant fact even if synthesis review later rejects
     # or exhausts repair. Publish it before the gate so a zero-dossier terminal still tells the user
     # what was actually retrieved instead of collapsing twenty records/eight lanes into silence.
+    # Acquire the envelope BEFORE replacing the projection. `_run_context_for_corpus` performs a
+    # STRICT integrity read of every indexed artifact, and a projection rewritten in place is stale
+    # until it is re-indexed -- so writing first made the read raise, which skipped the very
+    # `index_existing_artifact` call that would have refreshed the record. On a first leg the file
+    # has no record yet and nothing shows; on a RESUME it does, and the run was left holding the
+    # first leg's digest beside the second leg's bytes. Every later `maieusis resume` of that run
+    # is then refused forever -- correctly, by a guard that must not be weakened -- so one transient
+    # provider failure became an unrecoverable leg. Measured across 14 recorded runs: 13 never
+    # resumed, zero mismatches; the one resumed run, exactly this file. Every sibling publisher
+    # (`_persist_early_dataset_products`, `_persist_dataset_source_activity`) already takes the
+    # context first; this was the only site in the product that did not.
+    context = _run_context_for_corpus(run_corpus)
     retrieval_reader_path = write_retrieval_summary(
         RunPaths(root=run_corpus.parent),
         topic_terms=list(resolved_scope.terms),
         lane_coverage=dict(r5_table.lane_coverage),
-        source_count=len(r5_table.records),
+        kept_count=len(r5_table.records),
+        # The selector ran in this function, so the candidate pool it narrowed is known here and
+        # nowhere downstream. `pool_size` is 0 on the injected-table path, which is genuinely
+        # "no selection happened" rather than "a pool of zero".
+        retrieved_count=topic_selection_activity.pool_size or None,
     )
-    context = _run_context_for_corpus(run_corpus)
-    if context is not None:
-        index_existing_artifact(
-            context,
-            retrieval_reader_path,
-            kind=ArtifactKind.RETRIEVAL_SUMMARY,
-            processing_state=ProductProcessingState.PRODUCED,
-            authority=ArtifactAuthority.PROVISIONAL,
-        )
+    if context is not None and not index_existing_artifact(
+        context,
+        retrieval_reader_path,
+        kind=ArtifactKind.RETRIEVAL_SUMMARY,
+        processing_state=ProductProcessingState.PRODUCED,
+        authority=ArtifactAuthority.PROVISIONAL,
+    ):
+        raise ValueError("retrieval summary projection could not be re-indexed")
     # D5(a) + Q1: the gate must see the REAL claim-supporting classification (not a blanket True) AND
     # the SAME scope-driven off-topic view the compiler's blocked-source check uses, so a genuinely
     # weak OR off-scope brief earns an honest gate reject/revise (with diagnostic) at the dataset-half
@@ -2701,6 +3228,8 @@ def run_dataset_half(
             narrator_result=narrator_result,
             narrative=narrative,
             scope=resolved_scope,
+            derived_scope=derived_scope,
+            topic_selection=topic_selection_activity,
             topic_table=r5_table,
             topic_status=(
                 SourceActivityStatus.EMPTY if empty_harvest else SourceActivityStatus.PARTIAL
@@ -2748,81 +3277,41 @@ def run_dataset_half(
             topic_brief=brief,
             lane_coverage=dict(r5_table.lane_coverage),
             source_count=len(r5_table.records),
+            retrieved_count=topic_selection_activity.pool_size,
             scope=resolved_scope,
             fulltext_counts=fulltext_counts,
             authority_ceiling=FrontHalfAuthorityCeiling.PROVISIONAL_INSPIRATION,
             source_activity_path=source_activity_path,
+            ceiling_reason=FrontHalfCeilingReason.HARVEST_EMPTY,
         )
-    ready, readiness_issues = evaluate_topic_evidence_readiness(
-        brief,
-        source_record_ids=source_ids,
-        claim_supporting_record_ids=claim_supporting_ids,
-    )
-    if not ready:
-        diagnostic_path = write_gate_diagnostic(
-            GateDiagnostic(
-                gate_name=_TOPIC_EVIDENCE_PROVISIONAL_DIAGNOSTIC,
-                decision=GateDecision.INSUFFICIENT_EVIDENCE,
-                rationale="; ".join(readiness_issues),
-            ),
-            _diagnostics_dir(run_corpus),
-        )
-        source_activity_path = _persist_dataset_source_activity(
-            config=config,
-            run_corpus=run_corpus,
-            narrator_result=narrator_result,
-            narrative=narrative,
-            scope=resolved_scope,
-            topic_table=r5_table,
-            topic_status=SourceActivityStatus.PARTIAL,
-            topic_detail="partial source-bound topic literature; provisional inspiration only",
-        )
-        context = _run_context_for_corpus(run_corpus)
-        if context is not None:
-            index_existing_artifact(
-                context,
-                provisional_brief_path,
-                kind=ArtifactKind.TOPIC_EVIDENCE,
-                processing_state=ProductProcessingState.DEGRADED,
-                authority=ArtifactAuthority.PROVISIONAL,
-            )
-            index_existing_artifact(
-                context,
-                source_table_path,
-                kind=ArtifactKind.TOPIC_EVIDENCE,
-                processing_state=ProductProcessingState.DEGRADED,
-                authority=ArtifactAuthority.PROVISIONAL,
-            )
-            add_diagnostic(
-                context,
-                diagnostic_class=DiagnosticClass.SCIENTIFIC,
-                code="topic_evidence_provisional",
-                public_message=(
-                    "Partial topic literature is retained for provisional inspiration only."
-                ),
-                internal_path=diagnostic_path.relative_to(context.paths.root).as_posix(),
-            )
-        return DatasetHalfResult(
-            receipts=[],
-            narrative=narrative,
-            topic_brief=brief,
-            lane_coverage=dict(r5_table.lane_coverage),
-            source_count=len(r5_table.records),
-            scope=resolved_scope,
-            fulltext_counts=fulltext_counts,
-            authority_ceiling=FrontHalfAuthorityCeiling.PROVISIONAL_INSPIRATION,
-            source_activity_path=source_activity_path,
-        )
+    # Operator ruling, 2026-08-13, after reading the 6x2 leg's own artifacts: readiness stops
+    # routing. Until this change a brief that carried no typed close prior returned here, capped at
+    # PROVISIONAL_INSPIRATION with `reviewer_model_id: ''` -- no model was ever asked. The 6x2 leg
+    # (20260813T034552Z-55f60a06) is the measured case: 20 source records, every one
+    # `snippet_kind: abstract`, so the drafter would not assert that anything was already answered
+    # from an abstract, so the deterministic check found no close prior, so all six families ended
+    # provisional without a review. The authority ceiling was therefore being set by retrieval
+    # depth, and a thinner brief SURVIVED where a fuller one would have been judged.
+    #
+    # The absence itself is not evidence of anything: a genuinely new area has no already-answered
+    # prior work, and a failed retrieval looks identical from here. Only a reader of the actual
+    # sources can tell those apart, and the reviewer already owns a `close_prior_identified`
+    # criterion for exactly that question -- it had simply never been shown one of these briefs.
+    # Readiness keeps its real job: it is the compile-safety precondition the V2 compiler shares
+    # (`topic_evidence_readiness.py`), so it still decides the AUTHORITY CEILING below. It no longer
+    # decides whether anyone is asked.
     generation_boundary("topic_evidence_brief_reviser/v1")
     generation_boundary(TOPIC_EVIDENCE_TERMINAL_INQUIRY_PROMPT_VERSION)
     revision_rounds: list[TopicEvidenceRevisionRound] = []
     inquiry_disposition: TopicEvidenceInquiryDisposition | None = None
     inquiry_gap_dimensions: list[str] = []
+    inquiry_unestablished_dimensions: list[str] = []
     inquiry_record: TopicEvidenceTerminalInquiryRecord | None = None
     inquiry_record_path: Path | None = None
 
     def _review(current: TopicEvidenceBrief) -> GateOutcome:
         nonlocal inquiry_disposition, inquiry_gap_dimensions, inquiry_record, inquiry_record_path
+        nonlocal inquiry_unestablished_dimensions
         review_index = len(revision_rounds)
         source_summaries = build_topic_evidence_reviewer_source_summaries(
             brief=current,
@@ -2835,6 +3324,8 @@ def run_dataset_half(
             research_intent=intent.model_dump(mode="json"),
             source_record_summaries=source_summaries,
             retrieval_lineage=r5_table.lane_coverage,
+            source_record_ids=source_ids,
+            claim_supporting_record_ids=claim_supporting_ids,
             field_state=bundle.field_state_draft,
             review_guidance=(
                 topic_evidence_inquiry_review_guidance(inquiry_record)
@@ -2921,6 +3412,28 @@ def run_dataset_half(
                     and assessment.disposition.value != "packet_present_but_omitted"
                 }
             )
+            # A SECOND, deliberately wider set, and the difference between the two is the whole
+            # point of R4. The set above is scope-ESSENTIAL only, because that is what the public
+            # sentence should name. But an OpenGapCard's assertion does not care whether a
+            # dimension was scope-essential -- it asserts that close-prior and open-gap coverage
+            # WERE checked. Measured on a 2026-08-11 qualification leg
+            # (corpus/context/topic_evidence/terminal_inquiry/terminal_inquiry_record.yaml):
+            # `open_gaps` is `disposition: indeterminate` with `essential_to_scope: false`, and
+            # `close_prior_already_answered` is `packet_present_but_omitted`. Filtering on
+            # essentiality would leave the residual set as {background_core_constructs} alone and
+            # the guard would ship inert on the exact leg that motivated it. So the residual set is
+            # every dimension the inquiry could NOT establish from the packet.
+            inquiry_unestablished_dimensions = sorted(
+                {
+                    assessment.semantic_dimension.value
+                    for assessment in record.output.gap_assessments
+                    if assessment.disposition
+                    in {
+                        TopicEvidenceGapDisposition.PACKET_ABSENT,
+                        TopicEvidenceGapDisposition.INDETERMINATE,
+                    }
+                }
+            )
             if inquiry_disposition == TopicEvidenceInquiryDisposition.SOURCE_LOCKED_REVISE:
                 return inquiry_revision_outcome(record, brief=current)
         return current_outcome
@@ -3001,7 +3514,21 @@ def run_dataset_half(
                 gate_name="topic_evidence",
                 artifact_label=f"{brief.brief_id}.revision-provider-failure",
                 decision=GateDecision.INFRASTRUCTURE_FAILURE,
-                rationale=f"bounded topic inquiry/revision/review provider failed: {type(exc).__name__}",
+                # `str(exc)` carries the TYPED failure kind ("... failed: rate_limit") and is the
+                # secret-free surface the exception class promises; `detail` quotes provider output
+                # and belongs in an internal diagnostic, which is exactly what this is
+                # (providers/models/base.py:186-191). Recording only the class name left a live leg
+                # with `StructuredModelProviderError` and nothing else anywhere on disk or in the
+                # run log; the cause could only be established by replaying the persisted packet by
+                # hand, which showed it had been transient. Evidence discipline #3.
+                rationale=(
+                    f"bounded topic inquiry/revision/review provider failed: {exc}"
+                    + (
+                        f"; detail: {getattr(exc, 'detail', '')}"
+                        if getattr(exc, "detail", "")
+                        else ""
+                    )
+                ),
             ),
             _diagnostics_dir(run_corpus),
         )
@@ -3057,6 +3584,104 @@ def run_dataset_half(
             revision_history,
             topic_root / "revisions" / "research_intent.topic_evidence_revision_history.yaml",
         )
+    # Recomputed on the FINAL brief, not the draft: a revision round may have added the typed close
+    # prior the round-0 draft lacked, and capping such a run on a stale reading would discard the
+    # repair the reviewer asked for and got.
+    final_readiness = assess_topic_evidence_readiness(
+        final_brief,
+        source_record_ids=source_ids,
+        claim_supporting_record_ids=claim_supporting_ids,
+    )
+
+    def _capped_dataset_half(
+        *,
+        reason: FrontHalfCeilingReason,
+        diagnostic_path: Path,
+        public_message: str,
+        diagnostic_code: str,
+        topic_detail: str,
+        reason_detail: str = "",
+        residual_dimensions: tuple[str, ...] = (),
+    ) -> DatasetHalfResult:
+        """Return the capped-but-alive half, with the reviewed brief as the one on disk.
+
+        `provisional_brief_path` was written from the ROUND-0 draft, before any review, and stage C
+        loads the brief from that path and nowhere else (`question_scientist_export.py:301`). Every
+        capped exit therefore rewrites it: with no revision rounds `final_brief` is byte-identical to
+        what is already there, and with rounds it is the repaired artifact the reviewer last saw.
+        """
+        capped_source_activity_path = _persist_dataset_source_activity(
+            config=config,
+            run_corpus=run_corpus,
+            narrator_result=narrator_result,
+            narrative=narrative,
+            scope=resolved_scope,
+            derived_scope=derived_scope,
+            topic_selection=topic_selection_activity,
+            topic_table=r5_table,
+            topic_status=SourceActivityStatus.PARTIAL,
+            topic_detail=topic_detail,
+        )
+        # The brief is rewritten BEFORE it is indexed: the manifest entry carries the file's sha256,
+        # and indexing the round-0 bytes and then overwriting them would publish a digest for
+        # something no longer on disk. Both artifacts were indexed by the readiness lane this
+        # replaces, and a capped run's manifest must not lose them.
+        dump_data(final_brief, provisional_brief_path)
+        if context is not None:
+            index_existing_artifact(
+                context,
+                provisional_brief_path,
+                kind=ArtifactKind.TOPIC_EVIDENCE,
+                processing_state=ProductProcessingState.DEGRADED,
+                authority=ArtifactAuthority.PROVISIONAL,
+            )
+            index_existing_artifact(
+                context,
+                source_table_path,
+                kind=ArtifactKind.TOPIC_EVIDENCE,
+                processing_state=ProductProcessingState.DEGRADED,
+                authority=ArtifactAuthority.PROVISIONAL,
+            )
+            add_diagnostic(
+                context,
+                diagnostic_class=DiagnosticClass.SCIENTIFIC,
+                code=diagnostic_code,
+                public_message=public_message,
+                internal_path=diagnostic_path.relative_to(context.paths.root).as_posix(),
+            )
+        return DatasetHalfResult(
+            receipts=[],
+            narrative=narrative,
+            topic_brief=final_brief,
+            lane_coverage=dict(r5_table.lane_coverage),
+            source_count=len(r5_table.records),
+            retrieved_count=topic_selection_activity.pool_size,
+            scope=resolved_scope,
+            fulltext_counts=fulltext_counts,
+            topic_revision_history=revision_history,
+            authority_ceiling=FrontHalfAuthorityCeiling.PROVISIONAL_INSPIRATION,
+            source_activity_path=capped_source_activity_path,
+            ceiling_reason=reason,
+            ceiling_residual_dimensions=residual_dimensions,
+            ceiling_reason_detail=reason_detail,
+        )
+
+    def _readiness_ceiling_reason() -> FrontHalfCeilingReason:
+        """Which readiness cap this is: a judged-honest absent close prior, or plain not-compilable.
+
+        The honest-absence reason is deliberately narrow, because its banner says the reviewer
+        judged the absence honest and nothing weaker earns that sentence. It requires that a typed
+        close prior be the ONLY thing standing between this brief and full authority, and an EARNED
+        accept -- which by the gate kernel's construction means `close_prior_identified` was
+        assessed and passed along with the other nine. A reviewer that asked for changes it did not
+        get has not blessed the brief even if it happened to pass that one criterion, so every other
+        state (a missing open gap, a citation that does not resolve, any non-accept) is the
+        deterministic precondition failing with no scientific vindication: READINESS_NOT_MET.
+        """
+        if outcome.is_accept and final_readiness.close_prior_absence_is_the_only_gap:
+            return FrontHalfCeilingReason.CLOSE_PRIOR_ABSENCE_REVIEWED_HONEST
+        return FrontHalfCeilingReason.READINESS_NOT_MET
+
     if not outcome.is_accept:
         diagnostic_path = _write_topic_diagnostic(
             outcome,
@@ -3068,8 +3693,181 @@ def run_dataset_half(
             ),
         )
         public_reason = ""
-        if loop_result.budget_exhausted:
+        # A judged-and-thin literature caps the run; it does not kill it. Two D3-P legs on
+        # 2026-08-11 each completed a fully paid paper half and then ended with zero families here:
+        # one leg failed a single criterion of ten (generic_lane_coverage) with nine passing, and its
+        # inquiry had already overruled the reviewer on one of the three alleged gaps. Meanwhile a
+        # readiness failure capped the run at PROVISIONAL_INSPIRATION for a brief too thin to review
+        # at all, and two published demonstrations reached accepted planning dossiers down that
+        # exact lane. So the weaker brief survived and the judged one died. (Since 2026-08-13 the
+        # thin brief is judged too; the readiness cap below is what it earns, and this is still the
+        # branch that keeps a judged-thin literature from ending the run.)
+        #
+        # REJECT still raises. reviewer/v6 defines it as a brief that is unfaithful, launders
+        # unsupported evidence, mislabels a close prior as an open gap, or asserts novelty -- a
+        # fidelity failure, not a thin corpus, and the line that keeps "repair never gets a run past
+        # a scientific verdict" true. HUMAN_ESCALATION keeps its terminal: it means adjudication is
+        # needed, which is a different claim from "coverage is thin".
+        # Budget exhaustion deliberately stays terminal. It means the reviewer kept asking for
+        # repairs and the drafter kept failing to make them, which is a different claim from "this
+        # literature is thin" -- and its existing terminal test encodes that. Narrowing R1 to the
+        # insufficiency case keeps this card's blast radius to the edge it exists to fix.
+        degradable = (
+            outcome.decision == GateDecision.INSUFFICIENT_EVIDENCE
+            or inquiry_disposition == TopicEvidenceInquiryDisposition.NO_ESSENTIAL_GAP
+        )
+        if (
+            degradable
+            and not loop_result.budget_exhausted
+            and inquiry_disposition != TopicEvidenceInquiryDisposition.HUMAN_ESCALATION
+        ):
+            reason = (
+                _topic_inquiry_public_reason(inquiry_disposition, inquiry_gap_dimensions)
+                if inquiry_disposition is not None
+                else ""
+            )
+            # `context` is None for a corpus with no run manifest (the offline/test shape), exactly
+            # as the two provisional branches above already handle. Without this guard the degrade
+            # path dereferences None on the very corpora that exercise it.
+            if context is not None:
+                add_diagnostic(
+                    context,
+                    diagnostic_class=DiagnosticClass.SCIENTIFIC,
+                    code="topic_evidence_reviewed_coverage_gap",
+                    public_message=(
+                        reason
+                        or "The topic literature was independently reviewed and found short of the "
+                        "coverage this scope needs; planning continues capped at provisional."
+                    ),
+                    internal_path=diagnostic_path.relative_to(context.paths.root).as_posix(),
+                )
+            source_activity_path = _persist_dataset_source_activity(
+                config=config,
+                run_corpus=run_corpus,
+                narrator_result=narrator_result,
+                narrative=narrative,
+                scope=resolved_scope,
+                derived_scope=derived_scope,
+                topic_selection=topic_selection_activity,
+                topic_table=r5_table,
+                topic_status=SourceActivityStatus.PARTIAL,
+                topic_detail=(
+                    "topic literature independently reviewed and capped at provisional inspiration"
+                ),
+            )
+            # `provisional_brief_path` was written from the ROUND-0 draft, before any review. On
+            # every other exit from this function that path and the returned brief agree: the
+            # accept path rewrites it through `persist_reviewed_topic_evidence`, and the two
+            # earlier provisional returns hand back the very object that was written. This one did
+            # not, and it is the only exit that can be reached after a repair. Stage C loads the
+            # brief from this path and nowhere else (`question_scientist_export.py:301`), so a
+            # source-locked repair was discarded and the proposer was handed the draft the reviewer
+            # had faulted, while the run summary described the repaired one. Rewriting it here is
+            # unconditional and therefore cannot go stale: with no revision rounds `final_brief` is
+            # byte-identical to what is already on disk.
+            dump_data(final_brief, provisional_brief_path)
+            return DatasetHalfResult(
+                receipts=[],
+                narrative=narrative,
+                topic_brief=final_brief,
+                lane_coverage=dict(r5_table.lane_coverage),
+                source_count=len(r5_table.records),
+                retrieved_count=topic_selection_activity.pool_size,
+                scope=resolved_scope,
+                fulltext_counts=fulltext_counts,
+                authority_ceiling=FrontHalfAuthorityCeiling.PROVISIONAL_INSPIRATION,
+                source_activity_path=source_activity_path,
+                ceiling_reason=FrontHalfCeilingReason.REVIEWED_COVERAGE_GAP,
+                # The dimensions the inquiry could not establish from the packet. R4 reads exactly
+                # this list: a residual `close_prior_already_answered` or `open_gaps` is the state
+                # in which an OpenGapCard -- a card that asserts close-prior status HAS been checked
+                # -- would be a claim the run cannot back.
+                ceiling_residual_dimensions=tuple(inquiry_unestablished_dimensions),
+                ceiling_reason_detail=reason,
+            )
+        # The review is now an ADDITION to a run that readiness had already capped, and an addition
+        # must not cost the run standing it already had. Before 2026-08-13 this brief never reached
+        # a reviewer and the run continued, capped, to its dossiers. Asking a reviewer cannot be
+        # allowed to convert that survival into a dead run over a NON-verdict: exhaustion means the
+        # rounds ran out before a verdict, and `redraft_unavailable` means the host had no lawful
+        # repair for what was asked. Neither is a statement that the science is wanting, and the
+        # comment above already says so for the compile-ready lane.
+        #
+        # What still raises here is a verdict: a REJECT (the reviewer read the brief and found it
+        # unfaithful) or a HUMAN_ESCALATION (it asked for adjudication). A brief whose claims cite
+        # ids outside its own source table reaches REJECT through this same door, because closure is
+        # what `evidence_resolved` still means and the kernel treats an unresolved artifact as
+        # unfaithful. That is a deliberate, narrow change of standing for a self-contradicting
+        # artifact: it is not in any recorded leg (29 readiness diagnostics across this machine's
+        # live corpora, every one of them a missing close prior or open gap, none a closure fault).
+        # Exhaustion is the operator's named case, and the ruling is unconditional: budget
+        # exhaustion is not equivalent to rejection, ANYWHERE. The prose above has said so since
+        # 2026-08-13, but the only branch implementing it was gated on `not final_readiness.ready`,
+        # so a brief that WAS structurally ready still fell through to the raise and killed a run
+        # whose reviewer had answered normally on every round. `shepherd_recovery_probe.py` walks
+        # exactly that path and is why this was caught.
+        #
+        # `redraft_unavailable` deliberately does NOT join it here. It already stopped being filed
+        # as a rejection -- it carries its own kind and VALIDATION_FAILURE, so a shepherd may repair
+        # past it and a resume re-runs it -- and unlike exhaustion it reports that the HOST could not
+        # perform the change asked for, which is a machinery fault worth surfacing rather than
+        # capping over. Capping it too would silence the one signal that says the repair path broke.
+        #
+        # Precedence for an unready brief is unchanged, so this adds one reachable state rather than
+        # reclassifying any cap that already exists.
+        if (
+            (not final_readiness.ready or loop_result.budget_exhausted)
+            and outcome.decision != GateDecision.REJECT
+            and inquiry_disposition != TopicEvidenceInquiryDisposition.HUMAN_ESCALATION
+        ):
+            if final_readiness.ready:
+                return _capped_dataset_half(
+                    reason=FrontHalfCeilingReason.REVIEW_ROUNDS_EXHAUSTED,
+                    diagnostic_path=diagnostic_path,
+                    diagnostic_code=_TOPIC_EVIDENCE_PROVISIONAL_DIAGNOSTIC_CODE,
+                    public_message=(
+                        "The topic literature was independently reviewed, but the review never "
+                        "reached a final verdict before its configured revision budget ran out; "
+                        "planning continues capped at provisional."
+                    ),
+                    topic_detail=(
+                        "topic literature independently reviewed; capped at provisional inspiration "
+                        "because the review never reached a final verdict"
+                    ),
+                )
+            return _capped_dataset_half(
+                reason=_readiness_ceiling_reason(),
+                diagnostic_path=diagnostic_path,
+                diagnostic_code=_TOPIC_EVIDENCE_PROVISIONAL_DIAGNOSTIC_CODE,
+                public_message=(
+                    "The topic literature was independently reviewed and does not carry the typed "
+                    "close-prior and open-gap structure verified authority is compiled from; "
+                    "planning continues capped at provisional."
+                ),
+                topic_detail=(
+                    "topic literature independently reviewed; capped at provisional inspiration "
+                    "because it does not meet the structural readiness precondition"
+                ),
+            )
+        # Operator ruling, 2026-08-12: budget exhaustion is NOT equivalent to rejection, anywhere.
+        # Every branch below except the first IS the reviewer's own final word about the evidence --
+        # a reject, an insufficiency, an escalation it asked for -- and stays SCIENTIFIC. Exhaustion
+        # is the one that is not: the reviewer asked for a change and the configured rounds ran out
+        # before it gave a verdict, so by this enum's own contract the science was never judged.
+        # T2's other non-verdict belongs here for the same reason. `redraft_unavailable` means the
+        # loop handed the redraft the reviewer's asks, got back a byte-identical artifact, and
+        # stopped without spending a round -- the host has no lawful repair for what was asked. It
+        # is mutually exclusive with `budget_exhausted` by the loop's own construction and had no
+        # branch at all here, so it fell through to the `else` and was published as the reviewer
+        # rejecting the science. `paperbank_gate.py:413` already draws exactly this distinction at
+        # the paper gates and gives it VALIDATION_FAILURE; the same fact deserves the same class.
+        failure_class = FailureClass.SCIENTIFIC
+        if loop_result.redraft_unavailable:
+            kind = DatasetContextTerminalKind.TOPIC_EVIDENCE_REVISE_NO_REPAIR_AVAILABLE
+            failure_class = FailureClass.VALIDATION_FAILURE
+        elif loop_result.budget_exhausted:
             kind = DatasetContextTerminalKind.TOPIC_EVIDENCE_REVISION_BUDGET_EXHAUSTED
+            failure_class = FailureClass.PROMPT_BUDGET
         elif inquiry_disposition == TopicEvidenceInquiryDisposition.HUMAN_ESCALATION:
             kind = DatasetContextTerminalKind.TOPIC_EVIDENCE_HUMAN_ESCALATION
             public_reason = _topic_inquiry_public_reason(
@@ -3085,7 +3883,7 @@ def run_dataset_half(
             kind = DatasetContextTerminalKind.TOPIC_EVIDENCE_REVIEW_REJECTED
         raise DatasetContextTerminalError(
             kind,
-            failure_class=FailureClass.SCIENTIFIC,
+            failure_class=failure_class,
             gate_decision=outcome.decision,
             internal_detail=(
                 f"{outcome.rationale} | diagnostic persisted: {diagnostic_path}"
@@ -3097,14 +3895,60 @@ def run_dataset_half(
             ),
             public_reason=public_reason,
         )
-    # A direct ACCEPT remains diagnostic-noise-free. After a repair, retain the independent
-    # acceptance beside the rejected attempt so the revision history is auditable end to end.
-    if revision_rounds:
-        _write_topic_diagnostic(
+    # An accept the compiler could not honor. Splitting readiness into a closure axis and a
+    # completeness axis means the gate can now earn ACCEPT for a brief that reports no typed close
+    # prior -- which is the point -- but "an accepted brief always compiles" is the guarantee that
+    # made the readiness function shared in the first place, and the V2 compiler still refuses to
+    # build a full-authority topic pack from a brief with no close prior
+    # (`question_scientist_export.py:706`). So the host holds the guarantee here instead: the
+    # acceptance is recorded in the diagnostic and the run continues at PROVISIONAL_INSPIRATION,
+    # unpromoted, down the lane the compiler does accept. The reviewer's verdict decides the reason;
+    # it does not manufacture an authority the pack cannot carry.
+    if not final_readiness.ready:
+        accepted_diagnostic_path = _write_topic_diagnostic(
             outcome,
             final_brief,
-            artifact_label=f"{brief.brief_id}.final",
+            artifact_label=f"{brief.brief_id}.accepted-below-readiness",
         )
+        accepted_reason = _readiness_ceiling_reason()
+        honest_absence = (
+            accepted_reason is FrontHalfCeilingReason.CLOSE_PRIOR_ABSENCE_REVIEWED_HONEST
+        )
+        return _capped_dataset_half(
+            reason=accepted_reason,
+            diagnostic_path=accepted_diagnostic_path,
+            diagnostic_code=(
+                "topic_evidence_close_prior_absence_reviewed"
+                if honest_absence
+                else _TOPIC_EVIDENCE_PROVISIONAL_DIAGNOSTIC_CODE
+            ),
+            public_message=(
+                "The topic literature was independently reviewed and accepted, and the review "
+                "found no already-answered prior work to report for this scope. Verified authority "
+                "is compiled from a typed close prior, so planning continues capped at provisional."
+                if honest_absence
+                else "The topic literature was independently reviewed and accepted, but it does "
+                "not carry the typed close-prior and open-gap structure verified authority is "
+                "compiled from; planning continues capped at provisional."
+            ),
+            topic_detail=(
+                "topic literature independently reviewed and accepted; capped at provisional "
+                "inspiration because it does not meet the structural readiness precondition"
+            ),
+        )
+    # Every acceptance is retained, including a direct one. "Diagnostic-noise-free" was the wrong
+    # trade: the run that earns full authority fastest left the LEAST evidence, and what an accept
+    # dropped -- rationale, criterion_audit, readiness_issues, evidence_resolved, lane_coverage --
+    # is exactly what an auditor needs to answer whether the pass was earned. Measured: set 4's
+    # climate and ibl legs both reached `ai_reviewed`, fed six shortlisted families each, and left a
+    # `diagnostics/` tree with no topic verdict anywhere in it. The authority ordering was also
+    # inverted, since an accept CAPPED at provisional was already persisted a few lines above while
+    # the accept earning full authority was not.
+    _write_topic_diagnostic(
+        outcome,
+        final_brief,
+        artifact_label=f"{brief.brief_id}.final",
+    )
     try:
         promoted = promote_topic_evidence_to_ai_reviewed(final_brief, outcome)
     except ValueError as exc:
@@ -3127,6 +3971,8 @@ def run_dataset_half(
         narrator_result=narrator_result,
         narrative=narrative,
         scope=resolved_scope,
+        derived_scope=derived_scope,
+        topic_selection=topic_selection_activity,
         topic_table=r5_table,
         topic_status=SourceActivityStatus.PRODUCED,
         topic_detail="reviewed topic literature produced",
@@ -3137,6 +3983,7 @@ def run_dataset_half(
         topic_brief=promoted,
         lane_coverage=dict(r5_table.lane_coverage),
         source_count=len(r5_table.records),
+        retrieved_count=topic_selection_activity.pool_size,
         scope=resolved_scope,
         fulltext_counts=fulltext_counts,
         topic_revision_history=revision_history,
@@ -3288,9 +4135,18 @@ def _shortlist_failure_result(
     enough usable evidence". Only the exception CLASS is carried -- raw provider text can embed
     secrets or oversized payloads.
     """
+    # The kind and the attempt count, not the class name alone. Both are already on the exception
+    # and neither reached any persisted artifact, so recovering "was this even retried?" for the
+    # 2026-08-14 qualification family required replaying the captured wire against the live API.
+    # A finite
+    # enum member and an integer carry no provider text, so there is nothing to leak.
+    kind = str(getattr(getattr(exc, "kind", None), "value", "") or "unclassified")
+    attempts = getattr(exc, "attempts", None)
     rationale = (
         "shortlist review infrastructure failure "
-        f"({type(exc).__name__}); the run is incomplete for this family - not a scientific verdict"
+        f"({type(exc).__name__}, kind={kind}"
+        + (f", attempts={attempts}" if attempts is not None else "")
+        + "); the run is incomplete for this family - not a scientific verdict"
     )
     # Novelty ran BEFORE the shortlist gate, so each variant's novelty verdict is real and already
     # paid for. Carrying it through is what lets a resumed or re-run leg see that this family failed
@@ -3619,6 +4475,31 @@ def run_stage_d(
                 internal_path=diagnostic_path.relative_to(context.paths.root).as_posix(),
             )
 
+    def _first_call_reasked(kind: str) -> None:
+        # The first structured call returned an unusable reply and the run asked once more instead
+        # of dying. Recorded because a silent recovery is indistinguishable from a call that always
+        # worked, and this is the exact failure that killed the nlb6 20260724T230141Z run whole.
+        diagnostic_path = write_gate_diagnostic(
+            GateDiagnostic(
+                gate_name=_QUESTION_FAMILY_FIRST_CALL_DIAGNOSTIC,
+                decision=GateDecision.REVISE,
+                rationale=f"first family-generation call failed: {kind}; re-asked once",
+            ),
+            _diagnostics_dir(run_corpus),
+        )
+        context = _run_context_for_corpus(run_corpus)
+        if context is not None:
+            add_diagnostic(
+                context,
+                diagnostic_class=DiagnosticClass.INFRASTRUCTURE,
+                code="question_family_first_call_reasked",
+                public_message=(
+                    "The first question-family generation call returned an unusable reply; "
+                    "the run asked once more."
+                ),
+                internal_path=diagnostic_path.relative_to(context.paths.root).as_posix(),
+            )
+
     batch = generate_question_family_batch(
         provider=generator,
         context_payload=payload,
@@ -3626,6 +4507,7 @@ def run_stage_d(
         variants_per_family=variants_per_family,
         on_family_dropped=_family_dropped,
         on_retry_failed=_retry_failed,
+        on_first_call_reasked=_first_call_reasked,
         on_valid_batch=_persist_valid_batch,
     )
     # Required ordering: the clean strict batch is durable before ANY novelty/shortlist call.
@@ -3956,7 +4838,17 @@ def _paper_half_terminal_cause(
         classes.append(result.pattern_generation_failure_class)
     if classes:
         return StageStatus.INFRASTRUCTURE_FAILED, _aggregate_failure_classes(classes)
-    return StageStatus.SCIENTIFIC_TERMINAL, FailureClass.SCIENTIFIC
+    if not result.gate_result.should_continue:
+        # Zero accepted papers: the independent paper gate judged every one of them. Science.
+        return StageStatus.SCIENTIFIC_TERMINAL, FailureClass.SCIENTIFIC
+    if result.pattern_stage_gate_judged:
+        # Papers were accepted and an independent trace/pattern gate declined what came of them.
+        return StageStatus.SCIENTIFIC_TERMINAL, FailureClass.SCIENTIFIC
+    # N3: papers were accepted, no reviewer ever declined anything, and still no pattern survived --
+    # so every survivor was removed by a host predicate. SCIENTIFIC was the default here, which made
+    # exactly the wrong claim: it tells the reader to fix their science, forbids a shepherd from
+    # repairing the run, and makes resume REUSE the terminal instead of re-running the stage.
+    return StageStatus.INFRASTRUCTURE_FAILED, FailureClass.VALIDATION_FAILURE
 
 
 def _paper_half_terminal_detail(result: PaperHalfResult) -> str:
@@ -4037,7 +4929,21 @@ def exec_stage_dataset_half(
             stage_name="fulltext_enrichment",
             status=StageStatus.COMPLETE,
             detail="OA fulltext plus-on: "
-            + "; ".join(f"{key}={value}" for key, value in counts.items()),
+            + "; ".join(f"{key}={value}" for key, value in counts.items())
+            # A tally of four numbers is not a finding. When nothing was enriched, the receipt says
+            # so in words, because that is the difference between "full-text grounding was on" and
+            # "this run's topic evidence is abstract-only" — and on every leg measured so far it has
+            # been the latter.
+            + (
+                f"; {note}"
+                if (
+                    note := result.fulltext_counts.outcome_note(
+                        requested=config.literature.enabled
+                        and config.literature.fulltext_enrichment
+                    )
+                )
+                else ""
+            ),
             output_paths=[batch_receipt_relative],
             output_digests={batch_receipt_relative: batch_receipt_digest},
             external_call_ids=[
@@ -4062,6 +4968,7 @@ def exec_stage_dataset_half(
             topic_revision_history=result.topic_revision_history,
             lane_coverage=dict(result.lane_coverage),
             source_count=result.source_count,
+            retrieved_count=result.retrieved_count,
             scope=result.scope,
             fulltext_counts={key: int(value) for key, value in counts.items()},
             external_evidence_batch_receipt_path=batch_receipt_relative,
@@ -4074,6 +4981,9 @@ def exec_stage_dataset_half(
                 if result.source_activity_path is not None
                 else ""
             ),
+            ceiling_reason=result.ceiling_reason,
+            ceiling_residual_dimensions=list(result.ceiling_residual_dimensions),
+            ceiling_reason_detail=result.ceiling_reason_detail,
         ),
         paths.stage_output(STAGE_DATASET_HALF),
     )
@@ -4093,7 +5003,11 @@ def exec_stage_dataset_half(
             paths,
             topic_terms=list(result.scope.terms),
             lane_coverage=result.lane_coverage,
-            source_count=result.source_count,
+            kept_count=result.source_count,
+            # Recovered from the stage output rather than substituted from the kept count. Zero
+            # means the selector never ran for this run, which is a real "not recorded" and not a
+            # licence to reprint `source_count` under the word "retrieved".
+            retrieved_count=result.retrieved_count or None,
         )
         index_existing_artifact(
             context,
@@ -4162,6 +5076,7 @@ def exec_stage_c(
             dataset_output.authority_ceiling == FrontHalfAuthorityCeiling.PROVISIONAL_INSPIRATION
         ),
         rights_safe_topic_source_projection=rights_safe_topic_source_projection,
+        ceiling_cause=ceiling_cause_from_stage_output(dataset_output),
     )
     if paths.run_manifest.is_file():
         index_existing_artifact(
@@ -4338,7 +5253,11 @@ def exec_front_layout(config: MaieusisProjectConfig, paths: RunPaths) -> None:
             projection_paths,
             topic_terms=list(dataset_out.scope.terms),
             lane_coverage=dataset_out.lane_coverage,
-            source_count=dataset_out.source_count,
+            kept_count=dataset_out.source_count,
+            # The same stage output that carries the kept count carries the pool it came from, so
+            # the projection republishes both. Passing None here re-published a DOWNGRADED summary
+            # over a good one; the structural guard in the resume tests reads exactly this pair.
+            retrieved_count=dataset_out.retrieved_count or None,
         ),
         destination=paths.retrieval_summary,
         kind=ArtifactKind.RETRIEVAL_SUMMARY,
@@ -4972,7 +5891,7 @@ def run_back_half(
         authority_ceiling=manifest.authority_ceiling,
         basis_by_family=basis_by_family or {},
         run_id=run_id,
-        shortlist_digest=semantic_hash(manifest),
+        shortlist_manifest=manifest,
         reused_included_ids=frozenset(completed_by_id),
         resume_note=resume_note,
     )
@@ -4991,7 +5910,7 @@ def _family_completion_record(
     paths: RunPaths,
     *,
     run_id: str,
-    shortlist_digest: str,
+    shortlist_manifest: QuestionFamilyShortlistManifest,
     slug: str,
     family_result: MultiFamilyFamilyResult,
     outcome: FamilyRunOutcome,
@@ -5040,7 +5959,13 @@ def _family_completion_record(
         run_id=run_id,
         question_family_id=family_result.question_family_id,
         slug=slug,
-        shortlist_digest=shortlist_digest,
+        # Two digests, not one hash of the whole manifest: the shared proposal context, and this
+        # family's own entry. A sibling re-reviewed beside it must not invalidate what this family
+        # already earned -- that was the 2026-08-14 defect.
+        shortlist_context_digest=shortlist_context_digest(shortlist_manifest),
+        shortlist_entry_digest=shortlist_entry_digest(
+            shortlist_manifest, family_result.question_family_id
+        ),
         dossier_record=record,
         family_run_outcome=outcome,
         artifact_digests=relative_output_digests(paths.root, files),
@@ -5795,6 +6720,10 @@ def preserve_branch_products_before_cleanup(
     batch = load_model(paths.question_family_batch_artifact, QuestionFamilyBatch)
     family_by_id = {family.question_family_id: family for family in batch.families}
     slugs = assign_family_slugs(family_by_id)
+    # Same banner the fresh layout writes, so the idempotency check below compares like with like:
+    # a republish that computed the generic wording over bytes carrying the reasoned wording would
+    # prepend a second banner.
+    provisional_banner = provisional_inspiration_dossier_banner(persisted_ceiling_reason(paths))
     context = RunContext(run_id=run_id, paths=paths)
     for family_id in family_ids:
         family = family_by_id.get(family_id)
@@ -5826,9 +6755,9 @@ def preserve_branch_products_before_cleanup(
             )
             if (
                 batch.authority_ceiling == FrontHalfAuthorityCeiling.PROVISIONAL_INSPIRATION
-                and not text.startswith(PROVISIONAL_INSPIRATION_DOSSIER_BANNER)
+                and not text.startswith(provisional_banner)
             ):
-                text = PROVISIONAL_INSPIRATION_DOSSIER_BANNER + text
+                text = provisional_banner + text
             if config.is_demo and not text.startswith(DEV_SURROGATE_DOSSIER_BANNER):
                 text = DEV_SURROGATE_DOSSIER_BANNER + text
             disposition.closure_state = ProductProcessingState.PRODUCED
@@ -5963,7 +6892,7 @@ def _write_back_half_layout(
     authority_ceiling: FrontHalfAuthorityCeiling = FrontHalfAuthorityCeiling.VERIFIED,
     basis_by_family: dict[str, EvidenceBasis] | None = None,
     run_id: str = "",
-    shortlist_digest: str = "",
+    shortlist_manifest: QuestionFamilyShortlistManifest | None = None,
     reused_included_ids: frozenset[str] = frozenset(),
     resume_note: str = "",
 ) -> list[FamilyRunOutcome]:
@@ -5974,6 +6903,8 @@ def _write_back_half_layout(
     the digests cover it), and reused families' dirs are left untouched.
     """
     basis_by_family = basis_by_family or {}
+    ceiling_reason = persisted_ceiling_reason(paths)
+    provisional_banner = provisional_inspiration_dossier_banner(ceiling_reason)
     slugs = assign_family_slugs(sorted(o.question_family_id for o in outcomes))
     effective_outcomes = list(outcomes)
     outcome_by_id = {o.question_family_id: o for o in effective_outcomes}
@@ -6052,7 +6983,7 @@ def _write_back_half_layout(
             if development_surrogate:
                 text = DEV_SURROGATE_DOSSIER_BANNER + text
             if authority_ceiling == FrontHalfAuthorityCeiling.PROVISIONAL_INSPIRATION:
-                text = PROVISIONAL_INSPIRATION_DOSSIER_BANNER + text
+                text = provisional_banner + text
             candidate_path = atomic_write_text(
                 paths.family_artifacts(slug) / "public_dossier_candidate.md", text
             )
@@ -6147,11 +7078,19 @@ def _write_back_half_layout(
             }
         ):
             _deindex_stale_family_closure(paths, family_id=family_id, slug=slug)
-        if family_id and family_id in outcome_by_id and not projection_hard:
+        # A completion record binds to the shortlist it was earned under, so without the manifest
+        # there is nothing to bind and writing one anyway would produce a record a resume must
+        # reject. The caller that omits it has no shortlist in hand.
+        if (
+            family_id
+            and family_id in outcome_by_id
+            and not projection_hard
+            and shortlist_manifest is not None
+        ):
             record = _family_completion_record(
                 paths,
                 run_id=run_id or paths.root.name,
-                shortlist_digest=shortlist_digest,
+                shortlist_manifest=shortlist_manifest,
                 slug=slug,
                 family_result=family_result,
                 outcome=outcome_by_id[family_id],
@@ -6190,6 +7129,7 @@ def _write_back_half_layout(
             effective_outcomes,
             development_surrogate=development_surrogate,
             authority_ceiling=authority_ceiling,
+            ceiling_reason=ceiling_reason,
             evidence_basis_line=basis_line,
             resume_note=resume_note,
             processing_state=(
@@ -6208,6 +7148,7 @@ def _write_back_half_layout(
             effective_outcomes,
             development_surrogate=development_surrogate,
             authority_ceiling=authority_ceiling,
+            ceiling_reason=ceiling_reason,
             evidence_basis_line=basis_line,
             resume_note=resume_note,
         )
@@ -6590,7 +7531,7 @@ def _dataset_context_run_terminal(
     reason = (
         exc.public_reason
         if isinstance(exc, DatasetContextTerminalError) and exc.public_reason
-        else _dataset_context_public_reason(kind)
+        else _shared_context_provider_public_reason(exc) or _dataset_context_public_reason(kind)
     )
     if paths.run_manifest.is_file():
         add_diagnostic(
@@ -6665,10 +7606,18 @@ def _dataset_context_terminal_cause(
     if isinstance(exc, DatasetContextTerminalError):
         return exc.kind, exc.failure_class, exc.gate_decision, exc.internal_detail
     if isinstance(exc, QuestionScientistContextReadinessError):
+        # N3: this is `evaluate_topic_evidence_readiness`, a deterministic host predicate over the
+        # brief's structure -- and the SAME predicate the dataset half runs, where a failure merely
+        # caps the run at provisional inspiration. The topic-evidence gate shares it too, so an
+        # accepted brief compiles by construction (`topic_evidence_readiness.py:3`). Reaching the
+        # compiler's raise therefore means the brief was ready when it was judged and is not ready
+        # now -- the rights-safe projection dropped sources, or the table and brief disagree. No
+        # reviewer said the science was wanting; the machinery lost something between two stages,
+        # and filing that as scientific made it unresumable and unshepherdable.
         return (
             DatasetContextTerminalKind.CONTEXT_READINESS_REJECTED,
-            FailureClass.SCIENTIFIC,
-            GateDecision.INSUFFICIENT_EVIDENCE,
+            FailureClass.VALIDATION_FAILURE,
+            GateDecision.INFRASTRUCTURE_FAILURE,
             str(exc),
         )
     if isinstance(
@@ -6679,11 +7628,21 @@ def _dataset_context_terminal_cause(
             StructuredModelProviderError,
         ),
     ):
+        # The finite kind and the vendor id, not just the class name. Both are already computed by
+        # the adapter and both are secret-free; dropping them is what made the 2026-08-13 terminal
+        # say only "shared-context provider did not complete" over a `kind=account_exhausted,
+        # provider_id=anthropic` it had in hand. Raw provider text still never lands here.
+        kind_label = str(getattr(getattr(exc, "kind", None), "value", "") or "unclassified")
+        provider_label = str(getattr(exc, "provider_id", "") or "unknown")
+        attempts = getattr(exc, "attempts", None)
         return (
             DatasetContextTerminalKind.TOPIC_EVIDENCE_PROVIDER_FAILURE,
             FailureClass.PROVIDER_FAILURE,
             GateDecision.INFRASTRUCTURE_FAILURE,
-            f"{type(exc).__name__}: shared-context provider did not complete",
+            f"{type(exc).__name__}: shared-context provider did not complete "
+            f"(kind={kind_label}, provider={provider_label}"
+            + (f", attempts={attempts}" if attempts is not None else "")
+            + ")",
         )
     if isinstance(exc, ModelConfigurationError):
         return (
@@ -6702,6 +7661,41 @@ def _dataset_context_terminal_cause(
     )
 
 
+#: The finite provider failures a reader can DO something about, and the thing to do. Everything
+#: else keeps the generic shared-context wording, because naming a transport hiccup helps nobody.
+_ACTIONABLE_PROVIDER_REASONS: dict[str, str] = {
+    "account_exhausted": "the {provider} account ran out of credit part-way through, so "
+    "shared-context processing stopped; add credit to that account and resume this run",
+    "authentication": "the {provider} credentials were rejected, so shared-context processing "
+    "stopped; correct that provider's API key and resume this run",
+    "rate_limit": "the {provider} account was rate-limited, so shared-context processing stopped; "
+    "resume this run once the limit resets",
+}
+
+
+def _shared_context_provider_public_reason(exc: Exception) -> str:
+    """Name the provider and the finite failure kind when the run already knows both.
+
+    Stage D has said this since it was written (`_stage_d_public_failure_reason`); the dataset half
+    threw the same typed classification away and told every provider failure the same sentence -- "a
+    required model provider did not complete". On 2026-08-13 that sentence was all a real leg left
+    behind, and reading it cost a fresh live API call to learn what the run had already computed:
+    `kind=account_exhausted, provider_id=anthropic`. The operator, working from the generic wording,
+    had topped up the other vendor.
+
+    The provider id is named because with two vendors configured the unnamed version is unactionable,
+    and it is not a secret -- the stage receipt already records `reviewer: anthropic:claude-sonnet-5`.
+    Raw provider text stays out; only the finite kind and the vendor name are published.
+    """
+
+    kind = getattr(exc, "kind", None)
+    provider = str(getattr(exc, "provider_id", "") or "").strip()
+    template = _ACTIONABLE_PROVIDER_REASONS.get(str(getattr(kind, "value", "")))
+    if template is None or not provider:
+        return ""
+    return template.format(provider=provider)
+
+
 def _dataset_context_public_reason(kind: DatasetContextTerminalKind) -> str:
     """Finite public wording; reviewer/provider raw text stays in private diagnostics."""
 
@@ -6709,6 +7703,19 @@ def _dataset_context_public_reason(kind: DatasetContextTerminalKind) -> str:
         DatasetContextTerminalKind.NARRATIVE_REVIEW_NON_ACCEPT: (
             "the dataset narrative did not pass independent fidelity review, so downstream "
             "question development did not start"
+        ),
+        # Says what happened, not that the science was found wanting. The reviewer kept asking for a
+        # change and the configured repair budget ran out before it gave a final verdict, so this
+        # names the setting that decides it and stays out of the reader's science.
+        DatasetContextTerminalKind.NARRATIVE_REVISION_BUDGET_EXHAUSTED: (
+            "the independent fidelity reviewer was still asking for changes to the dataset "
+            "narrative when the configured repair budget ran out, so it never reached a final "
+            "verdict and downstream question development did not start; the persisted revision "
+            "rounds show what it asked for, and run.max_revise_rounds sets how many it gets"
+        ),
+        DatasetContextTerminalKind.NARRATIVE_REVISION_INVALID: (
+            "a dataset-narrative repair crossed a strict evidence or disclosure boundary; "
+            "shared-context processing is incomplete"
         ),
         DatasetContextTerminalKind.TOPIC_EVIDENCE_REVIEW_REJECTED: (
             "the topic-evidence brief did not pass independent scientific review, so downstream "
@@ -6718,8 +7725,18 @@ def _dataset_context_public_reason(kind: DatasetContextTerminalKind) -> str:
             "the retrieved topic evidence did not support a reviewable literature brief"
         ),
         DatasetContextTerminalKind.TOPIC_EVIDENCE_REVISION_BUDGET_EXHAUSTED: (
-            "the topic-evidence brief remained scientifically incomplete after the configured "
-            "revision budget was exhausted"
+            "the independent reviewer was still asking for changes to the topic-evidence brief "
+            "when the configured revision budget ran out, so it never reached a final verdict; the "
+            "persisted revision rounds show what it asked for, and run.max_revise_rounds sets how "
+            "many it gets"
+        ),
+        # Says what the machine could not do, and deliberately does not describe the literature.
+        # The reader must not go looking for a thin corpus: the corpus was never re-judged.
+        DatasetContextTerminalKind.TOPIC_EVIDENCE_REVISE_NO_REPAIR_AVAILABLE: (
+            "the independent reviewer asked for a change to the topic-evidence brief that this "
+            "host has no repair for, so the repair step returned the brief unchanged and no "
+            "revision round was spent; the reviewer never judged a repaired brief, and the "
+            "persisted review shows what it asked for"
         ),
         DatasetContextTerminalKind.TOPIC_EVIDENCE_REVISION_INVALID: (
             "a topic-evidence revision crossed a strict source, scope, or structure boundary; "
@@ -6741,7 +7758,8 @@ def _dataset_context_public_reason(kind: DatasetContextTerminalKind) -> str:
             "incomplete"
         ),
         DatasetContextTerminalKind.CONTEXT_READINESS_REJECTED: (
-            "the source-bound research context did not meet proposal-readiness requirements"
+            "the reviewed topic evidence no longer met the structural requirements it met when it "
+            "was reviewed, so the shared research context could not be compiled"
         ),
         DatasetContextTerminalKind.CONTEXT_VALIDATION_FAILED: (
             "a shared-context artifact failed strict validation; shared-context processing is "
@@ -6767,7 +7785,16 @@ def _topic_inquiry_public_reason(
     disposition: TopicEvidenceInquiryDisposition,
     gap_dimensions: Sequence[str],
 ) -> str:
-    """Render only controlled semantic labels from the typed inquiry, never raw model prose."""
+    """Render only controlled semantic labels from the typed inquiry, never raw model prose.
+
+    Every member of the enum gets its OWN branch and an unhandled member raises, because the
+    fall-through this function used to end with was not a neutral summary: it asserted an upheld
+    insufficiency. When R6 added ``NO_ESSENTIAL_GAP`` -- the disposition that means the inquiry
+    found nothing scope-essential missing -- that answer inherited the sentence for its exact
+    opposite, and the sentence travels to the run README, the persisted ``ceiling_reason_detail``,
+    and the Question Scientist's topic pack. A new member must fail loudly here rather than be
+    published as a verdict nobody returned.
+    """
 
     labels = [_TOPIC_DIMENSION_PUBLIC_LABELS[item] for item in gap_dimensions]
     gap_text = ", ".join(labels) if labels else "one or more essential literature dimensions"
@@ -6782,10 +7809,23 @@ def _topic_inquiry_public_reason(
             "after one source-locked repair, independent review still found insufficient "
             f"source-backed coverage for {gap_text}"
         )
-    return (
-        "the topic-evidence cause inquiry confirmed insufficient source-backed coverage for "
-        f"{gap_text}"
-    )
+    if disposition == TopicEvidenceInquiryDisposition.NO_ESSENTIAL_GAP:
+        # Deliberately names no dimension: the schema forbids this disposition alongside any
+        # scope-essential absence, indeterminacy, or packet-present omission, so the essential-only
+        # gap list the caller computes is empty by construction and `gap_text` would fall back to
+        # "one or more essential literature dimensions" -- inventing the very gap the inquiry
+        # just said does not exist.
+        return (
+            "the topic-evidence cause inquiry found no scope-essential literature dimension "
+            "missing from the reviewed packet, so the reviewer's coverage concern was not "
+            "established as essential and planning continues at provisional authority"
+        )
+    if disposition == TopicEvidenceInquiryDisposition.UPHOLD_INSUFFICIENT:
+        return (
+            "the topic-evidence cause inquiry confirmed insufficient source-backed coverage for "
+            f"{gap_text}"
+        )
+    raise ValueError(f"unhandled topic-evidence inquiry disposition: {disposition.value}")
 
 
 def _stage_d_public_failure_reason(failure_kind: StageDFailureKind) -> str:
@@ -6796,6 +7836,14 @@ def _stage_d_public_failure_reason(failure_kind: StageDFailureKind) -> str:
     it sends the reader to check provider status instead of their configuration or inputs.
     """
 
+    if failure_kind == StageDFailureKind.ALL_QUALITY_DROPPED_HOST_STRUCTURAL:
+        # Every candidate was dropped by a host structural check, so nothing here is about the model
+        # service and the reader must not be sent to check provider status -- which is where the
+        # fall-through default sent them.
+        return (
+            "question-family generation could not complete because every generated family was "
+            "dropped by a structural provenance or safety check before any review saw it"
+        )
     if failure_kind == StageDFailureKind.STRUCTURED_OUTPUT_INVALID:
         return (
             "question-family generation could not complete because the model's reply did not "
@@ -6835,7 +7883,10 @@ def _stage_d_run_terminal(
 ) -> RunResult:
     """Persist one finite Stage-D scientific or infrastructure terminal."""
     failure_kind, failure_class, status = _classify_stage_d_failure(exc)
-    scientific = failure_kind == StageDFailureKind.ALL_QUALITY_DROPPED
+    # N3: the CLASS decides what the reader is told, not the kind. ALL_QUALITY_DROPPED covers both a
+    # judged reject and a batch every host structural check emptied, and only the first may tell the
+    # reader their science was found wanting or hand them a settled scientific end.
+    scientific = failure_class == FailureClass.SCIENTIFIC
     # A structured-output rejection says only "structured_output_invalid" in str(exc); the field
     # detail lives on the error and is the only thing that distinguishes a truncated response from
     # a malformed field. It stays internal, like every other raw-exception rationale here.
@@ -6951,6 +8002,20 @@ def _classify_stage_d_failure(
     exc: Exception,
 ) -> tuple[StageDFailureKind, FailureClass, StageStatus]:
     if isinstance(exc, NoValidFamilies):
+        # N3: an emptied batch is a scientific terminal only if something JUDGED the families.
+        # Nothing at this seam does: every blocker the quality report can raise is a deterministic
+        # host predicate (the proposal firewall, the three provenance allowlists, the structural
+        # completeness checks), and the independent review of families happens later. An empty
+        # `blocker_kinds` means no blocker fired at all -- the batch never parsed -- which is equally
+        # unjudged. A kind absent from the host set is treated as a verdict, so a genuinely
+        # scientific blocker added here still records SCIENTIFIC.
+        kinds = set(exc.blocker_kinds)
+        if kinds <= HOST_STRUCTURAL_FAMILY_BLOCKER_KINDS:
+            return (
+                StageDFailureKind.ALL_QUALITY_DROPPED_HOST_STRUCTURAL,
+                FailureClass.VALIDATION_FAILURE,
+                StageStatus.INFRASTRUCTURE_FAILED,
+            )
         return (
             StageDFailureKind.ALL_QUALITY_DROPPED,
             FailureClass.SCIENTIFIC,
@@ -6970,6 +8035,11 @@ def _classify_stage_d_failure(
         )
     if isinstance(exc, StructuredModelProviderError):
         structured_mapping = {
+            # Lands with the enum member, per the #138 lesson recorded below: this dict is a DIRECT
+            # subscript, so an unmapped kind is a KeyError, not a missing label.
+            StructuredModelFailureKind.ACCOUNT_EXHAUSTED: (
+                StageDFailureKind.PROVIDER_ACCOUNT_EXHAUSTED
+            ),
             StructuredModelFailureKind.AUTHENTICATION: StageDFailureKind.PROVIDER_AUTHENTICATION,
             StructuredModelFailureKind.RATE_LIMIT: StageDFailureKind.PROVIDER_RATE_LIMIT,
             StructuredModelFailureKind.TIMEOUT: StageDFailureKind.PROVIDER_TIMEOUT,
@@ -7169,9 +8239,14 @@ def maybe_terminalize_stage_receipt(
 
 
 # --- CLI orchestration entrypoint -----------------------------------------------------------------
+
+
 def retrieve_topic_source_table(
-    config: MaieusisProjectConfig, scope: ResolvedResearchScope
-) -> TopicSourceTable:
+    config: MaieusisProjectConfig,
+    scope: ResolvedResearchScope,
+    *,
+    selector_provider: StructuredModelProvider | None = None,
+) -> tuple[TopicSourceTable, TopicSourceSelectionActivity]:
     """LIVE generic topic retrieval for the research intent (external HTTP — the user's gated step).
 
     Domain-neutral: each public source family receives one acquisition for each unique scope term.
@@ -7195,21 +8270,62 @@ def retrieve_topic_source_table(
             topic_terms=terms,
             records=[],
             search_traces=[],
-            max_records=20,
+            max_records=TOPIC_SOURCE_KEPT_COUNT,
+        ), TopicSourceSelectionActivity(
+            status="literature_disabled", target_size=TOPIC_SOURCE_KEPT_COUNT
         )
 
     from ..retrieval.generic_topic_lanes import build_generic_topic_evidence_query_plan
+    from ..retrieval.openalex_scope import resolve_openalex_field_id
     from ..retrieval.topic_sources import TopicSourceHarvester
 
+    # The pool is deliberately larger than what is kept. Everything beyond the kept count used to be
+    # thrown away unread, and the throwing-away was done by a rank that knows only topical
+    # relevance: on the 2026-08-16 climate leg the ONLY record bearing on `dataset_resource_reuse`
+    # sat at rank 52 of 100 and was evicted, after which the reviewer failed the corpus for having
+    # no reuse evidence. Retrieval cannot see that; something that reads the abstracts can.
+    #
+    # Costs no extra request: the eight-per-query results were already paid for and discarded.
+    harvester = TopicSourceHarvester(
+        max_records=TOPIC_SOURCE_CANDIDATE_POOL,
+        openalex_email=config.literature.openalex_email,
+    )
+    # The user's own field, in the user's own words, resolved against OpenAlex's own taxonomy. Both
+    # ways of having no field fail open to the byte-identical pre-card request: none named, or one
+    # named that OpenAlex has no category for. An emptied lane is worse than an over-full one, and
+    # the preflight pool check is where a field that empties lanes is supposed to be caught.
+    research_field = config.literature.research_field.strip()
+    openalex_field_id = ""
+    if research_field and not config.is_demo:
+        openalex_field_id = resolve_openalex_field_id(
+            research_field,
+            http_get_json=harvester.http_get_json,
+            openalex_email=harvester.openalex_email,
+            openalex_api_key=harvester.openalex_api_key,
+        )
     plan = build_generic_topic_evidence_query_plan(
         scope,
         source_profile=config.literature.source_profile,
         elicit_api_key=os.getenv("ELICIT_API_KEY", ""),
+        openalex_field_id=openalex_field_id,
     )
-    return TopicSourceHarvester(
-        max_records=20,
-        openalex_email=config.literature.openalex_email,
-    ).harvest(plan)
+    pool = harvester.harvest(plan)
+    selection = select_topic_sources(
+        provider=selector_provider,
+        candidates=pool.records,
+        scope_terms=scope.terms,
+        topic_description=str(getattr(config.research_intent, "topic_description", "") or ""),
+        target_size=TOPIC_SOURCE_KEPT_COUNT,
+    )
+    return (
+        pool.model_copy(
+            update={"records": selection.records, "max_records": TOPIC_SOURCE_KEPT_COUNT}
+        ),
+        # The harvester's own cap sits directly upstream of the selector's, so a pool_size of 200
+        # recorded without it reads as the whole harvest. Carried onto the activity here because
+        # this is the only place both numbers exist.
+        selection.activity.model_copy(update={"distinct_after_dedupe": pool.distinct_after_dedupe}),
+    )
 
 
 def ingest_paper_drafts(

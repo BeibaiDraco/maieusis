@@ -10,6 +10,11 @@ from .stage_receipt import FailureClass, StageStatus
 
 class StageDFailureKind(StrEnum):
     ALL_QUALITY_DROPPED = "all_quality_dropped"
+    #: N3: the same zero-survivor shape, but every blocker that emptied the batch was a deterministic
+    #: HOST check -- the proposal firewall, a provenance allowlist, a structural completeness rule.
+    #: It needs its own member because this record binds kind to class, and binding a host refusal to
+    #: SCIENTIFIC is what made such a run unresumable and unshepherdable.
+    ALL_QUALITY_DROPPED_HOST_STRUCTURAL = "all_quality_dropped_host_structural"
     PROMPT_BUDGET = "prompt_budget"
     PROVIDER_ACCOUNT_EXHAUSTED = "provider_account_exhausted"
     PROVIDER_AUTHENTICATION = "provider_authentication"
@@ -123,7 +128,11 @@ class StageDOutcomeRecord(BaseModel):
             raise ValueError("successful Stage-D outcome requires a retained batch and lineage")
         if self.retained_batch_path and not retained:
             raise ValueError("retained Stage-D batch requires retained candidate lineage")
-        if self.failure_kind == StageDFailureKind.ALL_QUALITY_DROPPED and (
+        all_dropped = {
+            StageDFailureKind.ALL_QUALITY_DROPPED,
+            StageDFailureKind.ALL_QUALITY_DROPPED_HOST_STRUCTURAL,
+        }
+        if self.failure_kind in all_dropped and (
             not self.processed_candidates
             or any(
                 item.disposition != StageDCandidateDisposition.QUALITY_DROPPED
@@ -133,7 +142,7 @@ class StageDOutcomeRecord(BaseModel):
             raise ValueError(
                 "all-quality-dropped Stage-D outcome requires complete quality-drop lineage"
             )
-        if self.failure_kind == StageDFailureKind.ALL_QUALITY_DROPPED and self.retained_batch_path:
+        if self.failure_kind in all_dropped and self.retained_batch_path:
             raise ValueError("all-quality-dropped outcome cannot retain a batch")
         return self
 
@@ -161,6 +170,8 @@ def _stage_d_expected_state(
         return StageStatus.COMPLETE, None
     if failure_kind == StageDFailureKind.ALL_QUALITY_DROPPED:
         return StageStatus.SCIENTIFIC_TERMINAL, FailureClass.SCIENTIFIC
+    if failure_kind == StageDFailureKind.ALL_QUALITY_DROPPED_HOST_STRUCTURAL:
+        return StageStatus.INFRASTRUCTURE_FAILED, FailureClass.VALIDATION_FAILURE
     if failure_kind == StageDFailureKind.PROMPT_BUDGET:
         return StageStatus.INFRASTRUCTURE_FAILED, FailureClass.PROMPT_BUDGET
     if failure_kind == StageDFailureKind.CONFIGURATION_UNAVAILABLE:

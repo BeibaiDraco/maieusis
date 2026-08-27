@@ -1,48 +1,52 @@
-# Paper — Annular Modes in the Extratropical Circulation. Part II: Trends — David W. J. Thompson and John M. Wallace
+# Paper — Thompson, D. W. J., J. M. Wallace, and G. C. Hegerl (2000), Annular Modes in the Extratropical Circulation. Part II: Trends.
 
 - Review authority: `ai_reviewed` (automated unless expert)
 
 ## Question the system extracted
 
-How similar are recent Northern and Southern Hemisphere climate trends to the annular modes identified in month-to-month circulation variability, what fractions of the observed trends are linearly congruent with those modes versus independent of them, and what seasonal and dynamical relationships do the trend patterns reveal?
+How closely do recent Northern and Southern Hemisphere climate trends resemble the annular modes identified from month-to-month variability, what fractions of those trends are linearly congruent with the annular-mode indices, how does that relationship vary by season and atmospheric level, and what do the patterns imply about possible dynamical, chemical, and externally forced contributions to the trends?
 
 ## The scientific contrast
 
-Observed climate trends that are linearly congruent with annular-mode variability versus residual trends that are linearly independent of the annular-mode indices; the paper also contrasts the better-resolved Northern Hemisphere partitioning with the more limited Southern Hemisphere assessment.
+Whether observed multidecadal trends can be decomposed into components congruent with the annular-mode patterns and residual components, rather than being treated as a single undifferentiated climate-change signal; and, for ozone and stratospheric changes, whether contemporaneous and lagged relationships are consistent with dynamical feedbacks in addition to chemical depletion.
 
 Competing explanations the paper weighed:
-- Recent trends primarily reflect a drift toward the high-index polarity of the annular modes.
-- Residual trends reflect other climate influences, including greenhouse-gas and sulfate-aerosol forcing or ENSO-like interdecadal variability.
-- Ozone depletion, sea-surface-temperature variability, volcanic forcing, or other external forcings may have induced AO-like responses.
-- Dynamical and ozone-related positive feedbacks may amplify an externally forced response rather than constitute its primary cause.
-- For ozone, contemporaneous AO relationships may underestimate delayed relationships because of persistence or memory in the ozone field.
+- The observed trends may primarily reflect a drift toward the high-index polarity of the annular modes.
+- Residual trends may reflect broader global-warming-like tropospheric warming and stratospheric cooling rather than annular-mode variability.
+- ENSO-like interdecadal variability and the 1976–77 regime shift may explain some regional North Pacific residual trends.
+- Stratospheric ozone depletion, increasing greenhouse gases and aerosols, Atlantic sea-surface-temperature variability, or volcanic forcing may have forced annular-mode responses.
+- For ozone, photochemical depletion may initiate the trend while circulation changes associated with the annular modes act as positive feedbacks; ozone autocorrelation and seasonal memory may extend the apparent relationship beyond the active season.
 
-What would tell them apart: Partitioning each observed trend into a component linearly congruent with the monthly annular-mode index and a residual component, followed by comparison across variables, seasons, hemispheres, and lagged ozone relationships.
+What would tell them apart: The paper discriminates these possibilities by regressing climate-field time series on monthly annular-mode indices, partitioning total trends into congruent and residual components, comparing alternative AO definitions, examining hemispheric and seasonal structure, and testing lagged ozone relationships across seasons.
 
 ## Background and motivation
 
-- Recent indices related to the Northern Hemisphere annular mode have drifted toward their high-index polarity, with corresponding trends in sea-level pressure, geopotential height, and surface air temperature; similar Southern Hemisphere trends have also been documented.
-- The companion Part I paper found that the leading modes of month-to-month extratropical circulation variability in both hemispheres have annular structures, involving polar-cap mass seesaws, out-of-phase westerly momentum variations, and strong temperature and ozone perturbations over the polar cap during active seasons.
-- Recent Northern Hemisphere winter climate trends resemble the spatial structure of the Arctic Oscillation: they include falling sea-level pressure over the Arctic, warming over high-latitude Eurasia, strengthening subpolar westerlies, and lower-stratospheric and ozone changes.
-- Several mechanisms could contribute to the annular-mode trends, including ozone depletion, increasing greenhouse gases and aerosols, Atlantic sea-surface-temperature variability, and volcanic forcing; the paper states that it remains unresolved which mechanisms are primary causes and which operate as positive feedbacks.
+- Indices related to the Northern Hemisphere annular mode have exhibited a pronounced drift toward the high-index polarity during recent decades, with corresponding trends in sea-level pressure, geopotential height, and surface air temperature.
+- Trends resembling the Southern Hemisphere annular mode have also been documented.
+- The leading month-to-month variability modes in the Northern and Southern Hemisphere extratropical general circulation are annular modes with related zonally symmetric structures, westerly-momentum variations, and stratospheric temperature and ozone perturbations.
+- Recent Northern Hemisphere climate trends are strongest during January–March, and their spatial structure is remarkably similar to the Arctic Oscillation signature in month-to-month variability.
+- Several mechanisms may contribute to annular-mode trends, including stratospheric ozone depletion, increasing greenhouse gases and aerosols, Atlantic sea-surface-temperature variability, and volcanic forcing; the source states that it remains unresolved which mechanisms are primary causes and which act as positive feedbacks.
+- In the Southern Hemisphere, evidence suggests a drift toward the high-index polarity, but sparse high-latitude observations and concerns about NCEP-NCAR reanalysis reliability make the trend decomposition less certain.
 
 ## Why this question mattered
 
-The decomposition clarifies how much of consequential recent climate change—including warming, pressure and wind changes, stratospheric cooling, and ozone depletion—has the spatial and temporal structure of annular-mode variability, while separating patterns that require other explanations. It also frames the unresolved attribution problem of distinguishing primary external causes from dynamical positive feedbacks.
+The design makes it possible to determine whether prominent recent climate trends share a common circulation structure, to distinguish annular-mode-related changes from residual warming, cooling, and regional variability, and to clarify how circulation, stratospheric conditions, and ozone depletion may be related across seasons and hemispheres.
 
 ## What the dataset offered (as the paper used it)
 
-Observational trend analysis. The authors estimate total linear trends and partition them into components linearly congruent with, and linearly independent of, monthly annular-mode indices, principally the Northern Hemisphere Arctic Oscillation index and the Southern Hemisphere annular-mode index.
+Observational trend analysis for 1968–97 or variable-specific available periods, including construction of annular-mode indices, regression of climate fields on the indices, and partitioning of observed trends into components linearly congruent with and linearly independent of the indices. The analysis compares NH and SH seasonality and examines ozone memory across seasons.
 
-- Population: Northern and Southern Hemisphere extratropical climate fields, with analyses focused on regions poleward of specified latitude bands and on the period 1900–1997 or shorter instrument-specific records.
-- Measurements: standardized leading principal-component time series of monthly sea-level pressure or 850-hPa height, linear trends at each grid point, regression coefficients between climate-field time series and annular-mode indices, linearly congruent and residual trend components, correlations and lag correlations, area-averaged temperature, pressure, ozone, and related fields
+- Population: Northern and Southern Hemisphere extratropical atmosphere and related climate fields; NH analyses generally use regions poleward of 20°N and SH analyses regions poleward of 20°S, with variable-specific polar-cap averages.
+- Measurements: surface air temperature, sea level pressure and geopotential height, precipitation, 50-hPa height, lower-stratospheric temperature, total column ozone, tropopause pressure, zonal-mean zonal wind, meridional circulation, AO and SH annular-mode index time series
 
 ## Key citations used in forming the question
 
 Public citation details are represented by the paper context; internal citation identifiers are omitted from this gallery.
+
 ## Open uncertainties (unmet evidence)
 
-- parser-owned text was usable, but the parse completeness report recorded limitations; review before authority raise.
+- Parent-dataset or dataset-release relation is not fully identifiable from the parser-owned source spans; no single parent dataset paper is named.
+- The source packet does not expose a complete standalone methods section, although the analysis procedure is described in the available spans.
 
 ## If this looks wrong
 

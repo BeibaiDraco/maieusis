@@ -1,17 +1,15 @@
-> **PROVISIONAL.** This source-bound inspiration has not earned verified authority. Planning continues through the ordinary route, but every downstream plan and dossier remains provisional until the inputs are independently reviewed.
+# Question family — Wave forcing versus vortex susceptibility before rapid weakening
 
-# Question family — Recurrent states versus transition-centered organization of the polar stratosphere
-
-- Shared scientific tension: Long-lived circulation states may be substantive recurrent organizations of the system, but apparent regimes can also emerge from continuous evolution whose scientifically distinctive structure is concentrated near transitions.
-- Summary: Tests whether large-scale stratospheric variability is most informatively organized as recurrent states or as dynamically distinctive transition episodes, without assuming that either representation is uniquely physical.
+- Shared scientific tension: Upward planetary-wave forcing is central to vortex variability, but the literature remains divided over whether unusually strong forcing or a preconditioned, receptive vortex state better distinguishes rapid weakening episodes.
+- Summary: Tests whether rapid polar-vortex weakening is organized mainly by anomalous wave forcing or by the susceptibility of the pre-existing stratospheric state. The two variants separate event-level precursor discrimination from a state-conditioned response comparison.
 - Evidence basis: **abstract-only** — this family's supporting literature is not fulltext-verified (full text was not available to this system).
 
 ## Variants
 
-- **State-centered representation test** — Do recurrent vertically organized circulation states recur robustly across seasonal and multi-decade partitions, and do they provide information about persistence beyond a continuous circulation description?
-  - distinct from siblings: This variant asks whether recurrent states themselves are robust and informative; its sibling treats transition episodes, rather than state occupancy, as the primary scientific object.
-- **Transition-centered dynamical contrast** — Are changes in wave activity, eddy forcing, and vertical circulation organization concentrated around transitions between circulation states, or do they evolve similarly during matched within-state intervals?
-  - distinct from siblings: This variant compares transition episodes with matched within-state intervals and asks whether change is localized near boundaries; it does not test whether a state inventory is intrinsically recurrent.
+- **Event-level precursor discrimination** — Do histories of anomalous wave activity and eddy forcing distinguish rapid polar-vortex weakening episodes more consistently than histories of the pre-existing zonal-mean circulation?
+  - distinct from siblings: This variant asks which history best discriminates episode onset; it does not ask whether identical forcing has state-dependent consequences.
+- **State-conditioned forcing response** — Does the subsequent vortex response to comparable wave-forcing episodes differ systematically between initially susceptible and resistant stratospheric circulation states?
+  - distinct from siblings: This variant holds forcing histories conceptually comparable and contrasts responses across antecedent states, whereas its sibling ranks precursor histories as event discriminators.
 
 ## If this looks wrong
 
@@ -20,18 +18,18 @@ This is a diagnostic summary, not an approval, and it does not claim any questio
 
 ---
 
-# Question family — Wave forcing, circulation response, and state-dependent feedback
+# Question family — Scientific robustness across vortex-state and event definitions
 
-- Shared scientific tension: Wave and eddy activity may actively precede circulation transitions, while the circulation state may simultaneously regulate wave propagation and the persistence of the response; covariation alone cannot distinguish these directions.
-- Summary: Separates two temporal interpretations of wave–mean-flow interaction: forcing as an antecedent of circulation change and background circulation as a conditioner of the response to forcing.
+- Shared scientific tension: Threshold events, continuous circulation states, and alternative vertical representations may identify different phenomena, so an apparent dynamical conclusion may be robust or may be induced by the chosen definition.
+- Summary: Asks whether substantive conclusions about polar-vortex variability survive changes in representation. One variant concerns event identity and lifecycle structure; the other concerns the stability of precursor relationships.
 - Evidence basis: **abstract-only** — this family's supporting literature is not fulltext-verified (full text was not available to this system).
 
 ## Variants
 
-- **Forcing-first temporal-ordering test** — Do episodes of anomalous wave activity or eddy forcing consistently precede vertically coherent circulation transitions rather than merely accompanying or following them?
-  - distinct from siblings: This variant evaluates whether forcing anomalies precede transitions; the sibling asks whether the same forcing has different consequences depending on the pre-existing circulation state.
-- **Background-state effect-modification test** — Does the pre-existing vertical circulation state condition whether comparable wave or eddy-forcing episodes produce persistence, transition, or rapid recovery?
-  - distinct from siblings: This variant holds the forcing episode conceptually comparable and contrasts outcomes across antecedent states, whereas its sibling tests whether forcing temporally precedes circulation change at all.
+- **Construct and lifecycle robustness** — Which features of rapid weakening and strengthening lifecycles remain stable when the polar vortex is represented by threshold events versus recurrent continuous circulation states?
+  - distinct from siblings: This variant tests whether the identity and lifecycle of states are stable across representations; it does not focus on whether a particular precursor association survives those choices.
+- **Relationship robustness across definitions** — Are inferred associations between wave-forcing histories and subsequent vortex transitions robust across alternative circulation indices, vertical representations, and event thresholds?
+  - distinct from siblings: This variant treats the wave-forcing association as the focal outcome and varies its measurement context; the sibling treats the state and lifecycle taxonomy itself as the focal outcome.
 
 ## If this looks wrong
 
@@ -40,18 +38,18 @@ This is a diagnostic summary, not an approval, and it does not claim any questio
 
 ---
 
-# Question family — Persistence, apparent memory, and path-dependent recovery
+# Question family — Lifecycle asymmetry and dynamical memory in vortex disturbances
 
-- Shared scientific tension: Low-frequency persistence may arise from state switching without long intrinsic memory, while asymmetric trajectories and recovery may indicate that forcing history carries predictive information beyond the current circulation state.
-- Summary: Distinguishes persistence generated by recurrent state occupancy from path dependence in which circulation outcomes depend on prior forcing and transition history.
+- Shared scientific tension: Vortex weakening and recovery may be approximately reverse expressions of one circulation mode, or recovery may follow distinct, history-dependent pathways with persistent dynamical memory.
+- Summary: Examines whether vortex disturbance lifecycles are reversible or history-dependent. One variant compares onset and recovery pathways; the other asks whether forcing history organizes recovery among similarly weakened states.
 - Evidence basis: **abstract-only** — this family's supporting literature is not fulltext-verified (full text was not available to this system).
 
 ## Variants
 
-- **State-switching explanation of aggregate persistence** — Can apparent long-memory behavior in polar-stratospheric circulation be accounted for by seasonal evolution and switching among recurrent states, or does substantial persistence remain within states?
-  - distinct from siblings: This variant explains aggregate low-frequency behavior through state occupancy and within-state persistence; its sibling focuses on whether two trajectories with similar current states diverge because of different prior histories.
-- **Path-dependent recovery test** — For similar displaced circulation states, does prior wave-forcing and transition history predict distinct recovery trajectories beyond the information in the current vertical state and seasonal context?
-  - distinct from siblings: This variant compares future recovery among similar current states with different histories; it is not a decomposition of aggregate persistence into state-switching and within-state components.
+- **Reversibility of onset and recovery** — Are the vertical circulation and wave–mean-flow pathways into major vortex weakening the time reverse of recovery, or do onset and recovery exhibit reproducible lifecycle asymmetry?
+  - distinct from siblings: This variant compares the geometry of entire onset and recovery trajectories; it does not condition recovery on alternative earlier forcing histories.
+- **History-conditioned recovery** — Among episodes reaching comparable vortex weakness, do distinct preceding forcing histories predict different recovery persistence or vertical progression?
+  - distinct from siblings: This variant holds the attained weak state approximately comparable and tests whether prior history predicts later recovery; the sibling directly compares onset and recovery trajectories for reversibility.
 
 ## If this looks wrong
 
@@ -60,18 +58,18 @@ This is a diagnostic summary, not an approval, and it does not claim any questio
 
 ---
 
-# Question family — Extreme polar-vortex episodes as distinct pathways and recovery classes
+# Question family — Regime dependence in wave–mean-flow organization
 
-- Shared scientific tension: Extreme polar-vortex disruptions may be amplified members of ordinary variability with a common lifecycle, or they may comprise heterogeneous dynamical pathways whose onset and recovery cannot be summarized by one composite.
-- Summary: Asks whether nominally similar extreme disruptions share a common lifecycle or divide into scientifically meaningful onset and recovery pathways.
+- Shared scientific tension: A common wave–mean-flow relationship may organize polar-vortex variability across regimes, or its strength and meaning may change with circulation state and vertical expression.
+- Summary: Tests whether wave–mean-flow relationships are portable across circulation regimes. One variant compares weak and strong vortex states; the other compares vertically coherent and vertically confined transition episodes.
 - Evidence basis: **abstract-only** — this family's supporting literature is not fulltext-verified (full text was not available to this system).
 
 ## Variants
 
-- **Antecedent-pathway heterogeneity test** — Do extreme polar-vortex disruptions separate into recurrent onset pathways distinguished by the vertical timing and composition of antecedent wave and eddy forcing?
-  - distinct from siblings: This variant classifies events by antecedent forcing and onset evolution; its sibling distinguishes events by post-disruption recovery and persistence.
-- **Post-event recovery heterogeneity test** — After comparably strong polar-vortex disruptions, are rapid recovery, prolonged displacement, and recurrent disruption associated with distinct vertical circulation and forcing trajectories?
-  - distinct from siblings: This variant conditions on a comparable disruption and distinguishes subsequent outcomes; it does not ask whether different antecedent pathways produce the disruption.
+- **Opposing circulation-regime comparison** — Is the association between wave activity, eddy forcing, and subsequent circulation change symmetric across weak-vortex and strong-vortex regimes?
+  - distinct from siblings: This variant contrasts weak and strong background regimes and asks about sign and response symmetry; it does not classify episodes by vertical coherence.
+- **Vertical-expression regime comparison** — Do vertically coherent vortex transitions exhibit a different wave-forcing history and persistence than transitions confined to a narrower part of the stratospheric column?
+  - distinct from siblings: This variant contrasts vertically coherent and confined transitions while controlling conceptually for local magnitude; its sibling contrasts weak and strong circulation polarities.
 
 ## If this looks wrong
 
@@ -80,18 +78,18 @@ This is a diagnostic summary, not an approval, and it does not claim any questio
 
 ---
 
-# Question family — Propagating episodes versus coherent modes of vertical coupling
+# Question family — Historical stability of ordinary and extreme vortex variability
 
-- Shared scientific tension: Vertical coupling may occur as temporally ordered propagation during discrete episodes, or as a continuously coherent mode spanning heights; either appearance could depend on the chosen representation.
-- Summary: Compares event-first and continuous-mode accounts of coupling across stratospheric heights while treating agreement among diagnostics as evidence to test rather than assume.
+- Shared scientific tension: Multi-decadal stratospheric variability may be historically stable apart from ordinary sampling fluctuations, may shift approximately uniformly, or may change disproportionately in consequential tails.
+- Summary: Tests whether historical variation appears as a broad distributional shift or as selective change in extremes. One variant emphasizes circulation-state tails; the other emphasizes forcing-history tails and their relationship to circulation outcomes.
 - Evidence basis: **abstract-only** — this family's supporting literature is not fulltext-verified (full text was not available to this system).
 
 ## Variants
 
-- **Event-first lagged coupling test** — When upper-stratospheric circulation or wave episodes are defined independently, do lower-stratospheric responses recur with consistent lagged vertical progression, and does that progression differ between ordinary and extreme episodes?
-  - distinct from siblings: This variant defines upstream episodes first and asks about ordered downstream progression; its sibling tests whether a continuous coherent mode is robust across diagnostic representations.
-- **Continuous-mode robustness test** — Is apparent vertical coupling captured by a robust continuous circulation mode across heights, or does coherence dissolve when circulation, wave activity, reference-flow, and forcing perspectives are compared?
-  - distinct from siblings: This variant evaluates cross-diagnostic robustness of continuous vertical coherence and its residuals; it does not require discrete upstream events or temporal propagation.
+- **Circulation-distribution tail stability** — Across the multi-decadal record, do extreme weak and strong vortex states change in step with the central circulation distribution, or do the tails exhibit disproportionate historical variation?
+  - distinct from siblings: This variant treats the circulation distribution itself as the outcome and contrasts its center with weak and strong tails; it does not center the analysis on extreme forcing histories.
+- **Forcing-distribution tail and response correspondence** — Do historically extreme wave-activity or eddy-forcing episodes vary disproportionately relative to ordinary forcing, and is any tail variation mirrored by the distribution of subsequent vortex responses?
+  - distinct from siblings: This variant treats forcing extremes and their response correspondence as the scientific target; the sibling concerns tail behavior of the circulation state regardless of forcing history.
 
 ## If this looks wrong
 
@@ -100,18 +98,18 @@ This is a diagnostic summary, not an approval, and it does not claim any questio
 
 ---
 
-# Question family — Historical change in state occupancy versus within-state dynamics
+# Question family — Stratospheric signatures of downward communication and persistence
 
-- Shared scientific tension: Historical circulation change may arise from redistribution among familiar dynamical states, alteration of the states themselves, or nonphysical inhomogeneity; aggregate change cannot distinguish these possibilities.
-- Summary: Decomposes multi-decade circulation change into changes in how often and how long states occur versus changes in the vertical and forcing structure expressed within comparable states.
+- Shared scientific tension: Downward-extending anomalies may represent a distinct, dynamically organized mode of stratospheric evolution, or they may be a descriptive by-product of persistent vortex disturbances and measurement choices.
+- Summary: Develops observationally bounded questions about downward-propagating stratospheric anomalies without claiming surface impacts. One variant asks whether propagation is a distinct state transition; the other asks whether a mechanistic proxy built from multiple stratospheric ingredients carries information beyond vortex weakness alone.
 - Evidence basis: **abstract-only** — this family's supporting literature is not fulltext-verified (full text was not available to this system).
 
 ## Variants
 
-- **State-population change decomposition** — Across the multi-decade record, is historical change in polar-stratospheric circulation expressed primarily through altered occupancy, persistence, or transition pathways among recurrent states?
-  - distinct from siblings: This variant asks whether the population weights and transition behavior of stable states change; its sibling holds state membership conceptually comparable and tests for changing internal structure.
-- **Within-state structural and residual change test** — Within comparable circulation states, is multi-decade change congruent with the established state structure, or does it contain systematic residual changes in vertical organization, wave activity, or eddy forcing?
-  - distinct from siblings: This variant examines changing structure within comparable states and interprets residual organization; it cannot be merged with a state-occupancy question because stable occupancy and stable internal dynamics are separate hypotheses.
+- **Distinct-state test for downward extension** — Do downward-extending stratospheric circulation anomalies form a recurrent transition class with distinctive wave-forcing and recovery histories, rather than simply the most persistent examples of vortex disturbance?
+  - distinct from siblings: This variant asks whether downward extension defines a recurrent transition population; it does not construct or evaluate a multicomponent proxy for that evolution.
+- **Multicomponent proxy comparison** — Can a multicomponent stratospheric proxy combining disturbance persistence, vertical progression, and post-disturbance wave forcing distinguish sustained downward-extending evolution better than vortex weakness alone?
+  - distinct from siblings: This variant compares a multicomponent proxy with vortex weakness at a predictive-association level; the sibling asks whether downward extension constitutes a distinct transition class.
 
 ## If this looks wrong
 

@@ -1,0 +1,42 @@
+# Which qualification run each published demonstration was cut from.
+#
+# `scripts/refresh_demo_release.py` derives every generated block of every `demo_manifest.yaml`
+# from exactly the facts named here plus the operator-local set root, so a manifest can no longer
+# name one run in `run_id` and a different run's build in `science_build_sha256`. That disagreement
+# shipped once: the 2026-08-15 set-3 artifacts were published under the 2026-08-06 demo legs' build
+# and receipt digests, and no gate compared them.
+#
+# The set root is operator-local and deliberately absent here -- it is passed to the refresh
+# command. `leg_receipt` names an in-repo private operator record for the gate to resolve; its path
+# is never copied into a published manifest.
+schema_version: maieusis.release_set/v1
+release: "0.1.1"
+release_contract: release_validation_set/v2
+
+# One private receipt covers the whole set, because the build-once contract makes the set -- not
+# the leg -- the unit that is qualified.
+#
+# FOUR legs from 2026-08-23. The two IBL entries are the same recordings run two ways: `ibl` is
+# `mode: topic_conditioned` anchored on `noise correlations`, `ibl-open` is `mode: open` with
+# `scope_derivation: auto`. They produced entirely different families, which is why both are
+# published. `ibl-open` resolves its run at `<set>/runs/ibl-open/<run_id>`, so the demo id and the
+# run directory share a name and no mapping is needed.
+set_receipt: docs/plans/receipts/2026-08-23-set-d3p9-qualification.yaml
+
+legs:
+  climate:
+    run_id: 20260823T080305Z-1ff154d2
+    showcase_family_ids:
+      - lifecycle-asymmetry-memory
+  ibl:
+    run_id: 20260823T100038Z-46ce083d
+    showcase_family_ids:
+      - accumulation-geometry
+  ibl-open:
+    run_id: 20260823T115241Z-791b5cad
+    showcase_family_ids:
+      - variability-geometry
+  nlb:
+    run_id: 20260823T124544Z-1acbc808
+    showcase_family_ids:
+      - context-dependent-motor-dynamics

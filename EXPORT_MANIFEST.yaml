@@ -2,8 +2,8 @@
 schema_version: 2
 distribution: maieusis
 version: 0.1.1
-tree_digest: eb39874c10c9d137a94e78ae62830288d32f440381374e32e8939d7909059fe0
-file_count: 464
+tree_digest: 51fcbe59044ac9403ff924d3f89f070a2f46c885ac88a0c460bbf265af39591e
+file_count: 532
 projection_sources:
   - source: curated public contract tests
     destination: tests
@@ -72,7 +72,7 @@ files:
   - path: .github/pull_request_template.md
     sha256: 0549a41dff7799c70798676ecb03c9aab08e9183c593535b76e5336841cfb0f4
   - path: .github/workflows/release.yml
-    sha256: ed387e1d6a5ea868306fc81c0b904e4a179cb9f2e5a8a3ae82d5741d10a8400b
+    sha256: 829a8c9330347da417b5394336747cb6088fb8f878e40d18fd6aefd380d72a15
   - path: .github/workflows/tests.yml
     sha256: 06eefb69209f4a1548f6d9f92d54d5979338f9ad72e322b83c387c97e05362cb
   - path: .gitignore
@@ -80,7 +80,7 @@ files:
   - path: AUTHORS.md
     sha256: b21ae18339a47a2daee55dee21c152bcb42f3d2e06406bbf7006686f4ea39a6c
   - path: CHANGELOG.md
-    sha256: db51013ca38a9ad3a0b8c7e68cabeb61e85d273ab43663d15046d467a6d1ddf8
+    sha256: 6723e18de012b968cf197842064b61098f4188a7725e47d2c03efccb8a4f1b7c
   - path: CITATION.cff
     sha256: 4b63be94323ffcf276539ed49d00e7007b5b69f5ee2691fa35aaf86fc5329cdf
   - path: CODE_OF_CONDUCT.md
@@ -96,343 +96,459 @@ files:
   - path: NOTICE
     sha256: ded3ee67a56e5408af5882247ffeb12f5b941924b41ca89a686b9cd4cb58bad8
   - path: README.md
-    sha256: d1d2d1382a3423b4d0bee15af960abc0525028e9e6b5f0ead83b3ee524a22440
+    sha256: 77174825ff7b54a6f5e6ab1e560070a2d242ef4f4eca9a2314ecc843a21cab77
   - path: SECURITY.md
     sha256: 361b53cb526af77d47515786a06bc7a4cee24cad38c914f924a79e1645e8ec6d
   - path: THIRD_PARTY_NOTICES.md
     sha256: 9a019c1aae8412a72abd2956f3785dcba095c07b31dde6a76aff24ada96383ec
+  - path: demos/.release/gallery_editorial.yaml
+    sha256: 37e06347545b75f53cbfa50095410f6aef502e7302a11beb0bdea865d07d731e
+  - path: demos/.release/release_expectations.yaml
+    sha256: 3fe687102bf4339c4af871e56d661238122bf11f5768820631c4de36202bdcb8
+  - path: demos/.release/release_set.yaml
+    sha256: 37a70f495a4ca1be3b8aff9b1973f3dba8e070bea77d0bc93abc4da87186807a
+  - path: demos/ALL_QUESTIONS.md
+    sha256: 20e54a140c04f16286dad2a73461342af4c0d2d2a52ea8b09fc016b191185c54
   - path: demos/PAPER_SOURCES.md
-    sha256: 2f1c5a55350f5a133e99f5f98fd899016b84241ff694f5f5a75a06f99350dfbc
-  - path: demos/QUESTIONS.md
-    sha256: d014db87e1c65e60a0248cfa8cb7f73623ed86f575c5053eddf484be25da5fac
+    sha256: 155a7dd341b5fee6477c72f554185607df9c850e58d670bc5f6e9c9b260e0d3f
+  - path: demos/README.md
+    sha256: 63129b1692a95e81db154837ab297f4fed7abd4168ce8a52938670c4e240cf28
   - path: demos/climate/DATASET_NOTES.md
-    sha256: 08ae45e61cd5ec5a93e5959438e26c3b76714a562816fcc5aa77c7b1d631d6aa
+    sha256: a4fdb59b57c95aa9d2f67790602b7da8264c1e7d9c9e89f96f6e90d6e3717a27
   - path: demos/climate/README.md
-    sha256: 478383dedb8f4560566e0e029d63175edc3022b255c5a9db1d8aa7079dbd53ce
+    sha256: 75316a1dbd18bfdacd7cb7a2ae3232b72dfbe99b32a5545680406936d2117dff
   - path: demos/climate/artifacts/dataset/dataset_narrative.md
-    sha256: a349514a7f8f3d7dcc7693e665580a27afd054877dbfa74a21f0adf51f53ace3
-  - path: demos/climate/artifacts/families/extreme-event-lifecycle-heterogeneity/dossier.md
-    sha256: 7bc925fbaea13209b9d7d9f24e403462c4d923c6ed6fea693a8527305920aaf3
-  - path: demos/climate/artifacts/families/extreme-event-lifecycle-heterogeneity/dossier_detailed.md
-    sha256: 849e235c64f63d448ba8dc43c98a61ce921848613963398bcef0d84635f2cea4
-  - path: demos/climate/artifacts/families/historical-change-in-dynamical-organization/dossier.md
-    sha256: 4fb99ffa0779ca8f04222cb381035eab0c92405b1f2e92354764a324b1ede947
-  - path: demos/climate/artifacts/families/historical-change-in-dynamical-organization/dossier_detailed.md
-    sha256: ac1ec83316d9eff072f22bf4d68dc37d837531813ebd9ddca257c5b4e193d730
-  - path: demos/climate/artifacts/families/persistence-memory-and-hysteresis/dossier.md
-    sha256: 3d63fa228a55055f897061af727454e805c710e915f0d23c91c752bf12a3a0a7
-  - path: demos/climate/artifacts/families/persistence-memory-and-hysteresis/dossier_detailed.md
-    sha256: 4c1440f9b97f73bfbbb9bd8ed7df01f3fb420e7a696caeed5b04d1c469d2c939
-  - path: demos/climate/artifacts/families/state-versus-transition-organization/dossier.md
-    sha256: 73ee5f41ed93018180b440357b1881d5e45053d49ad1be20940cbbe05b085932
-  - path: demos/climate/artifacts/families/state-versus-transition-organization/dossier_detailed.md
-    sha256: ce5d0d81d3a29220424e80ba604f0b24616c8adc5126da8f1fb5480d6abc3a71
-  - path: demos/climate/artifacts/families/vertical-coupling-representations/dossier.md
-    sha256: d1f97c245856f073cdbcce767b8a7441e5b2ef0d1048b70cf7d2283a7204aab8
-  - path: demos/climate/artifacts/families/vertical-coupling-representations/dossier_detailed.md
-    sha256: 151a1b6edaefb0eb49dae549a3eb341fed8b71ef7c3504a3023940acc8d7661c
-  - path: demos/climate/artifacts/families/wave-forcing-and-state-dependence/dossier.md
-    sha256: 4bb7b3f6431fa2b9112aa2803f38012c1575dd366b0fab22e0a7c8361540e7d3
-  - path: demos/climate/artifacts/families/wave-forcing-and-state-dependence/dossier_detailed.md
-    sha256: 2b1567f582acfeb3277fb822923068f4b10f014a025a780ab10dcbce76de1e9c
+    sha256: 998e7be0bbcfc12e6b96b085cda49109a429780448969942dddb8a62336bf13e
+  - path: demos/climate/artifacts/families/definition-robustness/dossier.md
+    sha256: 65114281a34d56d935f5a32e17dee754e721291449418123197a95fa0603bc86
+  - path: demos/climate/artifacts/families/definition-robustness/dossier_detailed.md
+    sha256: cc8e0dd10b271590af21b3faf6b0e413e1cabfd3a1073a06fd6be723368a1be3
+  - path: demos/climate/artifacts/families/distributional-stability/dossier.md
+    sha256: 3744b33d404cd4ec1ab2951ee4c275f663954d8fad9480ba23c399e209a5557b
+  - path: demos/climate/artifacts/families/distributional-stability/dossier_detailed.md
+    sha256: 4e595a06125d29dd0f74e1b43e0ceaa10434f874b3219fd449e35780c1749af9
+  - path: demos/climate/artifacts/families/downward-propagation-proxies/dossier.md
+    sha256: 5b90dbc74560c19f31830ac1d56645a0d0173195ddfe50df3d4b4b3ab74d5dde
+  - path: demos/climate/artifacts/families/downward-propagation-proxies/dossier_detailed.md
+    sha256: 6ea1d4bec7bda3eb40b4242b46b32fef117f47f2cf71978f02601d029e0728a3
+  - path: demos/climate/artifacts/families/lifecycle-asymmetry-memory/dossier.md
+    sha256: 843f2ac49376abf5d5ea695fd5518e99e52dec8559705e961b3cb75e174f7f46
+  - path: demos/climate/artifacts/families/lifecycle-asymmetry-memory/dossier_detailed.md
+    sha256: e8c0710ce6d5b99bde7ed64a8160154d3f4e710e3872e5aaed3ff885d52b6022
+  - path: demos/climate/artifacts/families/precursor-susceptibility/dossier.md
+    sha256: f6384805334adf1f140da785b853c8f87c8b66b19f9c41d9b173367334d91114
+  - path: demos/climate/artifacts/families/precursor-susceptibility/dossier_detailed.md
+    sha256: 16f6ffd046cfb8150c9ba667fd721e0c1e28d5531e9143313d3c68f8bb4b0fd9
+  - path: demos/climate/artifacts/families/wave-mean-flow-regimes/dossier.md
+    sha256: 46463f47a77b869b091f108c215230fd6ff770dfceaa21a1c1254404ffb16059
+  - path: demos/climate/artifacts/families/wave-mean-flow-regimes/dossier_detailed.md
+    sha256: b473f95398227052da6424f6adfcc8a60793d17eea51c361667fae0618c697fb
   - path: demos/climate/artifacts/literature/research_scope.md
-    sha256: 8aedffb6a0e014c60b09c98aa12fe9d26ff26ef208e4f8ddfd0a9c3ae136a3c8
+    sha256: b99f1d1d2e9cf0da883f8ee6717a3d32a5fd99d90bc03121b7f8c9c5c3aa6f24
   - path: demos/climate/artifacts/literature/retrieval_summary.md
-    sha256: 5d695e0f96d8f1a776927132010f5dd633e0ffd937363375bce849aabe09050e
+    sha256: 7d0479da5a783d08fb3469188a7af95149b7f348db2a1a84d3a9e624030740ad
   - path: demos/climate/artifacts/literature/topic_evidence_summary.md
-    sha256: e010d28ea454f211604a7ac904c7792280795cfbc5e17f979c260d9488e897c6
+    sha256: 297b1963dd3b6cb16437daff9fef18ced0a071e5a52cc22a04130cf68fc92cc5
   - path: demos/climate/artifacts/paperbank/formation_traces/01-wallace-gutzler-1981.md
-    sha256: b1bace91ca7cf9a9b5f194dde2bdf6aed4b3e1a4668ce89e8434f75e34717b6e
-  - path: demos/climate/artifacts/paperbank/formation_traces/02-barnston-livezey-1987.md
-    sha256: f8084917512dfd728f1ec65f5bfac482a555b93c2d87159f85abb0c9859481c4
-  - path: demos/climate/artifacts/paperbank/formation_traces/04-lau-1988.md
-    sha256: eb06eb7a2d096b0f79c32258e8be4a945e3398a7268a3f2daff53900d61d2d5f
-  - path: demos/climate/artifacts/paperbank/formation_traces/05-hoskins-hodges-2002.md
-    sha256: 12110de65f62f749b9972249df1c36edfbaaffc90b7e23ee72d926364d29270a
+    sha256: b1834fff3a0d7c0da513fb13f07be9496dd70f6ba0e57c528fc5d44bd843103b
+  - path: demos/climate/artifacts/paperbank/formation_traces/06-hurrell-1995.md
+    sha256: 2b8cd18da8d12726d7216d7a202085ee017fae0be0cb15c72ccbace174a87e5b
   - path: demos/climate/artifacts/paperbank/formation_traces/07-thompson-wallace-2000-part-i.md
-    sha256: 989af8bb3330a04f5b1f0594fc2ae348d497c701a532fcf8cb12c5b8da044631
-  - path: demos/climate/artifacts/paperbank/formation_traces/08-thompson-wallace-hegerl-2000-part-ii.md
-    sha256: 9b791ca70eea385bc22913d55503db5e4ee7c0bef0cde1235b993eb5bec0e3d7
+    sha256: bd2caefb16ceb9ce2dd8fcbf92c4f71590f775f8a85e90274ae42e49b147dc3f
   - path: demos/climate/artifacts/paperbank/formation_traces/10-holton-tan-1980.md
-    sha256: a3957ca6307b8c9161aad0caa4874545d85907082bddfcd47a67d251972bdf45
-  - path: demos/climate/artifacts/paperbank/formation_traces/11-baldwin-dunkerton-2001.md
-    sha256: 5cbee11e52f4fd1400d485e13d762f485b4b29e7079a0139f6993124243c8ddd
-  - path: demos/climate/artifacts/paperbank/formation_traces/13-wernli-schwierz-2006.md
-    sha256: b042d56af4a49b2b2ccdf14e4ca6bc3eb99d5d28fd1656007d05583dd091ea93
+    sha256: d23ffe7588d8acf1a2216c2f87e0b3b20f33559fac0e734183e7db4b3d267143
   - path: demos/climate/artifacts/paperbank/formation_traces/14-zhu-newell-1998.md
-    sha256: 48ddb4ba786dafb893afc032b83f3f91bc7f8f40e10a539d1955de35312a0d46
+    sha256: b6ef42f24f6997974903b0bf6ed4ab8c2466abc8685b8271fd65155398ea353f
   - path: demos/climate/artifacts/paperbank/formation_traces/16-taszarek-et-al-2021.md
-    sha256: e05056b0712b5bd607832564fb861df713d1e84ac935a42ebfe425e6672dbab7
+    sha256: 716bb606e02ca6482230ed2a225fcbb638e281588a7f504c229fd36ae202a482
   - path: demos/climate/artifacts/paperbank/formation_traces/17-wills-et-al-2022-author-manuscript.md
-    sha256: c85263050d26a658303fd41ac77c5880527cbb5f524f4a29736b923464e0a122
+    sha256: fc98c301ceccd9372530b26d7ad78a52f3fc6e45f09f5ec881e58c0026768e1c
+  - path: demos/climate/artifacts/paperbank/formation_traces/19-rousi-et-al-2022.md
+    sha256: c96786e941e00c9000c0b1ce21fa58d3c0de493b070d395e8ee2fd52e38fb8fd
+  - path: demos/climate/artifacts/paperbank/formation_traces/20-shaw-miyawaki-2024.md
+    sha256: 8ca7619b2854256031767a5eea5ebd42b6ffba975b9e577a3da3250b9ddf5c60
   - path: demos/climate/artifacts/paperbank/paperbank_summary.md
-    sha256: 42b8c01b73df54218290fd12381d83505fce8f89e681b032d132a132f4a9046c
+    sha256: 728e366a172bcf9cf75a6a3dfa6ddbec5e853330fb877ec7eb995bb309960359
   - path: demos/climate/artifacts/paperbank/papers/01-wallace-gutzler-1981.md
-    sha256: 30b5244be42e5e3c6d15ba5b20d4b3dc11e3ea436e823bddb6491ff8431e8e90
+    sha256: bb6ea46422fe63db8b1aff303660d2e8e00e5c653d3c9a02b6e3bbf3b0ad40cb
   - path: demos/climate/artifacts/paperbank/papers/02-barnston-livezey-1987.md
-    sha256: 7e80737eefac72d7d94f60a829ba93e324d8d45fd60f1584668d43f44b4a34b9
+    sha256: 04d0302080d472dec7fbdf6a7729a057ce651d74d004dd9a5b7a58f8f1b5fd02
   - path: demos/climate/artifacts/paperbank/papers/03-blackmon-et-al-1977.md
-    sha256: e595b69bfb055ad182f0076c246a7e91893c958e097c99db82ea870cced95e25
+    sha256: c90f47316dcab29e66db8ee83ec9e94c61b476851ad0be2527b0dec5023406b6
   - path: demos/climate/artifacts/paperbank/papers/04-lau-1988.md
-    sha256: 3062802aa952d0ce082dff025e2161dcfbb15d16a95433cd58a2db8b0364c440
+    sha256: b5fa17718c9414bef8791418b24cd7d269b564b79c265d4d17ed4e7e2c269743
   - path: demos/climate/artifacts/paperbank/papers/05-hoskins-hodges-2002.md
-    sha256: 8f1b031efe79e927be26cd3966e9f4f5a2bab785637a598b41557c3f4a42d1f7
+    sha256: 9b85376e08a1447c7a74afe99bd73a74530792820a107b994ab6e1db50023c5f
   - path: demos/climate/artifacts/paperbank/papers/06-hurrell-1995.md
-    sha256: 45aa5ede472ee8a760c9622e1adc08b36ac75cbb96798f8feb3b928c875327c3
+    sha256: 0c797e265072438e6c320e29b87ad771ad2aeca99ed0a4c16cde74303d7913ec
   - path: demos/climate/artifacts/paperbank/papers/07-thompson-wallace-2000-part-i.md
-    sha256: 91c55c97dfb8b1bc2151c4e4a49291c80fdf725e2506bf8127407335fed7a32f
+    sha256: 4c013af7843e8f6fad7c6dd3c622fd55a1d9898bb3fe386c4587a682641717d7
   - path: demos/climate/artifacts/paperbank/papers/08-thompson-wallace-hegerl-2000-part-ii.md
-    sha256: 8cf40faef4b95cd6674dfcd1c0e25044360d73395e7c9f01481f16807fb6f96a
+    sha256: 5d864a4f4d9f585132d523d2886057c5aed9d82419c6864e917f1f61a47b0a02
+  - path: demos/climate/artifacts/paperbank/papers/09-lorenz-hartmann-2001.md
+    sha256: b00d0874bbda8382e8d94a51425a9b1e4d2108d910efd05ac181f9ccf39aacc5
   - path: demos/climate/artifacts/paperbank/papers/10-holton-tan-1980.md
-    sha256: 4e35bc0f9c74766c0e797f6c89c22bf3e0111adf2cbd4b750c066115c14472d3
+    sha256: f0906940864a85494d27353d00a7b32fc75090fda784570181a612ccfb052218
   - path: demos/climate/artifacts/paperbank/papers/11-baldwin-dunkerton-2001.md
-    sha256: 21ac129b99191aebf4b516a4bce86fbcb960c59b0225dee91aed35189286ee5e
+    sha256: e07eca408ae420a9d2f20853a48f4125cc210264f491993efc1f01553b545a44
+  - path: demos/climate/artifacts/paperbank/papers/12-charlton-polvani-2007.md
+    sha256: c08c07abd248d31efdddca31ff7d0d99ff24ade03bf33037325180c216c72bd4
   - path: demos/climate/artifacts/paperbank/papers/13-wernli-schwierz-2006.md
-    sha256: bbdf50d95b608cdfadf8e82ab10e4b5f9adac827a54375caad88cd6c10392012
+    sha256: 42d91cb65abe0d13b95f922286a10d687b9e2dc0a023c71a5269a3bdf8b7cdd2
   - path: demos/climate/artifacts/paperbank/papers/14-zhu-newell-1998.md
-    sha256: e8b075ced1d7bae63368bcd56369bd298e21d6490d5cecb35d94b903fb482332
+    sha256: d2136e504767c297587a3b518b28c2b670574bca77f1e87a800a1827d56f10f6
   - path: demos/climate/artifacts/paperbank/papers/15-held-soden-2006.md
-    sha256: 39593a8ea0bae33fb081ea5cc2fd79c889e0ee1fc6e5fd07ed18b1eb1893b75c
+    sha256: 16e7743b3666d976b9a740341bbc7f9fcd7a5489a50fc06f836797fab13e0017
   - path: demos/climate/artifacts/paperbank/papers/16-taszarek-et-al-2021.md
-    sha256: 29629733834709bac2f718b1d80413ede71289c2c8d514bc03db27b8fd04c356
+    sha256: 2cc6ec9b94e5d4ca51c8f48ffa0f4878f650fe93df3f782ed6e3236734c2b709
   - path: demos/climate/artifacts/paperbank/papers/17-wills-et-al-2022-author-manuscript.md
-    sha256: d120078eed58278c9e575400535b59be7025e2e94884dddb06eb6cfba94e8cf9
+    sha256: 083aba652af1eb3e9c461f6a977ec8313eccef9abffff1b39e358ef8890dc5d5
   - path: demos/climate/artifacts/paperbank/papers/18-thackeray-et-al-2022.md
-    sha256: bc82a2a1f1ba1e8a6fb71e6a904f1b22aec02ffde346284ceaaf81bca90a0258
+    sha256: 2deb7c9f025bad89eda4a6fdfab34873647e31531db5cc3fc4fd0260746e5ba2
+  - path: demos/climate/artifacts/paperbank/papers/19-rousi-et-al-2022.md
+    sha256: 16499466edc06574b5a86d03d57609de354ecf012d7b11193b0a8552dfc09631
   - path: demos/climate/artifacts/paperbank/papers/20-shaw-miyawaki-2024.md
-    sha256: 00715d4b4aba481ea298e3e6415faaf2d7719ea562a1aa9f5accfa5bac6cdb7c
+    sha256: 84865012c69d247be6b527cff2ea82f99a211cc52f05856f1bc809ddd9b16ca6
   - path: demos/climate/artifacts/paperbank/question_patterns.md
-    sha256: 0c4c55a82d777e51b57e8b8632fa76c4922c87c76cea05b41bfa66cfbe7b901b
+    sha256: b661a7c69e7bceca45bb00c732276063155af1e744d5d3f7f9d8cc38905bec9f
   - path: demos/climate/artifacts/paperbank/question_patterns_detailed.md
-    sha256: 18c18dec2313ca2480268dff7db35de93537372d170dd5f306285e1aa88ab4d0
+    sha256: 94c1b8bd979d82f74e2fc57383cb0a01dd784b3c388092f7294711387bdcae29
+  - path: demos/climate/artifacts/questions/prior_art.md
+    sha256: 67254ab7e34c66869cef4fea1f5e109b3d477f4f078491ac7736329fa1253415
   - path: demos/climate/artifacts/questions/question_families.md
-    sha256: ef1bba2dee7f25f4205c782ff4fc32ab8ef0b051b2aa24a9cebc9b1946345ef5
+    sha256: a3094fff321735426681278101c143614ae3e0e2ba94c4af605416d6f5954a98
   - path: demos/climate/artifacts/questions/question_families_detailed.md
-    sha256: ee24c439e3841fa9e08e44db02e162dbaf6efc62fe6f9cb736127b28c5c6fa28
+    sha256: ecf4238e637b8e8886c170d08469479b18d5bf14671ca949177c19c66e0cad61
+  - path: demos/climate/artifacts/questions/review_decisions.md
+    sha256: 72c93d2fdb7124230ed131ec1a5558e323debcfe0c72420c6f1eea65b9a27c42
+  - path: demos/climate/artifacts/questions/shortlist.md
+    sha256: 1409c5a8c0d9fb8556c6e30b70b8b72a6eae9e7734daa3dc5930b5ca6df21f41
   - path: demos/climate/demo_manifest.yaml
-    sha256: b20dde3d44b92b657dd58a405e4c61610e75d322e52dcc60cac9461a9e1c0ad8
+    sha256: 65743c516e732701b73f6d6fc1307868177cd6aa42f30174d83fcaacd5665799
   - path: demos/climate/paper_sources.yaml
-    sha256: 5543f743c8e990b4f9ee42d9d8ab436cbb06f4db5e036c66049deffa34393f05
+    sha256: 307a11e536d28bbe9a53ff86f8634a1bda81e1aa55a9c645c816cb967b00976a
+  - path: demos/ibl-open/README.md
+    sha256: 515db07da13c57938dd37006838ac30f830a0d984ba1f1469c9da79a84d5af8b
+  - path: demos/ibl-open/artifacts/dataset/dataset_narrative.md
+    sha256: 5b4ad93e1138c8fa03c31aa12ccef9e7ad8a3feceb9b7c9739bcc80d4c95e3aa
+  - path: demos/ibl-open/artifacts/families/accumulation-dynamics/dossier.md
+    sha256: 7c68ecfd6cd0469d0a85f8ea7a3a1af28472e872da029e5616d97615dafa00e2
+  - path: demos/ibl-open/artifacts/families/accumulation-dynamics/dossier_detailed.md
+    sha256: 7256ef93dd1c000c98d96f80c0d11c4126dff23f0e377446f83e1297a97a0798
+  - path: demos/ibl-open/artifacts/families/choice-signal-origin/dossier.md
+    sha256: 2c7f2540c286d9e869781cfd081899e748b1cee367cbb9625f687ddc664bb48a
+  - path: demos/ibl-open/artifacts/families/mixed-selectivity-geometry/dossier.md
+    sha256: 5e9e509b09d47154dafb1472aebc535f021d3c93b094f28cca09940778315926
+  - path: demos/ibl-open/artifacts/families/mixed-selectivity-geometry/dossier_detailed.md
+    sha256: c479a602a668fe13fb5fa286f5fe4ed508d232f56990be6e791a42f1415f6bd8
+  - path: demos/ibl-open/artifacts/families/movement-decision-structure/dossier.md
+    sha256: 3b0cfa2f6faea794acf05ba0134b47fd9f5b2118c3e25c949e6b2d4ea4f532df
+  - path: demos/ibl-open/artifacts/families/movement-decision-structure/dossier_detailed.md
+    sha256: 13909e2143675394652d7a9a620af957dd2e78a22c5cf565b296cf3c15be21de
+  - path: demos/ibl-open/artifacts/families/sensorimotor-transformation/dossier.md
+    sha256: 4ac5c3d329b760d5320f29dd5eac7fbe3d74a73fb968c3c8efcf80fb14ef8e25
+  - path: demos/ibl-open/artifacts/families/sensorimotor-transformation/dossier_detailed.md
+    sha256: e25e31ad428bcbccb0a117f35afe6cb298971c494d50cff541df1c15aa411417
+  - path: demos/ibl-open/artifacts/families/variability-geometry/dossier.md
+    sha256: 2a54d0efbdfb94c63e40e00116fd93b526e6003e0acc1c83d41d2f321216488f
+  - path: demos/ibl-open/artifacts/families/variability-geometry/dossier_detailed.md
+    sha256: 6657054af11a42942e5c7e9dd307c9213e2ec535c22fd2b27076b6003aeea7e9
+  - path: demos/ibl-open/artifacts/literature/research_scope.md
+    sha256: f2c275eb4756c0343c97a3230a70a9d03271d11b8c58f6f858fd75aed5ff4cd7
+  - path: demos/ibl-open/artifacts/literature/retrieval_summary.md
+    sha256: 7a6f0e7f3a95eccb660cc7c3170bef3b7b7f111eb9981dad5d6cccff367407b0
+  - path: demos/ibl-open/artifacts/literature/topic_evidence_summary.md
+    sha256: d7be7ddb9650883799a2e79431c06b4b1b0ea2eab69022e39836e5687cc6f771
+  - path: demos/ibl-open/artifacts/paperbank/formation_traces/ibl-s41586-025-09226-1.md
+    sha256: f0673d32e424ad311bb4969ca1a855ad203dff52078a82374e3f20feaf1b1d7e
+  - path: demos/ibl-open/artifacts/paperbank/formation_traces/nature12160.md
+    sha256: 40a02e6832ee74cea77b7399d0531331f47d62d8d7c634270c6ef34abcbe0650
+  - path: demos/ibl-open/artifacts/paperbank/formation_traces/nature12742.md
+    sha256: 51d5197ade7d8f43af6534f198c6ba1e147628086299502b0b2a767d9dedb2e8
+  - path: demos/ibl-open/artifacts/paperbank/formation_traces/nn-3807.md
+    sha256: d7158373ebee33f9b82f00ce9cfd8768e397c47951ed104457b003432ffe9dee
+  - path: demos/ibl-open/artifacts/paperbank/formation_traces/s41586-019-1346-5.md
+    sha256: 4c7fa53e9246fac93c1537643eea71ecde78ae3d910dc784169a84a9b5c3abdd
+  - path: demos/ibl-open/artifacts/paperbank/formation_traces/s41586-021-04268-7.md
+    sha256: cda7e75a23280213635343cf43011ca245f2234088e24b3531005a76eeed0472
+  - path: demos/ibl-open/artifacts/paperbank/formation_traces/s41586-025-09528-4-1.md
+    sha256: f001b6c1f146432639f0c046ff120ba69b8010e9592086927a655845800f25a3
+  - path: demos/ibl-open/artifacts/paperbank/formation_traces/s41593-024-01758-5.md
+    sha256: 9508d42829791d95a3921b265b06108d9db3eee57c276c9e200540dade194382
+  - path: demos/ibl-open/artifacts/paperbank/formation_traces/science-aav7893.md
+    sha256: 41ff856c24521094989cc6c68fdfae6aed544c000a2876a84cce493901490ab6
+  - path: demos/ibl-open/artifacts/paperbank/formation_traces/srinath-et-al-2026-the-structure-of-correlated-variability-reflects-task-relevant-information-in-sensory-neurons.md
+    sha256: fc823991f1caf35c8be5d85419b8a66ba537fe515b73b80feaa03cbf449c78b9
+  - path: demos/ibl-open/artifacts/paperbank/paperbank_summary.md
+    sha256: e9aacc9fa3f09101f5f403c6cedd43c27d537bfdc586a1d181c26027fcf7b71c
+  - path: demos/ibl-open/artifacts/paperbank/papers/1-s2-0-s0896627319300534-main.md
+    sha256: b49d0b62d116ad491f988d9e8a58d5c4ac0d64f42775fbab3d62a06745064f1a
+  - path: demos/ibl-open/artifacts/paperbank/papers/2024-08-30-610535v3-full.md
+    sha256: b1c24d88bd7001d71b32e508f922e6a9ff20ff6110be7e615da3bb1ecd0f228c
+  - path: demos/ibl-open/artifacts/paperbank/papers/ibl-s41586-025-09226-1.md
+    sha256: c7880033748d5458e16667fb7ec461d1402275e4d5b4779c78677d08136f9c94
+  - path: demos/ibl-open/artifacts/paperbank/papers/nature12160.md
+    sha256: dec8d2689cbf93a42ec39370004b7d532591309637c96fa0d4ad356153cf7429
+  - path: demos/ibl-open/artifacts/paperbank/papers/nature12742.md
+    sha256: a7c4c2e3df590c3d4cc19751ce220c09580a60e7fc32fb02f41dfee10ecfdf7b
+  - path: demos/ibl-open/artifacts/paperbank/papers/nn-3807.md
+    sha256: c448e33371e12cbe3cac45981544c32050591b840c1e5da5b27730dcd31d66bf
+  - path: demos/ibl-open/artifacts/paperbank/papers/s41586-019-1346-5.md
+    sha256: e6add09e260ab5c2fc3d9ac8d715e7def61116964551237c078922626ec785a7
+  - path: demos/ibl-open/artifacts/paperbank/papers/s41586-021-04268-7.md
+    sha256: ae491cbf2500fbd211b5931bd29e6910d7661bfc139e897896c9ec4ded850375
+  - path: demos/ibl-open/artifacts/paperbank/papers/s41586-025-09528-4-1.md
+    sha256: 244c03fd283e3464850eec8b8b4bc9a6556b71b06dfd65d837bfe7549a7fa029
+  - path: demos/ibl-open/artifacts/paperbank/papers/s41593-024-01758-5.md
+    sha256: 1e90f9777aaccabd23669f50de2b0a570839ce9c5d7503ab7c650d62358e7e03
+  - path: demos/ibl-open/artifacts/paperbank/papers/science-aav7893.md
+    sha256: 9d45284c47af447bedede529595b5a9a28a0849c787f77b66454b14a159144f1
+  - path: demos/ibl-open/artifacts/paperbank/papers/srinath-et-al-2026-the-structure-of-correlated-variability-reflects-task-relevant-information-in-sensory-neurons.md
+    sha256: 165d5e3472f035d97d55d391875f534da04bf91e74752a1e1e339e81a026c7b8
+  - path: demos/ibl-open/artifacts/paperbank/question_patterns.md
+    sha256: 9ec6b3ed7732175c9f48231be8aa4b48d5119d55607afbd7e31dc0d7144fb2a1
+  - path: demos/ibl-open/artifacts/paperbank/question_patterns_detailed.md
+    sha256: 9039255a85e9a8c514be3a01ab6f2d9cda0474fa67c8f77974eba9800ba409c0
+  - path: demos/ibl-open/artifacts/questions/prior_art.md
+    sha256: 61f2d025383d396b9b902961a354cf4bafb87a8d024b9368222fd54d3ab4d721
+  - path: demos/ibl-open/artifacts/questions/question_families.md
+    sha256: 6a3958c038c1f803bb92fd66c143cdc07bacdb835e398c68cb76ab7d005f0151
+  - path: demos/ibl-open/artifacts/questions/question_families_detailed.md
+    sha256: 6a58bdf1cafd000b6c1fe0c6ff7bfe1e2bab1d981452c7ab4bf58dafa18f52ba
+  - path: demos/ibl-open/artifacts/questions/review_decisions.md
+    sha256: e629cf430c34061c1d3fdfd8e818b11b3487b629368a333b254c91fbc499b52c
+  - path: demos/ibl-open/artifacts/questions/shortlist.md
+    sha256: 1b96b02a4438435bcf084c8b14c459d4d831ce58ec840f69c594f91b38b365ca
+  - path: demos/ibl-open/demo_manifest.yaml
+    sha256: c346366399d7bb956783abb82510c2a03660ad54400dec6d584096c3556dfb16
   - path: demos/ibl/README.md
-    sha256: 35cae88f56234c6cfdaaed622f0985d0f8aee834662da333f3fd87a3c563ed11
+    sha256: 42f8545235d8ffea8556c355edd1b6643ae111a3ca03b0089f873c8c1828f761
   - path: demos/ibl/artifacts/dataset/dataset_narrative.md
-    sha256: 77ea44a8492de52cb18313c26f2d36f04978693e84628b2c9cd44f26ee90759b
-  - path: demos/ibl/artifacts/families/covariability-structure/dossier.md
-    sha256: 8343033dc6c1477ccbffa93bfe07b2d0c83a3e03cd31b6db94ca9f0d4612b746
-  - path: demos/ibl/artifacts/families/covariability-structure/dossier_detailed.md
-    sha256: 4e0a76f13f3dda8e51df0679c05d4a92c629cc7f649b45bf60eaca065b36e77c
-  - path: demos/ibl/artifacts/families/decision-dynamics/dossier.md
-    sha256: 6a337d9e3bab99f4c2a16a3825708dd49ce5624947d37780231142b67b48ba48
-  - path: demos/ibl/artifacts/families/decision-dynamics/dossier_detailed.md
-    sha256: df95be3c92c12764b83aa4ff62d761a673b6fb12b26f8e305227963b1f64c455
-  - path: demos/ibl/artifacts/families/distributed-selective-organization/dossier.md
-    sha256: b0522eaa2a5df33bcffcec98b1c5e0e92326fb14627efe82f036b3a858b1f1aa
-  - path: demos/ibl/artifacts/families/distributed-selective-organization/dossier_detailed.md
-    sha256: 39f4e8ec442551b20ce2e0930e02514d742d64f90f89e3b89c4330be0b9671ae
-  - path: demos/ibl/artifacts/families/functional-errors-latency/dossier.md
-    sha256: 7bcd35901fea20fef2b0c14cb98ecdba17d9de48b9146262bc3372b18b10629a
-  - path: demos/ibl/artifacts/families/functional-errors-latency/dossier_detailed.md
-    sha256: c17f8b3ee9826543d857d8cb4f2d7de8cf898bf452bac72f5edc576c912a6233
-  - path: demos/ibl/artifacts/families/invariant-decision-geometry/dossier.md
-    sha256: 432b836a57b33161dea27950e5de60c983bcdfa8517c02a68abf6f7e02e9d1cb
-  - path: demos/ibl/artifacts/families/invariant-decision-geometry/dossier_detailed.md
-    sha256: 90d6270a5c399c31c6ae7c03a845334ac24fb7c346543a7b967db99c38df67c1
-  - path: demos/ibl/artifacts/families/replicable-idiosyncratic-geometry/dossier.md
-    sha256: f5a82d9eef80d76f4d9b5b8752a2e2871053058c19ea493909de5bac83f3ff15
-  - path: demos/ibl/artifacts/families/replicable-idiosyncratic-geometry/dossier_detailed.md
-    sha256: 8fb01d465559748ba87cdac79fd57476a7a521c103bb16b25f474bf2e22143a4
+    sha256: 9873cbabeea386b144c8dd165368719461e9ea832d03c885ee1bcaf0bdf65ceb
+  - path: demos/ibl/artifacts/families/accumulation-geometry/dossier.md
+    sha256: cfefcaf0ab2385a1c0b8038ce4a6bd923e41ef32d3fa381b7f4fcdabc46edc2b
+  - path: demos/ibl/artifacts/families/accumulation-geometry/dossier_detailed.md
+    sha256: 9fe3fd0e785286f9a9148c9fef049b72050ab7691964ec1661c99fadcc8f200f
+  - path: demos/ibl/artifacts/families/behavioral-alternatives/dossier.md
+    sha256: 6403274e0fc82803f570668bc79d47ba8da9cdce1b80b94fe58dfc6c0814982f
+  - path: demos/ibl/artifacts/families/behavioral-alternatives/dossier_detailed.md
+    sha256: ed97587a86c33912787cf96ecf9e24230a45525e774d0b35ae4f5668448c53e4
+  - path: demos/ibl/artifacts/families/noise-alignment/dossier.md
+    sha256: 6e7461cb988a2216d99743df4a2b4b35d7bbee7d7795ca32232ea1fb58c1efd4
+  - path: demos/ibl/artifacts/families/noise-alignment/dossier_detailed.md
+    sha256: 0e26445e1fa39a8199680230757914ac85feaa5da2d6a16c190e6d9ac0ab74d2
+  - path: demos/ibl/artifacts/families/noise-origin/dossier.md
+    sha256: 86b69f453f88282db1d035820f73a88c6598e4455a05103563be7773389aefca
+  - path: demos/ibl/artifacts/families/noise-origin/dossier_detailed.md
+    sha256: faae3d03ecf14128e5d9e5f2b5cb725526423908df03349c29af21c79914274f
+  - path: demos/ibl/artifacts/families/regional-organization/dossier.md
+    sha256: 241fea80c336b232f806bfeb84c20a60bfd7e3357859d25540601c77a1a071dc
+  - path: demos/ibl/artifacts/families/regional-organization/dossier_detailed.md
+    sha256: dbf83f966f57e487244e3a23ab55befb905fa5ce66a9ac80528a578d54504194
+  - path: demos/ibl/artifacts/families/reproducibility/dossier.md
+    sha256: 2ee5007cd1a96e7109df27197c2ebc0323351c554a80ceab2d6eee27d9de08ae
+  - path: demos/ibl/artifacts/families/reproducibility/dossier_detailed.md
+    sha256: 363e229b8c2ba5274bd6ce0127215f8d633fffb84b6d8be312a3a8f80e81c284
   - path: demos/ibl/artifacts/literature/research_scope.md
-    sha256: dbf581defab4d2bbea05c80d2f581f6ab47e8e6579366acd9cc1b73f098b0534
+    sha256: 5827e24eeea3fbeaa6c52d2be0c066ecf55943a6f9a50b5e843d9d4632f7c492
   - path: demos/ibl/artifacts/literature/retrieval_summary.md
-    sha256: caf2d3c73032a1901cfe559a2745ee9ff1bb34f555305516b2c584e43ede5290
+    sha256: 86888269d4bf1d8b31d53e1be10386e486e6acb1c531074cf5947f8f6c3ed8e7
   - path: demos/ibl/artifacts/literature/topic_evidence_summary.md
-    sha256: f7aedeff0ff026fa3357c03458db86fec1df3a44d17b5a7581f6daff3dd3f771
-  - path: demos/ibl/artifacts/paperbank/formation_traces/1-s2-0-s0896627319300534-main.md
-    sha256: 85d9dc2d0433d5c8e73087dcf4eedde67c4ca9f6a408bb15dc824f840ca68d52
+    sha256: 79b57f601d23bb23de2837a4d6be40ec61d0be2e15aae548a748fc7e5781ca9b
   - path: demos/ibl/artifacts/paperbank/formation_traces/ibl-s41586-025-09226-1.md
-    sha256: 2bf3865a545a9b5a58a4819bb1479ce0ff277f0e190b574d40f8e37be1865053
+    sha256: f0673d32e424ad311bb4969ca1a855ad203dff52078a82374e3f20feaf1b1d7e
   - path: demos/ibl/artifacts/paperbank/formation_traces/nature12160.md
-    sha256: 9d440f8510f61878002cd913a5db37f5d98cbe9caedd87c1f02951f1a7e2dbfa
+    sha256: 40a02e6832ee74cea77b7399d0531331f47d62d8d7c634270c6ef34abcbe0650
   - path: demos/ibl/artifacts/paperbank/formation_traces/nature12742.md
-    sha256: 31b572ff140acb2ed44488de06d4c56faa7aae5711252cfd88e090ec8b0188a3
+    sha256: 51d5197ade7d8f43af6534f198c6ba1e147628086299502b0b2a767d9dedb2e8
   - path: demos/ibl/artifacts/paperbank/formation_traces/nn-3807.md
-    sha256: 0866366e84247687b8b3ab690ad9d217501b09f2ca3d6c516302e6d7abe426dc
+    sha256: d7158373ebee33f9b82f00ce9cfd8768e397c47951ed104457b003432ffe9dee
   - path: demos/ibl/artifacts/paperbank/formation_traces/s41586-019-1346-5.md
-    sha256: 866d8147c3f01a5af62de6637857e54d69920b3b060453be7d12c02198d1604e
+    sha256: 4c7fa53e9246fac93c1537643eea71ecde78ae3d910dc784169a84a9b5c3abdd
   - path: demos/ibl/artifacts/paperbank/formation_traces/s41586-021-04268-7.md
-    sha256: 0f1f0e69ed0bb67bb2529acd668c5baf24d1c99075cbfee1cb632c1658ab72ee
+    sha256: cda7e75a23280213635343cf43011ca245f2234088e24b3531005a76eeed0472
   - path: demos/ibl/artifacts/paperbank/formation_traces/s41586-025-09528-4-1.md
-    sha256: 747258ad4387cc1abe2dda2a393dca554c9ce9647c4257e140601cf933232fb7
+    sha256: f001b6c1f146432639f0c046ff120ba69b8010e9592086927a655845800f25a3
   - path: demos/ibl/artifacts/paperbank/formation_traces/s41593-024-01758-5.md
-    sha256: ad4c594d4cda3466c32407d9069b991efcbc87f154ca74511c297899766dc590
+    sha256: 9508d42829791d95a3921b265b06108d9db3eee57c276c9e200540dade194382
+  - path: demos/ibl/artifacts/paperbank/formation_traces/science-aav7893.md
+    sha256: 41ff856c24521094989cc6c68fdfae6aed544c000a2876a84cce493901490ab6
   - path: demos/ibl/artifacts/paperbank/formation_traces/srinath-et-al-2026-the-structure-of-correlated-variability-reflects-task-relevant-information-in-sensory-neurons.md
-    sha256: 60db869243cd17c7f850f3bc3298dd0c71d0f1072a2c8ec3dbf3cfd9a7cd4af6
+    sha256: fc823991f1caf35c8be5d85419b8a66ba537fe515b73b80feaa03cbf449c78b9
   - path: demos/ibl/artifacts/paperbank/paperbank_summary.md
-    sha256: 37e2369b6ff122aa3c6e3a2e981178de55bbc7846d277f47f2928d5ee28e46d1
+    sha256: e9aacc9fa3f09101f5f403c6cedd43c27d537bfdc586a1d181c26027fcf7b71c
   - path: demos/ibl/artifacts/paperbank/papers/1-s2-0-s0896627319300534-main.md
-    sha256: 55251ac7077480361abddcae6579495ef128e1241d63fbab5cdfd8c2be19be51
+    sha256: b49d0b62d116ad491f988d9e8a58d5c4ac0d64f42775fbab3d62a06745064f1a
   - path: demos/ibl/artifacts/paperbank/papers/2024-08-30-610535v3-full.md
-    sha256: c5134ec92e7cae3f634d53faf9bd5f8d2012ff27bc8775b52a7ae7f3fd4250eb
+    sha256: b1c24d88bd7001d71b32e508f922e6a9ff20ff6110be7e615da3bb1ecd0f228c
   - path: demos/ibl/artifacts/paperbank/papers/ibl-s41586-025-09226-1.md
-    sha256: b00c5174f5ce9dfbe561c58cf2afdc98119996421aa9d1bff4072ab3a250be2d
+    sha256: c7880033748d5458e16667fb7ec461d1402275e4d5b4779c78677d08136f9c94
   - path: demos/ibl/artifacts/paperbank/papers/nature12160.md
-    sha256: 129562f716e23361804f3eeb5ebf0c25c3b81f8f7b4ce1b5d4e86b1574264c6d
+    sha256: dec8d2689cbf93a42ec39370004b7d532591309637c96fa0d4ad356153cf7429
   - path: demos/ibl/artifacts/paperbank/papers/nature12742.md
-    sha256: 0029e12b0ceac3156d8429667b05c3df78e57ee9ec5c3b1e26b3aea3b3b0760d
+    sha256: a7c4c2e3df590c3d4cc19751ce220c09580a60e7fc32fb02f41dfee10ecfdf7b
   - path: demos/ibl/artifacts/paperbank/papers/nn-3807.md
-    sha256: 290cd1c5a03f538cd0b32da6b15dc2a952ff045ce4ded5874e884188ef86603f
+    sha256: c448e33371e12cbe3cac45981544c32050591b840c1e5da5b27730dcd31d66bf
   - path: demos/ibl/artifacts/paperbank/papers/s41586-019-1346-5.md
-    sha256: 2b628e5065128333f8387457d20c8937fb55d7b4be29817205314269f59fb9ba
+    sha256: e6add09e260ab5c2fc3d9ac8d715e7def61116964551237c078922626ec785a7
   - path: demos/ibl/artifacts/paperbank/papers/s41586-021-04268-7.md
-    sha256: 552ab06152d869aef3d28840658970f0fa85e2087c761b34e5211f7bdcdda96b
+    sha256: ae491cbf2500fbd211b5931bd29e6910d7661bfc139e897896c9ec4ded850375
   - path: demos/ibl/artifacts/paperbank/papers/s41586-025-09528-4-1.md
-    sha256: 3a0787fc47914cab9ab2fb02165bcac01d78010ac47a75a74ef3d7c68f009e73
+    sha256: 244c03fd283e3464850eec8b8b4bc9a6556b71b06dfd65d837bfe7549a7fa029
   - path: demos/ibl/artifacts/paperbank/papers/s41593-024-01758-5.md
-    sha256: 139de11418dc5c92f1fef9f9411c6bfd5ca2663dd08819be1fe1a1b61331a120
+    sha256: 1e90f9777aaccabd23669f50de2b0a570839ce9c5d7503ab7c650d62358e7e03
   - path: demos/ibl/artifacts/paperbank/papers/science-aav7893.md
-    sha256: d52d37884e7917e3357a8f7df73912e3fda1145ae47cbc22a82acfc648baf0cb
+    sha256: 9d45284c47af447bedede529595b5a9a28a0849c787f77b66454b14a159144f1
   - path: demos/ibl/artifacts/paperbank/papers/srinath-et-al-2026-the-structure-of-correlated-variability-reflects-task-relevant-information-in-sensory-neurons.md
-    sha256: 664d87f9728a95bf1ed75d6a071f0cb5d6d513640c5cbaf207808eb1c8530694
+    sha256: 165d5e3472f035d97d55d391875f534da04bf91e74752a1e1e339e81a026c7b8
   - path: demos/ibl/artifacts/paperbank/question_patterns.md
-    sha256: fd4dc4437afa1e5fece653eb9c5bc262c5a4fc20eb216e8eb49dfecfb8c9a5cd
+    sha256: 9ec6b3ed7732175c9f48231be8aa4b48d5119d55607afbd7e31dc0d7144fb2a1
   - path: demos/ibl/artifacts/paperbank/question_patterns_detailed.md
-    sha256: d904df4ff86bebd4bc00960fb84938d705c00a51454f25e872058e7bcaacf533
+    sha256: 9039255a85e9a8c514be3a01ab6f2d9cda0474fa67c8f77974eba9800ba409c0
   - path: demos/ibl/artifacts/questions/question_families.md
-    sha256: b0b63063f047feed056f8f442c0587309e91ace363a267fa5d2f9d1ac703bc97
+    sha256: 6b77dae6c5ed4dc5cd314435ca776360518e0a2dd2cb3834dc1888cfbe974606
   - path: demos/ibl/artifacts/questions/question_families_detailed.md
-    sha256: bf33efcb3eaac73daed4f00d2422057bb0bae6e32323c587b3dec12190a61a9a
+    sha256: e5929d62679250dfd73228fa063811f71ad12dc72b7e8ff18e492035b05211d6
+  - path: demos/ibl/artifacts/questions/review_decisions.md
+    sha256: 135b2c024459a863d3ecce6b804a61182ab174a68ad4fd5b527f2b4c78a11089
+  - path: demos/ibl/artifacts/questions/shortlist.md
+    sha256: a92538ff9521ebefb3de7e16a3d3c350e1dfa97c55536dd4fa9a9016030528a2
   - path: demos/ibl/demo_manifest.yaml
-    sha256: 64543e6823b4d60145d2a96cac79e376f3abc15428c1def7233e7c8c089f1359
+    sha256: 04468de48c96609336dde93d624e606f06c002650393c83d2f87bfdb649694d5
   - path: demos/nlb/DATASET_NOTES.md
     sha256: 55ecd6a5e052f08907f1d03e28689f4557d886a2e6a509ce00387afeda48643d
   - path: demos/nlb/README.md
-    sha256: e4594572cbca9c1236a7dfb5317d1dbacb2faa34acc7534601d24253a26b42de
+    sha256: f943a3d3cb196042a47b97798f1182719f772b13ae96577f0145c9433e0d91a7
   - path: demos/nlb/artifacts/dataset/dataset_narrative.md
-    sha256: 6990176585ca4dc74b912f47d91883037955d6245adb22e59c2dcb86209a3a18
-  - path: demos/nlb/artifacts/families/covariability-functional-alignment/dossier.md
-    sha256: 2f3995c5afa551021a28ed868a893e70503e819a31bebbdb038c798fcc0ede14
-  - path: demos/nlb/artifacts/families/covariability-functional-alignment/dossier_detailed.md
-    sha256: 50a3e3bff4af463eb72d28ecc145393cef76b26e2959f1bc72e23b31239756c4
-  - path: demos/nlb/artifacts/families/degenerate-motor-population-codes/dossier.md
-    sha256: 433f2322dc9062d183dd2ecc32c2ceb1aaa933ae8bf5e8c2ab4f2d21458c7c8f
-  - path: demos/nlb/artifacts/families/degenerate-motor-population-codes/dossier_detailed.md
-    sha256: 86d6b0c830fb78fdfe7ef1443214f646d3ff69023113aff772870f971340e44a
-  - path: demos/nlb/artifacts/families/m1-pmd-population-organization/dossier.md
-    sha256: 2ae79e51f87c100b03bb1e7a3227f2338366191b8d8af417f31f2716c7a116ff
-  - path: demos/nlb/artifacts/families/m1-pmd-population-organization/dossier_detailed.md
-    sha256: 0e5029f97670018393f7911e6b1038da91ac8fcedf1f4f323c1f6410d1cff3db
-  - path: demos/nlb/artifacts/families/manifold-form-functional-meaning/dossier.md
-    sha256: 1bd0a21c113d99e78aff92ee8cb33040e501f1a73eb6538c2d1b243a237a206e
-  - path: demos/nlb/artifacts/families/manifold-form-functional-meaning/dossier_detailed.md
-    sha256: 591e063ea2140aca8a1d8d43122722012b690765e059c2792e8f798c9d1f1fc4
-  - path: demos/nlb/artifacts/families/motor-geometry-temporal-organization/dossier.md
-    sha256: 752b70b19d14d23a1f15245f40f2d981150255ce83d551ec5bb1587dedd0c37d
-  - path: demos/nlb/artifacts/families/motor-geometry-temporal-organization/dossier_detailed.md
-    sha256: fd0a7a7163b6787398c00176efde3dc0fe166e6fb79962455e80e6a4dd52ea71
-  - path: demos/nlb/artifacts/families/trajectory-context-generalization/dossier.md
-    sha256: dfd6f206b6ab604947bd9eb1e38f6519c0fd78ebb3c1afec2e1254726b6fd6cd
-  - path: demos/nlb/artifacts/families/trajectory-context-generalization/dossier_detailed.md
-    sha256: ad3dae56dabae5541db381b71df3c9b2d86b8deaa01063d5d9ef9107dd942119
+    sha256: e74c65a5077c00f091c3be9fb516e6857b5e42041465b431e3c302cfe9856c33
+  - path: demos/nlb/artifacts/families/context-dependent-motor-dynamics/dossier.md
+    sha256: 57131ad793bc9b51a1c378d8fa145a867fb9474453b33ca1d32a37ed8445e808
+  - path: demos/nlb/artifacts/families/context-dependent-motor-dynamics/dossier_detailed.md
+    sha256: 85958e5eb25440d77166a8606a43c1038fe42f0807467cf6a638645dc19fde0f
+  - path: demos/nlb/artifacts/families/generalizable-motor-readout/dossier.md
+    sha256: 4b60a11f2c005b4616c5dac642ff3fb9306c94ce44b5395024882069131051ff
+  - path: demos/nlb/artifacts/families/generalizable-motor-readout/dossier_detailed.md
+    sha256: 07039e34de2f233263308e64ebdcc6dfc58e3a0ea5b972f497258f75747f811b
+  - path: demos/nlb/artifacts/families/pmd-m1-distributed-computation/dossier.md
+    sha256: d30a5c5dc051b4d98bd5dedbecaf5d3adf30e180c90f6dc8e3b91573517c6b37
+  - path: demos/nlb/artifacts/families/pmd-m1-distributed-computation/dossier_detailed.md
+    sha256: d8fca2baacd82e818d386a5d5d3925ac249c28d83e06c9d852cfb626dc2f020b
+  - path: demos/nlb/artifacts/families/preparatory-variability-structure/dossier.md
+    sha256: 15a5cd5a86b30fae9c464d07b6accd8023f11cfa633b1fca7434810ec5aa3b1e
+  - path: demos/nlb/artifacts/families/preparatory-variability-structure/dossier_detailed.md
+    sha256: bf1bef5bb277b1b1c12f1798e33c0e67bad87099732b0ec9f1e11b51628ad2b7
+  - path: demos/nlb/artifacts/families/stable-versus-specific-geometry/dossier.md
+    sha256: 40d2cade2df18ee516a675e5797ca423eb27a5cebb47ea4e4a8eecdba2894731
+  - path: demos/nlb/artifacts/families/stable-versus-specific-geometry/dossier_detailed.md
+    sha256: 6cef9176e1810df3e7b15f9ca646d5d7de16c8995a3eefa6af2b9cc5406fbe14
+  - path: demos/nlb/artifacts/families/trajectory-geometry-alternatives/dossier.md
+    sha256: 0bd7a0079d989a6c7fbdac105cac60fdfb4a44e62449fd94ba5f3620961dcc8f
+  - path: demos/nlb/artifacts/families/trajectory-geometry-alternatives/dossier_detailed.md
+    sha256: 4624249e98fa9b3b301bcea4ca1c3dcae2ef022e63bd4688dad1d53fcb7be341
   - path: demos/nlb/artifacts/literature/research_scope.md
-    sha256: dbf581defab4d2bbea05c80d2f581f6ab47e8e6579366acd9cc1b73f098b0534
+    sha256: d51fc61174758d30bde8a422bc011442f2013a5494df87b3a21fa9481e153a74
   - path: demos/nlb/artifacts/literature/retrieval_summary.md
-    sha256: caf2d3c73032a1901cfe559a2745ee9ff1bb34f555305516b2c584e43ede5290
+    sha256: 205ba26c853a2d32699852c0311ceea8a1abcff48e977fbaab3ae721ca661bdf
   - path: demos/nlb/artifacts/literature/topic_evidence_summary.md
-    sha256: 8a91b3a3e68099e536dad90a5efb73abdad5111eca20cad3ed8c83d103904600
-  - path: demos/nlb/artifacts/paperbank/formation_traces/1-s2-0-s0896627319300534-main.md
-    sha256: 85d9dc2d0433d5c8e73087dcf4eedde67c4ca9f6a408bb15dc824f840ca68d52
+    sha256: ec3bfe16ea20966022c3a110bccdf94e3e2691e98051032581c141442b738362
   - path: demos/nlb/artifacts/paperbank/formation_traces/ibl-s41586-025-09226-1.md
-    sha256: 2bf3865a545a9b5a58a4819bb1479ce0ff277f0e190b574d40f8e37be1865053
+    sha256: f0673d32e424ad311bb4969ca1a855ad203dff52078a82374e3f20feaf1b1d7e
   - path: demos/nlb/artifacts/paperbank/formation_traces/nature12160.md
-    sha256: 9d440f8510f61878002cd913a5db37f5d98cbe9caedd87c1f02951f1a7e2dbfa
+    sha256: 40a02e6832ee74cea77b7399d0531331f47d62d8d7c634270c6ef34abcbe0650
   - path: demos/nlb/artifacts/paperbank/formation_traces/nature12742.md
-    sha256: 31b572ff140acb2ed44488de06d4c56faa7aae5711252cfd88e090ec8b0188a3
+    sha256: 51d5197ade7d8f43af6534f198c6ba1e147628086299502b0b2a767d9dedb2e8
   - path: demos/nlb/artifacts/paperbank/formation_traces/nn-3807.md
-    sha256: 0866366e84247687b8b3ab690ad9d217501b09f2ca3d6c516302e6d7abe426dc
+    sha256: d7158373ebee33f9b82f00ce9cfd8768e397c47951ed104457b003432ffe9dee
   - path: demos/nlb/artifacts/paperbank/formation_traces/s41586-019-1346-5.md
-    sha256: 866d8147c3f01a5af62de6637857e54d69920b3b060453be7d12c02198d1604e
+    sha256: 4c7fa53e9246fac93c1537643eea71ecde78ae3d910dc784169a84a9b5c3abdd
   - path: demos/nlb/artifacts/paperbank/formation_traces/s41586-021-04268-7.md
-    sha256: 0f1f0e69ed0bb67bb2529acd668c5baf24d1c99075cbfee1cb632c1658ab72ee
+    sha256: cda7e75a23280213635343cf43011ca245f2234088e24b3531005a76eeed0472
   - path: demos/nlb/artifacts/paperbank/formation_traces/s41586-025-09528-4-1.md
-    sha256: 747258ad4387cc1abe2dda2a393dca554c9ce9647c4257e140601cf933232fb7
+    sha256: f001b6c1f146432639f0c046ff120ba69b8010e9592086927a655845800f25a3
   - path: demos/nlb/artifacts/paperbank/formation_traces/s41593-024-01758-5.md
-    sha256: ad4c594d4cda3466c32407d9069b991efcbc87f154ca74511c297899766dc590
+    sha256: 9508d42829791d95a3921b265b06108d9db3eee57c276c9e200540dade194382
+  - path: demos/nlb/artifacts/paperbank/formation_traces/science-aav7893.md
+    sha256: 41ff856c24521094989cc6c68fdfae6aed544c000a2876a84cce493901490ab6
   - path: demos/nlb/artifacts/paperbank/formation_traces/srinath-et-al-2026-the-structure-of-correlated-variability-reflects-task-relevant-information-in-sensory-neurons.md
-    sha256: 60db869243cd17c7f850f3bc3298dd0c71d0f1072a2c8ec3dbf3cfd9a7cd4af6
+    sha256: fc823991f1caf35c8be5d85419b8a66ba537fe515b73b80feaa03cbf449c78b9
   - path: demos/nlb/artifacts/paperbank/paperbank_summary.md
-    sha256: 37e2369b6ff122aa3c6e3a2e981178de55bbc7846d277f47f2928d5ee28e46d1
+    sha256: e9aacc9fa3f09101f5f403c6cedd43c27d537bfdc586a1d181c26027fcf7b71c
   - path: demos/nlb/artifacts/paperbank/papers/1-s2-0-s0896627319300534-main.md
-    sha256: 55251ac7077480361abddcae6579495ef128e1241d63fbab5cdfd8c2be19be51
+    sha256: b49d0b62d116ad491f988d9e8a58d5c4ac0d64f42775fbab3d62a06745064f1a
   - path: demos/nlb/artifacts/paperbank/papers/2024-08-30-610535v3-full.md
-    sha256: c5134ec92e7cae3f634d53faf9bd5f8d2012ff27bc8775b52a7ae7f3fd4250eb
+    sha256: b1c24d88bd7001d71b32e508f922e6a9ff20ff6110be7e615da3bb1ecd0f228c
   - path: demos/nlb/artifacts/paperbank/papers/ibl-s41586-025-09226-1.md
-    sha256: b00c5174f5ce9dfbe561c58cf2afdc98119996421aa9d1bff4072ab3a250be2d
+    sha256: c7880033748d5458e16667fb7ec461d1402275e4d5b4779c78677d08136f9c94
   - path: demos/nlb/artifacts/paperbank/papers/nature12160.md
-    sha256: 129562f716e23361804f3eeb5ebf0c25c3b81f8f7b4ce1b5d4e86b1574264c6d
+    sha256: dec8d2689cbf93a42ec39370004b7d532591309637c96fa0d4ad356153cf7429
   - path: demos/nlb/artifacts/paperbank/papers/nature12742.md
-    sha256: 0029e12b0ceac3156d8429667b05c3df78e57ee9ec5c3b1e26b3aea3b3b0760d
+    sha256: a7c4c2e3df590c3d4cc19751ce220c09580a60e7fc32fb02f41dfee10ecfdf7b
   - path: demos/nlb/artifacts/paperbank/papers/nn-3807.md
-    sha256: 290cd1c5a03f538cd0b32da6b15dc2a952ff045ce4ded5874e884188ef86603f
+    sha256: c448e33371e12cbe3cac45981544c32050591b840c1e5da5b27730dcd31d66bf
   - path: demos/nlb/artifacts/paperbank/papers/s41586-019-1346-5.md
-    sha256: 2b628e5065128333f8387457d20c8937fb55d7b4be29817205314269f59fb9ba
+    sha256: e6add09e260ab5c2fc3d9ac8d715e7def61116964551237c078922626ec785a7
   - path: demos/nlb/artifacts/paperbank/papers/s41586-021-04268-7.md
-    sha256: 552ab06152d869aef3d28840658970f0fa85e2087c761b34e5211f7bdcdda96b
+    sha256: ae491cbf2500fbd211b5931bd29e6910d7661bfc139e897896c9ec4ded850375
   - path: demos/nlb/artifacts/paperbank/papers/s41586-025-09528-4-1.md
-    sha256: 3a0787fc47914cab9ab2fb02165bcac01d78010ac47a75a74ef3d7c68f009e73
+    sha256: 244c03fd283e3464850eec8b8b4bc9a6556b71b06dfd65d837bfe7549a7fa029
   - path: demos/nlb/artifacts/paperbank/papers/s41593-024-01758-5.md
-    sha256: 139de11418dc5c92f1fef9f9411c6bfd5ca2663dd08819be1fe1a1b61331a120
+    sha256: 1e90f9777aaccabd23669f50de2b0a570839ce9c5d7503ab7c650d62358e7e03
   - path: demos/nlb/artifacts/paperbank/papers/science-aav7893.md
-    sha256: d52d37884e7917e3357a8f7df73912e3fda1145ae47cbc22a82acfc648baf0cb
+    sha256: 9d45284c47af447bedede529595b5a9a28a0849c787f77b66454b14a159144f1
   - path: demos/nlb/artifacts/paperbank/papers/srinath-et-al-2026-the-structure-of-correlated-variability-reflects-task-relevant-information-in-sensory-neurons.md
-    sha256: 664d87f9728a95bf1ed75d6a071f0cb5d6d513640c5cbaf207808eb1c8530694
+    sha256: 165d5e3472f035d97d55d391875f534da04bf91e74752a1e1e339e81a026c7b8
   - path: demos/nlb/artifacts/paperbank/question_patterns.md
-    sha256: fd4dc4437afa1e5fece653eb9c5bc262c5a4fc20eb216e8eb49dfecfb8c9a5cd
+    sha256: 9ec6b3ed7732175c9f48231be8aa4b48d5119d55607afbd7e31dc0d7144fb2a1
   - path: demos/nlb/artifacts/paperbank/question_patterns_detailed.md
-    sha256: d904df4ff86bebd4bc00960fb84938d705c00a51454f25e872058e7bcaacf533
-  - path: demos/nlb/artifacts/provenance/paperbank_import.yaml
-    sha256: a098157c5b02877065250a213ec0e1a3614ea4ba984d7a7e1827380850651501
+    sha256: 9039255a85e9a8c514be3a01ab6f2d9cda0474fa67c8f77974eba9800ba409c0
+  - path: demos/nlb/artifacts/questions/prior_art.md
+    sha256: 9e4692461d4321f7dff1601e375795925c7e14e01921c6cf67636ffee7556451
   - path: demos/nlb/artifacts/questions/question_families.md
-    sha256: 53c0b8a6ab7d2d9ad1ca6e52c58049c1c5958c954903d1ec2a9d2606b23b74b4
+    sha256: 3592a51ec4278d1d7ee4850715fcba5cf02f67541c1cfb4325bd081973148de0
   - path: demos/nlb/artifacts/questions/question_families_detailed.md
-    sha256: e8de6f413ef37ec38317712bb64db35e616941599f48bd4acb0506be59ae888e
+    sha256: 91836de818c49461cd8338d609f6bf8b9f8f54a1979c9db52ad1987922a2d1c7
+  - path: demos/nlb/artifacts/questions/review_decisions.md
+    sha256: f99eaa5fa93dcbc2a46b8ea44e44ffe27de8c2fbfeb68d910f40ff7edfb5e6b2
+  - path: demos/nlb/artifacts/questions/shortlist.md
+    sha256: e637cd3dcd0d00f44a3d1792956f4ea9b34c9dee3b08b388841069fc450b64d9
   - path: demos/nlb/demo_manifest.yaml
-    sha256: 34f6104dd2bafe585c98df14a4aa10de7f57c9cf41a241ca0c6d62684a6003eb
+    sha256: e665fcb70aebabd8808b469ff973e52dd3d34207c4a70a94652a0f25162f7507
   - path: demos/nlb/verify_region_mapping.py
     sha256: 6ab25034baf11d4107d04b3390cea71fb810821ea8bc6c56fe6c495d0b394955
   - path: demos/shared/paper_sources.yaml
     sha256: c9745cc42047c6349eeba799274cf1956b726d4abc92added0d94ac744cde0f7
   - path: docs/AGENT_GUIDED_SETUP.md
-    sha256: 33843afedac7f6a39845833691f7a33450d7ec6df71483675963fd581848ba40
+    sha256: 09e237231ec29d868b9feed7bddc1d7e6a473ba2046a9f85a924e7e2744ec007
   - path: docs/ARCHITECTURE.md
-    sha256: 23c9d53683715cc6c06a919889d0526cdb9a5410eab93b1a33f4a6c3cdd59297
+    sha256: 3125d1e37d8ceeb9cf9b59263d48c5ca70f27eb00416b36f78e2c748d13ac66a
   - path: docs/CITATION.md
-    sha256: b2a3109f153f43a87f01d55b1f89c1649ba6185775c485afd82fc05df9705085
+    sha256: efc21558dada612cba1062ede135bb4a460b6c0e229439da3bade1ebf5c7dd0c
   - path: docs/CONFIGURATION.md
-    sha256: f9dfdb430429db139b3cbac3686b0c6183741f8611360b5678ac0c98885a91c9
+    sha256: 50560c710eb4e0d6ac03d7603d566c7939780f52cc3917de6e1d4517530cbb35
   - path: docs/INDEX.md
-    sha256: 4797e487050b1bd8c674928b57adff7a5ac663c77093d61df2898c9a9460d9ba
+    sha256: 67408421d06eb58e31c08683c630963c6700272d72b21c7de81aff9be9f94eec
   - path: docs/INPUTS_AND_OUTPUTS.md
-    sha256: 1d72cf8fa08dc560e968f3f963d5044e4efe3f4caf7454ff2c3b5af42a375aca
+    sha256: 8c3b88cb0d146585e6965eda5259770e75111e213b014964e1342a34737205da
   - path: docs/INSTALLATION.md
-    sha256: 194e45130b4567b8dccca4770bc99063750c0c84c9413a3dd04277b479dd73b7
+    sha256: 234fc0c6bfb559ef711c59a20b6307f82b06fe59692cd435b1d58b42a820c37a
   - path: docs/LABELS.md
-    sha256: 577116c59c2beca3c76e6603198e17e2011af1004fb545065704e25afcab5d2a
+    sha256: c1f362ba77f0cfa0ecd9750cc9696878838aed2a442708a54f70533e0a33cdc8
   - path: docs/LIMITATIONS.md
-    sha256: 63c555a040c239736b31b2f9e3380608d59ca8665a7d59ff685ab434171d956f
+    sha256: 9376153501edd593702363258ed4aa4e561886f3444a9686b5e56c09dad0f48b
   - path: docs/MANUAL_SETUP.md
-    sha256: 2b15886fb93c55c04dc3b896dd86be43f4e1d54ed9875f8771be82dc044a61fe
+    sha256: 6b072268d2cfba87ab9652f1b3706161fe7ae0904457c765c3e141cd44fd3b30
   - path: docs/METHOD_OVERVIEW.md
-    sha256: 9e6a381b4a8588df554de228393e36c9e37c9c9620ccbfb7e8afea4dda6dbc2b
+    sha256: eaa7d8be0dc8bedb81e7d2559e1e1f4724e9ee88569e6a96acfa9884f5091145
   - path: docs/PROVENANCE.md
-    sha256: 4971460a49561dba0680c1b3ccdbd62f9951b505ab07d4e8af9c311b6f8a94e2
+    sha256: f4bfef2f21d7b4260d394df9fbc5ac0e451c2011a663ba0a876ce52860b4f3db
   - path: docs/RUN_SUPERVISION.md
-    sha256: e72a75c8f9762ffcba9d05f3a8e0af2ef348d17b90cfa528278571c1fda7a828
+    sha256: 4298bcd09a9c1af02f253a1e22405bb7119b681cdd726bd98fce275a8d1584c5
   - path: docs/SCANNED_PDFS.md
-    sha256: 6842189163258affbf6920a4749c68129f1e4d4d4578f17fde3f64bae3ed6492
+    sha256: 4939a8638d914c4ff36ef794a28a95f47123a0a48f01bc399b1511abb3fd9e0d
   - path: docs/SHEPHERD_MODE.md
-    sha256: a12d14c82b5dabd4b61003ae111b33ff54a935a066d4320ad8549e98d55d9fc4
+    sha256: 4404aa35601c52bc63beca6fcc4ac34fe78338f7c4609c005a487ddb26747f88
   - path: docs/TROUBLESHOOTING.md
-    sha256: ff187ba60915ecb611c734482c8e59a6ed0647feaa730a5b097047fc3c4a2a0d
+    sha256: 8e3e9be0f32cad2ddd8f3659b151349ea4aeb0a8bbba2bd03c2a5fe3786476a9
   - path: docs/assets/maieusis-paperbank-pattern-induction.png
     sha256: 311a15deffb49748397f89249125786f5787ce77dc1914c81325b1dfdca05990
   - path: docs/assets/maieusis-positioning-map.png
@@ -450,25 +566,27 @@ files:
   - path: docs/positioning/references.bib
     sha256: ee896d1e577251f3dbbb2b8a1eb7437764fb5154bd7204f9b29d128f6bb6b1d2
   - path: examples/maieusis.claude-planner.example.yaml
-    sha256: 4470f9c07e1f6c26ab175da4c51aaf69aed780dd298c3293c9c20bf80bfc9712
+    sha256: 95497e039cbefa2665c3fc22260e2d444f20385e063f907bd477df89e9245aab
   - path: examples/maieusis.yaml
-    sha256: e28cde2ff5e0190d46d189eb9ef37e8ad8ae8fabc9ef0ad5ecf85189466d98b6
+    sha256: b8ff1ff10c9b7fcbe771905848eebe8e1ffb9c2f60234e39d942f9421d66b01c
   - path: examples/project/AGENTS.template.md
-    sha256: ae78ff41019371bc0ec7e190f69f09aa26ea8fbe6d62e1e12977aec900326972
+    sha256: b68130904dafdacbab0d7d8186208075e874edf1f67bb93fff96ba7117ef11ad
   - path: examples/project/CLAUDE.template.md
     sha256: 5ba39e02a35908fed82a2442a797b4d0fefe0aed8dc17bc2cecc0e5e12c9597e
   - path: examples/project/maieusis-setup.SKILL.md
-    sha256: 14458ec11fdc361b3fea01972f63842c6ac7e8a9e3dc4992583c9cdaf40da078
+    sha256: fbbf5e8a9b59df9d0d089e3e90adf3ab250536cc19350b8bb6d64121ac10564a
   - path: examples/question_input.yaml
     sha256: d4093ace963ea24236da467b541bcbf4e03bd4265a37a1e620aedcec957d4f2b
   - path: examples/release/README.md
-    sha256: 90345fae1e4e1f4a26ff9dbf7bd300bb5ea195bf2cf6ca6cda57a547e564d7ae
+    sha256: f1911f76e90ac07d9336c0c248b625d787f63153ce8688dfcf8578fed4d4be84
   - path: examples/release/climate-cleanroom.yaml
-    sha256: 0000153ec64dfb909769c2f71fc5239b25d50175ca8b5c0fd09b49242a48dfa4
+    sha256: c4a7a5e21d08e6909e376370d41e197fb332707f4f1b9a2cb51245c2d57fe77e
   - path: examples/release/ibl-cleanroom.yaml
-    sha256: 2b082b222cae97dc44ef13461d85c7f42f612361a12c07aaf18006f50b1d49b4
+    sha256: 32ef97a9ccf4c78c7dcba83efb9161657087ca36ab248b55bcf9e00450c9a917
+  - path: examples/release/ibl-open-cleanroom.yaml
+    sha256: 7446376c6a1420c23d429a3e8675947ca3cb690fd8f2f92afbfae88dd765560f
   - path: examples/release/nlb-cleanroom.yaml
-    sha256: 114343cda046dcdab86b8c554c34dae796676322dab46c3804ee7267683623b7
+    sha256: 8f8ca7bfc5d8f9e7958d3eb9bd77c2f1ca55577d66ee42cf91a815ed3209fc34
   - path: examples/research_intent.yaml
     sha256: 9c6120a376ba9adbef5d3d8e39ee81c1f4a68fe18093e6c92436e650e0eacc6a
   - path: prompts/citation_importance_reviewer/v1.md
@@ -477,12 +595,16 @@ files:
     sha256: ed56f57e4982b828e715987d2a18207d4db24fe1761b0e597e403fc3a2840870
   - path: prompts/citation_importance_selector/v3.md
     sha256: 178a98776631d8c4b7f85d26924a8b366daf574ec83ea9b4aa6e3e989857d3f8
-  - path: prompts/dataset_narrative_extractor/v4.md
-    sha256: d9a3256ef0ea868f5f4caf5ac0ca3f18145c7d5ed0f23e7a056c5d93590e8413
-  - path: prompts/dataset_narrative_fidelity_reviewer/v1.md
-    sha256: c29c309854e27cc7ace5c484c0b561df6082ddf389f00c11f39eb5b47f1f002e
+  - path: prompts/dataset_narrative_extractor/v5.md
+    sha256: d46fd72a7e8c97f133818d008ddb5dd4a0b0e57a5cbce9d243f36bd645939a46
+  - path: prompts/dataset_narrative_fidelity_reviewer/v2.md
+    sha256: cafbe076676e7fd060f41176442f1eee43d29b5136d79158599544de1ebce56f
+  - path: prompts/dataset_narrative_reviser/v1.md
+    sha256: c357ce0b2c08aebc66558317ee326fd731a64cdf29cd3d135059d1f8b6de93ff
   - path: prompts/dataset_planner/v2.md
     sha256: 6b05385040e7fd1975af643b83ba03fdc76bd333754266f2afb3a7fde1295505
+  - path: prompts/dataset_scope_deriver/v2.md
+    sha256: c7578885448faba505a615a94d0ba3b5467813b8e6000b7e5617fdeb5ce6c8a2
   - path: prompts/development_family_outcome_surrogate/v1.md
     sha256: ad7ce5970a6e58a4b74a12374f7c3f687765720c65ed588e111b515341d1243e
   - path: prompts/direct_recap_review/v1.md
@@ -533,12 +655,16 @@ files:
     sha256: 1b89d78d284b69342294d7447d24b503cf64fe98820e1020eccedf5d1be68397
   - path: prompts/topic_evidence_brief_synthesizer/v4.md
     sha256: 31c29493b2f029daaa461bc9edf36f85fb841d996e7c77d833a36b2abab0d3d9
-  - path: prompts/topic_evidence_reviewer/v5.md
-    sha256: 8036ee654a2605dfda8b287f7079f2b8c1ec95aa4bf349f8b6e67074d3eff96c
+  - path: prompts/topic_evidence_brief_synthesizer/v7.md
+    sha256: aa8652528d10d5a9607f542eaffcdfa60130688d43400a00188bf736663cf89f
+  - path: prompts/topic_evidence_reviewer/v6.md
+    sha256: 93625304faad6438a238e073c647ddcfd7e6238b8101ea4da2034fa96da1e257
   - path: prompts/topic_evidence_terminal_inquiry/v1.md
     sha256: 46f753085adaa0e9992c650143cbcbacc4bee7adaf6d61435ecb13f6b4276891
-  - path: prompts/topic_field_state_synthesizer/v2.md
-    sha256: 5e4e6c4ef7cdbd8284577a429551b4b074664799a676a19b8db467127a14ee05
+  - path: prompts/topic_field_state_synthesizer/v3.md
+    sha256: edb0b112a6daba0f631532a40a4d31972fe198055716dc021fca33af4e080c25
+  - path: prompts/topic_source_selector/v1.md
+    sha256: 04c0fb89d430b2d60302a3097f3f2048d280e258a710cab37ef3dee9bc77a6c7
   - path: pyproject.toml
     sha256: e9e5d121732e959e7f023b76ceb481c362387e64f5102eb3a09125f23b0e438c
   - path: src/research_agenda_engine/__init__.py
@@ -608,9 +734,9 @@ files:
   - path: src/research_agenda_engine/providers/models/__init__.py
     sha256: fad122d8689b84e21a8164968b68b2a133c2e313a94a0b85041a31e288d66b09
   - path: src/research_agenda_engine/providers/models/anthropic_provider.py
-    sha256: 1aaad0432bf85f125f55ff6d5b91a476eb40a10c4bd083988f11d793767f2917
+    sha256: f45e5004171143fb8022db187b99019075449fcf70327cc84461280b04493cb2
   - path: src/research_agenda_engine/providers/models/base.py
-    sha256: dc33df086b896ffb5a56af3da5f58142aadaf17a72983dbb32bd432ef44f598b
+    sha256: d3615b046e10b7d3f8aa7ed22b747b708f1de9f27633e4d98f439d609563d840
   - path: src/research_agenda_engine/providers/models/cached.py
     sha256: 626291f43538b41ac917e1244a17539caf3b71a13f3d2341f4689162b10bb4a5
   - path: src/research_agenda_engine/providers/models/factory.py
@@ -618,7 +744,7 @@ files:
   - path: src/research_agenda_engine/providers/models/mock.py
     sha256: c491371ef682982597535dd82043766bfefb6188092bc996b1a45b9f416eda89
   - path: src/research_agenda_engine/providers/models/openai_provider.py
-    sha256: 65f1287ae4c5b4c2157a2bd64a174bce999bb2164eb2023c5551e86b45994e51
+    sha256: 05027800c962de11caaf868c3b77612cff2473d5c39aed06fd0b8d7363ecb031
   - path: src/research_agenda_engine/providers/models/policy.py
     sha256: e61b235cb47ac3e21bb648b90eec70476824d517bf0c693d8cffcb5eb4239ac0
   - path: src/research_agenda_engine/providers/models/web_search_provider.py
@@ -628,7 +754,7 @@ files:
   - path: src/research_agenda_engine/providers/scientific_agents/anthropic.py
     sha256: 04415bfcb901099657a83c44b6ff26bd2a04c0956e5eba300f431f45cf2160b8
   - path: src/research_agenda_engine/providers/scientific_agents/base.py
-    sha256: 1a0b048a9dfc4397fc217f9de19a6309ff677eb3102d956a4c9945aff465d9bb
+    sha256: bde3616afdf1a3afa45bdf31ff541ad930cc15f0b2e021b7aa9e60cdee6910fe
   - path: src/research_agenda_engine/providers/scientific_agents/mock.py
     sha256: 545c7ba5b23b65e9cebc420173960d500a2dd0b4a752c64de93394e628cdc9ab
   - path: src/research_agenda_engine/providers/scientific_agents/openai.py
@@ -642,15 +768,17 @@ files:
   - path: src/research_agenda_engine/schemas/cited_literature.py
     sha256: 150968ac698b867e580584038f5d5dd25426bf8697e47014b126600777de647c
   - path: src/research_agenda_engine/schemas/coarse_dataset_facts.py
-    sha256: b66f2d2247a6155891a2e268756f732660e869b1aa3017d09ffd1ed2099d09dd
+    sha256: 4fdf066eb9ea2647fb0cd9b97d1582bba8ba6a2b121c5be907991fc078e7bfd9
   - path: src/research_agenda_engine/schemas/dataset.py
     sha256: 6485921cafa25509469a85a6a0cf0d890ef9c6d8e6f34e4b09a0ca320e310d8b
   - path: src/research_agenda_engine/schemas/dataset_context_terminal.py
-    sha256: 7d1d847678365b0613d414e7a599f3bcac93fb33da88e5eab514fc340575a4de
+    sha256: d2f1d66824cc5cbc330528c97ff14f51bf90c9fea9b1286a376ce4b3b83d72d1
   - path: src/research_agenda_engine/schemas/dataset_narrative.py
-    sha256: e35578c7eded8a291cbf02efa0e01cf293f2ca46394afbc99471efedb7142c01
+    sha256: af6a6a01f65402476f3a406c9a70e693287a4b125e828bf24b7f161605876192
   - path: src/research_agenda_engine/schemas/dataset_seed.py
     sha256: 84c6458d5f351299bc3a1baa355dcfeb6044e05309460fe574fe36e3715442aa
+  - path: src/research_agenda_engine/schemas/derived_dataset_scope.py
+    sha256: 3dffdfec0068093c9d794b27da649a0460cccb42e2c40f554d3d5a2aaeed5f3e
   - path: src/research_agenda_engine/schemas/dossier_closure.py
     sha256: 90ac6d3076d0be926fc8accd4168239e592debd659b91f27ff57d3609fa81eb9
   - path: src/research_agenda_engine/schemas/external_evidence.py
@@ -658,11 +786,11 @@ files:
   - path: src/research_agenda_engine/schemas/family_failure.py
     sha256: 9ae167e37f8ccb3694a7d4068f23c3b01caaa6cf8098f926d1ab1deb46740979
   - path: src/research_agenda_engine/schemas/front_half_authority.py
-    sha256: 5e82575a2bfd4599d3d6c6ab7afb1c4067072597e6cbfaeed39b95ac8bce59a2
+    sha256: a83ed63b4e257fbbaf4b5f09b98038ba52c22521eb74da5780b4eea4b1bb181a
   - path: src/research_agenda_engine/schemas/fulltext_excerpt.py
     sha256: 5e07db7d782bfb8953305360ee4c68e62ab2c5da7e72ef7809219cfbd2c418c8
   - path: src/research_agenda_engine/schemas/gate_outcome.py
-    sha256: 75f4de93ab43bcab585780ad9b06c6b6f56835910ad39eb1d977d6f1c7eeaadf
+    sha256: 59e84646aa49b5978a588f964a4e507879ce04c1cab01292ed245f856b6217c4
   - path: src/research_agenda_engine/schemas/generic_dossier.py
     sha256: b92995038d9d9f94d9b53ecca9c397ff0e7189fce8bd42877c8cdab0fbc9278b
   - path: src/research_agenda_engine/schemas/generic_family_outcome.py
@@ -674,13 +802,13 @@ files:
   - path: src/research_agenda_engine/schemas/generic_scientific_source.py
     sha256: a706eae9c79b056b4afe746f0297bd74992e0bfbc45a9b403b9757db58b76240
   - path: src/research_agenda_engine/schemas/inferred_research_scope.py
-    sha256: 84b107e181c02bb00d45ba8a54e7a45d8922e0a4354996860eed7af6f1c4d559
+    sha256: ab28c248c31755c9d01b1dc97ee8652d8644c943f57d0a31785c46f5892734ca
   - path: src/research_agenda_engine/schemas/maieusis_project_config.py
-    sha256: f77fd8d4f0247b2a363ed3f36e97d8e79204353a716ba1e9290621157aea1119
+    sha256: 1cb7791d8fa9f44ef2f5364d272351ef971440980663b5c53aca69c60be1dcb3
   - path: src/research_agenda_engine/schemas/multi_family_dossier.py
-    sha256: 16a1e1b3c5879c865c72030f3cab2efbc93a205a4a3d14a578f0c17ff2584e91
+    sha256: b71420cbe4bdd004907b48b3221495c37cafc7e59b188c7b1d4fccef36ce907c
   - path: src/research_agenda_engine/schemas/novelty_admission.py
-    sha256: 4d1cb91072b83fd75d36af7a6559dd9fe41c5ad3c413642cd0f821148e38fc47
+    sha256: 6798ca0d7269a51aa7a6d1b9eff8464d99088de3a773091c8f0913a60e924d96
   - path: src/research_agenda_engine/schemas/paper_case.py
     sha256: b83b3886fa3c4397a3fca4fe2b23b4a018a08c9ab97b1a3d1196f142681f136a
   - path: src/research_agenda_engine/schemas/paper_ingest.py
@@ -696,25 +824,25 @@ files:
   - path: src/research_agenda_engine/schemas/planning_policy.py
     sha256: d3bab37f65fe54d46dd8a5a5a7f957e1b82ac434925ab445e59c6b1c7c20f582
   - path: src/research_agenda_engine/schemas/presentation.py
-    sha256: 53d5fdd66d83619eda128b3501faeb0d6bc3a536af1f2921bf74e2eae513ecac
+    sha256: 3e2b383d8753198cb6219d3a13e2c4dc11874a25b537fd9d7a4a6fd994cfbade
   - path: src/research_agenda_engine/schemas/question_branch.py
     sha256: a3b1897c7fae5f757ba89dc104e4049504a8a4a13dccd5fdb9fe6beb6b836ca6
   - path: src/research_agenda_engine/schemas/question_family.py
     sha256: 59f2b34ba664511101c263105b173e330ec240d7773d53c3ccad66ceea860d45
   - path: src/research_agenda_engine/schemas/question_family_branch.py
-    sha256: 9a7e3f158c384abda06e9744d37f4187a0fa3446032a685c738e2bc17da8f4e6
+    sha256: 0fea94db669069c18049102840697204ef656f7e7284a734d35ee3b930f8f01f
   - path: src/research_agenda_engine/schemas/question_pattern.py
     sha256: 3781d959bcb866e8ce6279405e2b8433b2171da708a8b2ea781c2685d72ee29f
   - path: src/research_agenda_engine/schemas/question_scientist_context.py
     sha256: 5bb71334aa474cf1efb329b813985c07510097422fd6669ba300fab08f7ce191
   - path: src/research_agenda_engine/schemas/question_scientist_context_v2.py
-    sha256: b70ff52daf5245e4ad43a3bd1fd8099727e8a476de381f0501e33a8c61d81651
+    sha256: 195545a89ff3206c0f45e6a3b42b4fdc6cb233f15df1654c25c54e6e156f8903
   - path: src/research_agenda_engine/schemas/question_seed.py
     sha256: 3b23b029cfe6c95ab7cd7668335d30f8d9a95937caa8cf6aaf80b7f8a80d192e
   - path: src/research_agenda_engine/schemas/research_intent.py
-    sha256: da5f1bb3b0b19b71e6ed5404eab5fc5b2d8de2fe307f3918654043ae2a9e3507
+    sha256: 72a9184b43949d72bc664f9a219b354a1438ccd5ce4c96d287e531ac4319e3a2
   - path: src/research_agenda_engine/schemas/resume.py
-    sha256: 4b9f71a771946f4efc814e7c59238c5fa2883eb7f2dc5009261046c5f0a442c8
+    sha256: 27d4e273914a0706a8d856c73929a4bec8c65eb5d6657ff7cf8e05455450f50c
   - path: src/research_agenda_engine/schemas/review_authority.py
     sha256: d58e6c4e88503ef4db927f3a26f3100ada0c841fc9b660f5eec57c504fe3fe29
   - path: src/research_agenda_engine/schemas/run_manifest.py
@@ -722,7 +850,7 @@ files:
   - path: src/research_agenda_engine/schemas/run_outcome.py
     sha256: 267edcb26a72ecd25bdbc3fc62084e52071e2f2b1542256dddf20c48f2ccd0ad
   - path: src/research_agenda_engine/schemas/scientific_context.py
-    sha256: e9e7ed55f6f1c012239679e9b4ee26d610029cbd11722588fc5490a8ea8d3dd2
+    sha256: 63cfc39de01a1e80297c12cb2d12a852f19e90e83b984288941027154c1c5247
   - path: src/research_agenda_engine/schemas/scientific_dossier.py
     sha256: 6cdacd6ba7488cf46145dc3c686b24038147593e405230b693250dfd45615c94
   - path: src/research_agenda_engine/schemas/shortlist_outcome.py
@@ -730,13 +858,13 @@ files:
   - path: src/research_agenda_engine/schemas/source_activity.py
     sha256: 29afcf02805cfd18e71d4b3dcd5684af9f22c9279ada9f66ad56b73ed342293a
   - path: src/research_agenda_engine/schemas/stage_d.py
-    sha256: 7458f02802a39cc4ec715f1da07fd5a08fd52fec7a04c439e4a60877a1e1fd69
+    sha256: bdf3e941ceb8b49ca02b4d348e96feb3ffc37853da71635ec682264388ad45bc
   - path: src/research_agenda_engine/schemas/stage_receipt.py
     sha256: 37d6085f17f1ac27c9cf119cb054749ddabb3aec0a67fe542413839685bb83aa
   - path: src/research_agenda_engine/schemas/topic_evidence_inquiry.py
-    sha256: 152915cbd293a714c87ad123d50dbf1eee8b35454235b541e2e4e5ea2ade6170
+    sha256: 0954c3cb38c31628f7a3fe0a1b38294ab86cd343771d1e3a5cf26e82915b7832
   - path: src/research_agenda_engine/schemas/topic_literature.py
-    sha256: 67d836168a09a3d384d1be64954009c846b6fc5f389c865557f42bfa80894fc3
+    sha256: ab81e3cf54004504a8a370c1af3017f5e088f8ba8b54859b2bb5540598b77f11
   - path: src/research_agenda_engine/schemas/variant_novelty.py
     sha256: cf592f1f59611887a87f940efea21e7e23b1654bd05580dfa953f68697653d9c
   - path: src/research_agenda_engine/services/__init__.py
@@ -748,19 +876,19 @@ files:
   - path: src/research_agenda_engine/services/agents/citation_importance_reviewer.py
     sha256: f3cf1b74e65d5df067f51c10b55a89fbf2630ebc725c9870aa178127fe27a5d5
   - path: src/research_agenda_engine/services/agents/dataset_narrative_reviewer.py
-    sha256: 4f69810511b7259d992896813fe7a80044288f9fd970ab99dcd64a63a80d7076
+    sha256: 52b0c9ccecdf53fed897d74a2a3846ce3c67758e322af3962e0c1ab83e002c26
   - path: src/research_agenda_engine/services/agents/formation_trace_reviewer.py
     sha256: 8e58a849f852189f558e3bafe726ffedd4f3417b9e1241f75072c2922c51078d
   - path: src/research_agenda_engine/services/agents/gate_diagnostics.py
     sha256: 461feaba731657579c49e62f82b8ee9dcd3390cd79424789ccb3e28f65bb55a2
   - path: src/research_agenda_engine/services/agents/gate_kernel.py
-    sha256: 312a6faaba1f98a7f144ed974ea5c78f2e30800d2b340361e58adb6413793f34
+    sha256: 7d20555375b7462c61f0aeb840a2d90a4bfb60e31fcf117ef97ff96af7f26933
   - path: src/research_agenda_engine/services/agents/generation_boundaries.py
-    sha256: 3be782da0bc9fa4a10ac84075efacafd4611157c76329d33e0d219d15c46c029
+    sha256: 4ca71f561695e0e3a0ad35c8b129694e2d1e3b05dd011b7f955ea149428171c2
   - path: src/research_agenda_engine/services/agents/generation_mirrors.py
     sha256: 5b4c781696ebed5f154ef9b7468e5043eda96afdb4828a4a8bf9196adc8667f4
   - path: src/research_agenda_engine/services/agents/novelty_admission.py
-    sha256: dce0ef3a21c593b0505e2c18b94dd8ce7d2cb36ebd1d5be9ab2cf12136ffc975
+    sha256: 404069518a74998036b114370f57e8317264e5e0a89cc53826093084ee60cc37
   - path: src/research_agenda_engine/services/agents/novelty_web_grounding.py
     sha256: cb78421445b697dd24bdeec8ef07042b5130de22d0577fc5eee17278335d6837
   - path: src/research_agenda_engine/services/agents/paper_case_reviewer.py
@@ -780,19 +908,19 @@ files:
   - path: src/research_agenda_engine/services/agents/question_scientist_ensemble.py
     sha256: bb37240b233642a171b784e02af1ffd3ac4d85f510107c2dfa90786dd194d659
   - path: src/research_agenda_engine/services/agents/question_scientist_family.py
-    sha256: b14fd76c5762ab93af38b4e6e169b36d2d9bc662bd52572cce40044475b455ac
+    sha256: ad1d9af69e72ce29e1117642ecd8e822398f8d518e1a0a104dd63ca64b2bb822
   - path: src/research_agenda_engine/services/agents/reviewer_base.py
     sha256: fbd9482c9610c5b69aca3ce97b74edd96d9bfb31b6b7d1513ce9be9935265459
   - path: src/research_agenda_engine/services/agents/shortlist_reviewer.py
     sha256: e470b6c74179f33eb06791e418edffe23cc47f7aa421f6b0916b0f70d906b0f0
   - path: src/research_agenda_engine/services/agents/topic_evidence_reviewer.py
-    sha256: 380a5c1c7b363b4ae6e6c928f2cf604256d520b4de9eea2f28c24b0ff00944a9
+    sha256: b345b48b19eac4d1e863da381963730655522104221fd253abdbe6cb18c07817
   - path: src/research_agenda_engine/services/context/__init__.py
     sha256: e827fabe7c3a75d7d37ce4542bca317a648a49f2ed9d18d12354ae1fc98ad63b
   - path: src/research_agenda_engine/services/context/c_summaries.py
     sha256: 5d6cd0eb23d8ce56c1890fa06c5964cefc13f23be449bb5293931a0b47d6052a
   - path: src/research_agenda_engine/services/context/dataset_narrative.py
-    sha256: 1da4926fcefe00d2861936aaa9b8931440f1149e37f982a57315a2117a112daf
+    sha256: 3521253816202aef132f09ac03497c019adcd621ac55bbfe8e0f7fcb80116480
   - path: src/research_agenda_engine/services/context/evidence_basis_labels.py
     sha256: 340b4511ad81a439c2cce0e694c1c070968b990cf70b545616240784181379c2
   - path: src/research_agenda_engine/services/context/evidence_requests.py
@@ -800,29 +928,31 @@ files:
   - path: src/research_agenda_engine/services/context/export_gate.py
     sha256: f0462317687886352e584145dd63834b132f523237872a4314e1ff55e4777536
   - path: src/research_agenda_engine/services/context/question_scientist_export.py
-    sha256: 7304de33b7f0f54bf0dfd54422f5a0c0864c6ff7e978cb8bbcdbc0f63850a77b
+    sha256: 6cf05a9367b5688bbad0e2b5400a61358fba7d0f0ebc9c402fc11fda68985242
   - path: src/research_agenda_engine/services/context/question_scientist_payload.py
     sha256: 0e8bd1dfd627d3ad189e7939d45fe5a82e812a1c656e3e82ac299d8f4816b889
   - path: src/research_agenda_engine/services/context/research_scope.py
-    sha256: e347fe4a523e4915cf3097a0331f309bb8bb889050c8e9ce8862e708c19275bb
+    sha256: 3fef70a0446d08b59d2a45193e59a46546fb2a248ef71336fccaf25437556b8a
   - path: src/research_agenda_engine/services/context/review_gates.py
     sha256: 5927dce2e35f4f4b61f498832a0923bfd7114cc52cd593aef86f538b7cb488e8
+  - path: src/research_agenda_engine/services/context/scope_derivation.py
+    sha256: da922b6a5c741859b51731da4c661e5d4c3a612b6b035be88a8c1dee3e771ff1
   - path: src/research_agenda_engine/services/context/topic_evidence.py
-    sha256: 07d6c86ed4babbeffccd3dbe559f9ff5148906482f9762bd0216fe19914fed58
+    sha256: 4aeca5c346c1df68d5af53b35385a4d858e2281af8af91d7b5be37cca65186f1
   - path: src/research_agenda_engine/services/context/topic_evidence_readiness.py
-    sha256: aaad79770991043d33c6f9b15f62585aa5bbcaea49c24d1ff03a880c45476957
+    sha256: 87dbac65d86b0d491820ee058cdd766fe701eb62c0d2a52290ec027b294e065e
   - path: src/research_agenda_engine/services/context/topic_evidence_revision.py
-    sha256: 8e2381ce5ef284e362656371e700d9a6ef2b481591e9bda79ccdaaa4083e2dbb
+    sha256: d018c4984348fb57f3767400ea72dc7deb205ba17190f52a9d8882386723bee6
   - path: src/research_agenda_engine/services/context/topic_evidence_terminal_inquiry.py
-    sha256: 6d8b2a0be2d35b5dc4c3e016a6ce7447f7fb275e0fcf04693b67b86da200ab38
+    sha256: c55c5ed38b78c9614c078bddeadacf337c263982d89cd744dffc3a671df7d8f5
   - path: src/research_agenda_engine/services/context/topic_summaries.py
-    sha256: 91bd3fbedbd3d9a2810f8d1309851c3ff04f1e096a698a2b1f186e9a16dc8f0b
+    sha256: 2d01504c47dde8926ffef4b2185441d30c7f1f0f1ca123f7ebf7de1266fd49f4
   - path: src/research_agenda_engine/services/dossier/__init__.py
     sha256: 8af01632cc61d93f75f65069f18991505a5f2d86254b5803b52a984f8d306dcb
   - path: src/research_agenda_engine/services/dossier/development_review_dossier.py
     sha256: aa31e698bbdc964710b943a4e299eb48fcdfaebd19309dcb162c11f5229f09e0
   - path: src/research_agenda_engine/services/dossier/generic_family_dossier.py
-    sha256: d7652b8459df66695e60db48e8a3205347cc8910b4bd0e239a4dac0bf8bec9a7
+    sha256: 7df519d19bb8b939af57415acd3864a1b621864838945995a81125d0bb49ef06
   - path: src/research_agenda_engine/services/dossier/generic_human_review_override.py
     sha256: 0aa53d9a4061aaea6950a79e0dbfa88fdcfcdb55f731b01a502bde99783af673
   - path: src/research_agenda_engine/services/dossier/multi_family_coordinator.py
@@ -838,17 +968,19 @@ files:
   - path: src/research_agenda_engine/services/narrative_sources/coarse_facts_import.py
     sha256: 6afc6a791d749591c53f47c2eb62caca02b1df2b7857b23c8abfcc80743320f8
   - path: src/research_agenda_engine/services/narrative_sources/fusion.py
-    sha256: f8f4b2f9c055ef663abf91a8f5ef55f05927554dab8e7342e0663c6ca0defdcd
+    sha256: 9519eb7058a2682adc14486241630d817909e046b78e531302db9cab678500ef
   - path: src/research_agenda_engine/services/narrative_sources/narrative_persistence.py
-    sha256: 1d55152ee4837a07f1c484cfc67999be5ce3b6d38f4b64391d0be0e0046294d9
+    sha256: 7612463e4cac8e4598ee4cd66d30a0b8a3770011b5cd25ac2c1b6793c09e6a1e
   - path: src/research_agenda_engine/services/narrative_sources/narrative_render.py
     sha256: 2204f459e315a5e1b300ca69bb0ecb0407720c77fcc47e270d3a7c2db9fc6ab5
+  - path: src/research_agenda_engine/services/narrative_sources/narrative_revision.py
+    sha256: 59d71aedf52bb16ac8d2472d025144225a511c66e7cb1475744d45fade049402
   - path: src/research_agenda_engine/services/narrative_sources/narrator.py
-    sha256: 722851e1d52a3f8698e59d27caabc9e08aa25941384f639962cd9ebbb154c957
+    sha256: d691a3fb067d987c3ceca52d2e607d705ba6f7dcbcfe1bc4d995d8ff60ae78f3
   - path: src/research_agenda_engine/services/narrative_sources/provider.py
     sha256: 1adc95814d951511423fecc79ed02b6ec0efa5a3337d6650ff5b1e62157846f0
   - path: src/research_agenda_engine/services/narrative_sources/source_a_documentation.py
-    sha256: d56b798a33c71c364d9de779e4cfb0b8315b4ea4adf5bd0df490426ff6455331
+    sha256: 2078e64bd78f7b6b8cca5b373e7deebd5b5ef5ee6c67d67a336c4a47533af638
   - path: src/research_agenda_engine/services/narrative_sources/source_c_model_research.py
     sha256: 3349ab2d5353e80a52da883e356d36e4e5b73228d8ede2f7c8bd3236a1c1e324
   - path: src/research_agenda_engine/services/narrative_sources/source_d_user_docs.py
@@ -858,7 +990,7 @@ files:
   - path: src/research_agenda_engine/services/orchestration/branch_manager.py
     sha256: 3454d1f7997adde13bab0805983070a739d1ea040a69e66d1fa60b0aaf2e8acc
   - path: src/research_agenda_engine/services/orchestration/end_to_end.py
-    sha256: 8502faafb2eb872a24e175e243745da74a1d5c87370a2a7d5742d2c089419a36
+    sha256: 9890eac54afd3510567dfb356fe1a7bd3cfbf8b1750b61da9c968fd2c9a4aec9
   - path: src/research_agenda_engine/services/orchestration/event_store.py
     sha256: 70f7dddb58c62d4ec4af3f316bbeb3f6d0bbaf3a34e3411cd51a446ac6a66cf3
   - path: src/research_agenda_engine/services/orchestration/front_half_persist.py
@@ -866,11 +998,11 @@ files:
   - path: src/research_agenda_engine/services/orchestration/paperbank_import.py
     sha256: afa636f17583ce65831f49b20b5ad933c486ae041ab01912760ae0d4939c9467
   - path: src/research_agenda_engine/services/orchestration/resume.py
-    sha256: 70b374a6d2e559a56402ba9a5a4dd3cfd57e1bc2c896166a8560683391a68d73
+    sha256: e83db4f0d41367697d1610f339cca2b1476b9d1c59bc348a168e43428df52a4a
   - path: src/research_agenda_engine/services/orchestration/run_envelope.py
-    sha256: 10411e87b88d12da073534352f447ca483c966d268477b3b9b43179f2d780509
+    sha256: fe07316e9bd7e2928d53b24df7b57a44d681c9d6209f578ec8fe6f255ace45cc
   - path: src/research_agenda_engine/services/orchestration/run_layout.py
-    sha256: 933189a9ea389e6cc4ad3e2c1f149d6cd84c10157c7f8c18536a4a052ec3b282
+    sha256: b8d5ca778b8ba5787e3afc3db7665b88409e7b9dc9ca210b03ecba3c293a6f3d
   - path: src/research_agenda_engine/services/orchestration/run_manager.py
     sha256: 92cdf1dbf56cbbb1f9450b540ceb88de4abd7e93131f85ee25bfbf2aef915255
   - path: src/research_agenda_engine/services/orchestration/runtime_factories.py
@@ -888,15 +1020,15 @@ files:
   - path: src/research_agenda_engine/services/paper_ingest/external_lookup.py
     sha256: eac6affb0d0287cee43aa873107e35488d36078f55c430e71592f12ad21d75cc
   - path: src/research_agenda_engine/services/paper_ingest/extraction.py
-    sha256: a580b50ca04f5a0a0426607509c05964f3617b269a170edea7ae3087a92bfe0f
+    sha256: 594a4bfeab67b4439ab50834a9dfdfcc72e939f39ea7a8ced5e848037cfee93f
   - path: src/research_agenda_engine/services/paper_ingest/local_literature_build.py
     sha256: 66981b660e91eeb9758a98025389c35cf7c4254e8de90ef03f81fc5ccf9859a9
   - path: src/research_agenda_engine/services/paper_ingest/paperbank_gate.py
-    sha256: f0038bea22bdb4bc5c56f108c7451150dfd812f98629a9824bd2519f9001f03e
+    sha256: 847b731d751d7a46d8ca6640019f54d84c33fda7a5c8371c05fd8d99146186bb
   - path: src/research_agenda_engine/services/paper_ingest/parsing.py
-    sha256: fc14c1585a773ff3aee95647eb4c832d3501a36c28172bcc653c6930f38dafc8
+    sha256: c5b2230174b225961257edb33a7df84b78d91cea0311f99a9cb376a1242f11b4
   - path: src/research_agenda_engine/services/paper_ingest/pipeline.py
-    sha256: 0ddee19bfcf7f517db88879de8c6050de1face3aeed2f56f103de59ef1456526
+    sha256: 3fd1fa4e03bf37bf60bd3673b94e886dff7beac635410afbb690009eb4093c81
   - path: src/research_agenda_engine/services/paper_ingest/reference_resolution.py
     sha256: 9747e54b3d301c9a2c5622d8161c3108ab4bc5846a88a7d7d60945191d4c2f89
   - path: src/research_agenda_engine/services/paper_ingest/source_preparation.py
@@ -932,7 +1064,7 @@ files:
   - path: src/research_agenda_engine/services/planning/construct_probe_validation.py
     sha256: cbe860a514eb31d3f346a68825084671387b3b280a6e3dbf65df8317eecb13e7
   - path: src/research_agenda_engine/services/planning/dataset_planner_packet.py
-    sha256: bc306570288e9e1c0e3e90c9ddadc9d20062f5960dc0397d30227714d5539b50
+    sha256: 7eddeab2e7e86edf0d3a3586f8929b08bc5e25465fc2987f40e238840338e45d
   - path: src/research_agenda_engine/services/planning/direct_file_artifact_contract.py
     sha256: f9fdf13ae7e50642dbb708eefd38a48c2e5c0fcb568e40ba29189cbb4893efa0
   - path: src/research_agenda_engine/services/planning/evidence_claims.py
@@ -942,7 +1074,7 @@ files:
   - path: src/research_agenda_engine/services/planning/guards.py
     sha256: dcdc40b78e8ad2b4f6183d03c4644f2a6f71737e1133a32e791b7ebb6e3620cb
   - path: src/research_agenda_engine/services/planning/planner_artifact_import.py
-    sha256: fd8e4e468c73474c286d2ed7b50f9e4ef91d180ffa173f3b7e7edb62e0ac974d
+    sha256: 5d6ceda14cef8d7d65a8123504e21b59d3abb3ac5d1c1ae2c004c820cf3178d3
   - path: src/research_agenda_engine/services/planning/planner_boundaries.py
     sha256: f4ebaa01e4afe2615620c75b6cbf04be60251115c4e082dc0e3ec70a5a48f038
   - path: src/research_agenda_engine/services/planning/planner_bundle_builders.py
@@ -950,33 +1082,37 @@ files:
   - path: src/research_agenda_engine/services/planning/planner_failures.py
     sha256: 34b695cb0671496df3a1c4ba95911554d859424e2dc898249faf850dba050715
   - path: src/research_agenda_engine/services/preflight.py
-    sha256: cb1efbdfa336f94dcb47d9514a6d92a515d4abdea0e7fc3abb9af40be51784aa
+    sha256: 68a4191dffa2c548812acc36b6992b3db241fcf901a8f5b97bf1c1f2b8610e45
   - path: src/research_agenda_engine/services/presentation/__init__.py
     sha256: 374e350e1efebd81dc4d8d780af1063d1a591e7fa90290b7999f22d04059131b
   - path: src/research_agenda_engine/services/presentation/context_pages.py
-    sha256: a877ebd6fe28454faaec89caec2d87ba6ec94b9156e3bc503a68b06f8641108a
+    sha256: d7cf11cbdb2b34d4160f33ce8fdc3f4548bb9fb64348915278240aace0af1437
   - path: src/research_agenda_engine/services/presentation/family_page.py
-    sha256: 7e81d1b148ce62177f472572716a159f6b9d6cd590cb8a08be85b1b89ce8f45c
+    sha256: 713052e7c25457cf94cc28ddadddda825c320823f0c4e3622cfccee5cc4732b0
   - path: src/research_agenda_engine/services/presentation/materialize.py
-    sha256: 83eaec1ec17619f57ab27726e86e96df27c5ae49b9c737364d5d678aed9b037a
+    sha256: 4d788ae2c5d977fd92855534c4778b48edcb381a4838d081f5b0cb48bbcc79fa
   - path: src/research_agenda_engine/services/presentation/privacy.py
-    sha256: 91b75197287c00a0c5f73d2f87f1b6b1a7b455105d847ea10e342edbe2dced86
+    sha256: 1642864e92148d2c60ff0a6a7bd8a1d9d0d52d26fd97a7698f6ead4cec30932f
   - path: src/research_agenda_engine/services/retrieval/__init__.py
     sha256: e6e5188645806de5e07f6c23939781ab69e2c9e1449a946a98e9b8b93abcf7f6
   - path: src/research_agenda_engine/services/retrieval/dataset_seed_retrieval.py
     sha256: 77d6ae14e848e57a19d3c9df78918a3b20b1f6e386872c54f14f6413796ed3b6
   - path: src/research_agenda_engine/services/retrieval/fulltext_fetch.py
-    sha256: f8ecce942b7c3fb1fbec895a365fec4e632dd49b3851309f486cb5e021c57b18
+    sha256: 8ce6d398f80fbb674bd76462fb05317fcd3a2af0cf3211c0071821c37e3e9616
   - path: src/research_agenda_engine/services/retrieval/generic_topic_lanes.py
-    sha256: 620f7631d0b8e6f6f1e9f34c66f6f6dd0a942b17d2e1f0aae614262ce4faf4b5
+    sha256: d6012dcc2d9ad39791296d52f58c83de6a668120ba943446bc34759f7d5318db
   - path: src/research_agenda_engine/services/retrieval/literature_prior_search.py
     sha256: e4326302376418a2ab8b6c2491dc539399041495fd54fdf6bd28cb431e7ff415
   - path: src/research_agenda_engine/services/retrieval/novelty_sources.py
-    sha256: 949d53be349992c51e2774fbb45114665b1ce745177b300e40cbb0bf6d07696b
+    sha256: daa81da91bbd8e503eb33701b8092e42513d3033762c617e6701de1a9c442ee3
+  - path: src/research_agenda_engine/services/retrieval/openalex_scope.py
+    sha256: e7c122bc751509a02ce79b802e9e46dce0df8dd41d021776b6739c5588ff06ad
   - path: src/research_agenda_engine/services/retrieval/paper_case_index.py
     sha256: 67946460d20ec984a725289c2166f0f7bb3c1e43d94ddffb7c4fb61c3b1e9817
+  - path: src/research_agenda_engine/services/retrieval/topic_source_selection.py
+    sha256: a132400c4d498ba83829c90348f9016a49516da423ddd2142113204e757e5c15
   - path: src/research_agenda_engine/services/retrieval/topic_sources.py
-    sha256: 3454c8d9d298040d3d65c3232ecb14216d46f3bc750f821c35b7c70e1d5aa82d
+    sha256: d2e525c20971ea40bd2814553d9b8fdf9a8577aaf5dee52baafc1c44e4842f5f
   - path: src/research_agenda_engine/services/retrieval/variant_novelty.py
     sha256: b8614a651fb866f438c72ec4462ff1b1a280b90b83e734c1a031d92f03d06043
   - path: tests/test_cli.py
@@ -984,4 +1120,4 @@ files:
   - path: tests/test_context_firewall.py
     sha256: fbcdf013f945e8efdf4e9d73c14e2eba4a42fc1a2636d4ba0f93f9fb28ff2efb
   - path: tests/test_release_metadata.py
-    sha256: 447d203027b75f8b976b9508a2cd09d7d9ccb32c21f15bbf628c50c735c88e3b
+    sha256: 18df93894ddc8c1f5d78c023a7e21d223f3fd67e4e369ee1d90bb04519f220d4

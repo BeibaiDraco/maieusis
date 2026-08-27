@@ -68,6 +68,15 @@ def reasoning_request_kwargs(thinking: str, effort: str) -> dict[str, object]:
 
 
 class StructuredModelFailureKind(StrEnum):
+    #: The account has no money left. Vendors do not ship this as its own error type: OpenAI raises
+    #: `RateLimitError` for `insufficient_quota` and Anthropic a plain 400 `BadRequestError`, so
+    #: until this member existed the generation lane called the first one RATE_LIMIT -- "the provider
+    #: throttled you, wait and retry" -- and left the second unclassified, escaping the typed
+    #: boundary entirely. Both were measured: the 2026-08-13 leg filed 11 `rate_limit` diagnostics in
+    #: 37 seconds whose real cause was an empty OpenAI balance, and the operator, reading them,
+    #: topped up the WRONG vendor. The `scientific_agents` lane has recognized billing since it was
+    #: written; this is the same predicate on the lane that never had it.
+    ACCOUNT_EXHAUSTED = "account_exhausted"
     AUTHENTICATION = "authentication"
     RATE_LIMIT = "rate_limit"
     TIMEOUT = "timeout"
@@ -81,6 +90,59 @@ class StructuredModelFailureKind(StrEnum):
     # the 2026-07-31 leg and were retried three times each -- 18 fully-billed calls that could not
     # have succeeded. A caller that can see this kind can raise the ceiling instead of replaying.
     OUTPUT_TRUNCATED = "output_truncated"
+
+
+_ACCOUNT_EXHAUSTION_CODES = frozenset(
+    {
+        "billing_hard_limit_reached",
+        "credit_balance_too_low",
+        "insufficient_credit",
+        "insufficient_credits",
+        "insufficient_quota",
+    }
+)
+_ACCOUNT_EXHAUSTION_PHRASES = (
+    "billing hard limit",
+    "credit balance is too low",
+    "credit balance too low",
+    "insufficient credit",
+    "insufficient quota",
+)
+
+
+def is_account_exhaustion_error(exc: BaseException) -> bool:
+    """Recognize explicit billing/account exhaustion without treating every 400/429 as billing.
+
+    SDKs expose the stable code in different places, so inspect the finite code/type fields first
+    and use the small provider phrase list only as a compatibility fallback. The caller may use the
+    result for classification, but capture must never persist any of these raw values.
+
+    It lives HERE, in the lower of the two provider layers, because both lanes need it and one
+    definition is the only way "the run knows it ran out of money" can be true of both. It was
+    written in `scientific_agents/base`, which re-exports it, and for as long as it lived only there
+    the generation lane could not tell an empty balance from a rate limit.
+    """
+
+    candidates: list[str] = []
+    for attribute in ("code", "type"):
+        value = getattr(exc, attribute, None)
+        if value is not None:
+            candidates.append(str(value))
+    body = getattr(exc, "body", None)
+    if isinstance(body, dict):
+        error = body.get("error", body)
+        if isinstance(error, dict):
+            for key in ("code", "type", "message"):
+                value = error.get(key)
+                if value is not None:
+                    candidates.append(str(value))
+    candidates.append(str(exc))
+    normalized = " ".join(candidates).strip().lower().replace("-", "_")
+    tokens = set(normalized.replace(":", " ").replace(",", " ").split())
+    if tokens & _ACCOUNT_EXHAUSTION_CODES:
+        return True
+    phrase_view = normalized.replace("_", " ")
+    return any(phrase in phrase_view for phrase in _ACCOUNT_EXHAUSTION_PHRASES)
 
 
 def partial_json_text(exc: ValidationError) -> str:
@@ -100,6 +162,22 @@ def partial_json_text(exc: ValidationError) -> str:
         return ""
     raw = errors[0].get("input")
     return raw if isinstance(raw, str) else ""
+
+
+#: The failure kinds an identical replay can plausibly clear. Deliberately excludes the ones it
+#: cannot: ACCOUNT_EXHAUSTED and AUTHENTICATION need an operator, INVALID_RESPONSE and
+#: STRUCTURED_OUTPUT_INVALID are the model's own reply shape (a caller that wants those retried says
+#: so explicitly, as the extraction lane does), and OUTPUT_TRUNCATED reproduces exactly -- the
+#: packet is unchanged and the ceiling is unchanged, which cost 18 fully-billed calls on the
+#: 2026-07-31 leg before it was understood.
+TRANSIENT_FAILURE_KINDS: frozenset[StructuredModelFailureKind] = frozenset(
+    {
+        StructuredModelFailureKind.RATE_LIMIT,
+        StructuredModelFailureKind.TIMEOUT,
+        StructuredModelFailureKind.CONNECTION,
+        StructuredModelFailureKind.SERVER_ERROR,
+    }
+)
 
 
 class StructuredModelProviderError(RuntimeError):

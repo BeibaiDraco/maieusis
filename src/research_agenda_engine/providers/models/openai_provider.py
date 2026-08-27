@@ -19,6 +19,7 @@ from .base import (
     StructuredModelFailureKind,
     StructuredModelProvider,
     StructuredModelProviderError,
+    is_account_exhaustion_error,
     partial_json_text,
 )
 from .policy import ModelPolicyDecision, ensure_model_allowed
@@ -177,6 +178,12 @@ class OpenAIProvider(StructuredModelProvider):
 
 
 def _openai_failure_kind(exc: Exception) -> StructuredModelFailureKind | None:
+    # Billing is checked BEFORE the type name, and the order is the whole fix: OpenAI ships
+    # `insufficient_quota` as a `RateLimitError`, so the name test below claims it first and reports
+    # a throttle. An empty balance and a throttle call for opposite actions -- pay, versus wait --
+    # and the run told the operator to wait.
+    if is_account_exhaustion_error(exc):
+        return StructuredModelFailureKind.ACCOUNT_EXHAUSTED
     name = type(exc).__name__
     if name in {"AuthenticationError", "PermissionDeniedError"}:
         return StructuredModelFailureKind.AUTHENTICATION

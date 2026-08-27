@@ -46,6 +46,18 @@ class PresentationMarkdownError(ValueError):
     """A candidate detailed page crossed a literal privacy or navigation boundary."""
 
 
+#: What an identifier looks like here: a hyphenated/underscored handle, a hex digest, or anything
+#: carrying a digit. Deliberately NOT "any string a persisted `*_id` field happened to hold" --
+#: that is how an ordinary word got in. A token that is a single run of letters is left alone; the
+#: validator that runs immediately after still refuses a page that leaks a real identifier, so a
+#: shape this misses fails loudly rather than silently publishing it.
+_IDENTIFIER_SHAPE = re.compile(r"^(?=.*[\d_\-.:/])[\w\-.:/]{4,}$")
+
+
+def is_identifier_shaped(token: str) -> bool:
+    return bool(_IDENTIFIER_SHAPE.match(token.strip()))
+
+
 def validate_detailed_markdown(
     text: str,
     *,
@@ -84,8 +96,17 @@ def validate_detailed_markdown(
     visible_text = remove_allowed_public_dois(_text_without_link_targets(text), allowed_public_dois)
     for token in private_tokens:
         token = token.strip()
-        if len(token) >= 6 and re.search(
-            rf"(?<![A-Za-z0-9]){re.escape(token)}(?![A-Za-z0-9])", visible_text
+        # The THIRD place this rule is implemented — the redactor and the family-page validator are
+        # the other two — and the third to refuse a page over the ordinary English word `subjects`,
+        # which is a run-private token only because a dataset narrative's `scale_fact_id` happens to
+        # be spelled that way. Fixing the first two still lost three reading guides here.
+        #
+        # `is_identifier_shaped` is imported rather than restated: a rule with three copies drifts,
+        # and this whole defect is what drift looks like from the reader's side.
+        if (
+            len(token) >= 6
+            and is_identifier_shaped(token)
+            and re.search(rf"(?<![A-Za-z0-9]){re.escape(token)}(?![A-Za-z0-9])", visible_text)
         ):
             raise PresentationMarkdownError("detailed Markdown contains a run-private token")
     for href in _MARKDOWN_LINK_RE.findall(text):

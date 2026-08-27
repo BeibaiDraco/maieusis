@@ -1,28 +1,28 @@
 # Topic evidence
 
-> ⚠️ Evidence basis: 4 of 4 open gaps / strong claims rest on ABSTRACT-ONLY literature (full text was not available to this system). These are literature-motivated, NOT fulltext-verified — see the fulltext-enrichment receipt for the per-route fetch breakdown.
+> ⚠️ Evidence basis: 5 of 5 open gaps / strong claims rest on ABSTRACT-ONLY literature (full text was not available to this system). These are literature-motivated, NOT fulltext-verified — see the fulltext-enrichment receipt for the per-route fetch breakdown.
 
 - Review authority: `ai_reviewed` (automated unless expert)
-- Scope: neural population geometry, dynamical systems models, neural dynamics, neural population code, neural co-variability, neural manifolds, representational geometry, neural circuit models
+- Scope: noise correlations, perceptual decision-making, evidence accumulation, sensory evidence, neural decision variables, choice selectivity, movement-related activity, response time variability, neural population dynamics, representational geometry, mixed selectivity, distributed representations, brain-wide neural activity, inter-laboratory variability, behavioral reproducibility, spike sorting
 
 ## Close priors (already answered — avoid redundant questions)
 
-- A proposed biologically plausible model explains few-shot concept learning using tightly circumscribed firing-rate manifolds and a plastic downstream readout neuron.
-- In primary motor cortex, dominant neural modes and their activity were reported to be largely preserved across several skilled wrist and reach-to-grasp behaviors despite task-specific muscle and single-unit patterns.
+- Already answered close prior: whether noise correlations can affect population information differently for encoding and decoding has been directly analyzed in simultaneously recorded neurons; the reported effects were small in that sample, with somewhat larger effects on encoding than decoding and larger predicted effects for larger ensembles.
+- Already answered close prior: in the studied human target-detection paradigm, experimentally induced liberal versus conservative decision criteria were best captured as a shift in sensory-evidence accumulation toward the target-present bound, accompanied by changes in pre-stimulus cortical activity.
 
 ## Open gaps (still open — NOT a novelty claim)
 
-- Whether task-relevant hippocampal population representations remain stable across spatial contexts despite place-code remapping is an open question investigated with calcium imaging and dimensionality-reduction methods.
-- How to model structured, overdispersed gain covariance at the network level remains an open methodological problem, with a recent latent-variable proposal addressing it.
+- A live explanation-level tension is whether information-limiting noise correlations principally arise from limited sensory input, suboptimal connectivity, or internal fluctuations; these mechanisms can all reduce asymptotic information but predict different correlation patterns.
+- Open question within the recorded search scope: across tasks, regions, and recording modalities, it remains unresolved how the correlation structure, geometry, and mixed selectivity of population activity jointly constrain behaviorally relevant evidence accumulation and whether observed choice-selective sequences implement a common mechanism or region-specific circuit solutions.
 
 ## Unresolved tensions
 
-- The supplied retrieval covers only the scope-term-acquisition lane; required coverage for competing explanations, boundary conditions, dedicated measurement limits, dataset reuse, close priors, and open gaps was not independently established.
-- Population-level stability and spatial remapping present a live tension: the supplied hippocampal abstract investigates whether stable task-relevant representations can coexist with remapped place codes, but its truncated evidence text does not report the outcome.
-- Geometry and semantic equivalence can dissociate: population activity patterns that differ considerably in structure may nevertheless be similar in informational meaning, so structural geometry alone need not identify behavioral or informational content.
-- Geometry-based representation descriptions and accounts connecting local population activity to large-scale dynamics operate at different explanatory levels; how these levels should be integrated remains unresolved in the supplied sources.
-- The literature packet supports examples of geometry-linked generalization, but it does not establish a common causal account across few-shot learning, motor behavior, hippocampal contextual learning, and other neural systems.
-- Most directly relevant recent items in the packet are preprints or future-dated records and should receive independent source review before strong field-state conclusions.
+- The literature supports competing effects of noise correlations on information, but does not settle which biological sources dominate across brain regions, tasks, or population scales.
+- Internal state, trial history, reward context, and movement can affect response-time, choice, and accumulation-related signals, limiting simple sensory-evidence interpretations.
+- Conclusions about population dynamics, mixed selectivity, and neural contributions to perception vary with effector, task context, region, timescale, and correlation assumptions.
+- The supplied studies do not establish a common causal mechanism linking noise correlations, representational geometry, mixed selectivity, and behavior across modalities and species.
+- IBL reports qualitative cross-laboratory replication of a complex mouse behavior and Neuropixels recordings through standardization and shared infrastructure, but the packet does not quantify links between noise correlations and inter-laboratory or behavioral reproducibility.
+- The supplied precedents establish reuse of IBL-style resources but do not demonstrate that every brain-wide or spike-sorting resource is comparable for all questions in this scope.
 
 ## If this looks wrong
 
