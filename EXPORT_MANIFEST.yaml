@@ -2,7 +2,7 @@
 schema_version: 2
 distribution: maieusis
 version: 0.1.1
-tree_digest: 51fcbe59044ac9403ff924d3f89f070a2f46c885ac88a0c460bbf265af39591e
+tree_digest: 22b7a8b8ebc47f2efc34516ebd765b98b3861a884124bff23517416faef9116d
 file_count: 532
 projection_sources:
   - source: curated public contract tests
@@ -72,7 +72,7 @@ files:
   - path: .github/pull_request_template.md
     sha256: 0549a41dff7799c70798676ecb03c9aab08e9183c593535b76e5336841cfb0f4
   - path: .github/workflows/release.yml
-    sha256: 829a8c9330347da417b5394336747cb6088fb8f878e40d18fd6aefd380d72a15
+    sha256: d66bc48f0c50e5becbcc0fe33f631a86a8c5567780e1950e2a87d086ed247d36
   - path: .github/workflows/tests.yml
     sha256: 06eefb69209f4a1548f6d9f92d54d5979338f9ad72e322b83c387c97e05362cb
   - path: .gitignore
@@ -522,7 +522,7 @@ files:
   - path: docs/ARCHITECTURE.md
     sha256: 3125d1e37d8ceeb9cf9b59263d48c5ca70f27eb00416b36f78e2c748d13ac66a
   - path: docs/CITATION.md
-    sha256: efc21558dada612cba1062ede135bb4a460b6c0e229439da3bade1ebf5c7dd0c
+    sha256: ec22be9053e422702ffefaa731432f46e0cd020d0ca581fa925f7e488f54439e
   - path: docs/CONFIGURATION.md
     sha256: 50560c710eb4e0d6ac03d7603d566c7939780f52cc3917de6e1d4517530cbb35
   - path: docs/INDEX.md
@@ -1120,4 +1120,4 @@ files:
   - path: tests/test_context_firewall.py
     sha256: fbcdf013f945e8efdf4e9d73c14e2eba4a42fc1a2636d4ba0f93f9fb28ff2efb
   - path: tests/test_release_metadata.py
-    sha256: 18df93894ddc8c1f5d78c023a7e21d223f3fd67e4e369ee1d90bb04519f220d4
+    sha256: 0d31c33a511650d7b4b1db7bed4f9cac4a724df12485c6bc4cfdf3f82b18c814

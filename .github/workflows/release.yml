@@ -555,10 +555,19 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.ref_name }}
+          # `gh` infers the repository from a git remote, and this job deliberately never checks
+          # the source out -- it needs the frozen artifacts and nothing else. Without `--repo` the
+          # command died on `fatal: not a git repository` the first time it was ever asked to run,
+          # which was the real v0.1.1 promotion. v0.1.0's release was created by hand, so this job
+          # shipped unexercised through a whole release and its first execution was the one that
+          # mattered. Adding a checkout would work too and is the wrong fix: the job's independence
+          # from the source tree is the property, and naming the repository is how you keep it.
+          GH_REPO: ${{ github.repository }}
         run: >-
           gh release create "$TAG"
           release/python-package-distributions/*
           release/SHA256SUMS.txt
           release/release-build-receipt.json
           release/wheel-smoke-receipt.json
+          --repo "$GH_REPO"
           --verify-tag --generate-notes

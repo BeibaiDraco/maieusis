@@ -16,15 +16,19 @@ citation for Maieusis v0.1.1 is:
   citation panel offers.
 - **Version DOI:** each release also has its own DOI, which resolves to the
   archived source snapshot for that exact release. Use it when reporting work
-  performed with a specific version. The v0.1.0 version DOI is
-  [`10.5281/zenodo.21388806`](https://doi.org/10.5281/zenodo.21388806); the
-  v0.1.1 version DOI appears on the release's Zenodo record and in the GitHub
-  Release notes.
+  performed with a specific version.
+  - v0.1.1 — [`10.5281/zenodo.22134742`](https://doi.org/10.5281/zenodo.22134742)
+  - v0.1.0 — [`10.5281/zenodo.21388806`](https://doi.org/10.5281/zenodo.21388806)
 
 A version DOI cannot be recorded in `CITATION.cff` ahead of publication: Zenodo
 mints it from the published GitHub Release, while the release workflow validates
 that file during the freeze that precedes publication. Recording the concept DOI
 there keeps the file true at every step, and this guide carries the version DOIs.
+
+That is why v0.1.1's DOI arrives here in a commit dated after the release it
+describes. The commit changes this page and nothing else: the tag, the release
+assets, the files on PyPI, and the Zenodo archive are fixed, and none of them is
+rebuilt or replaced by it.
 
 ## Citing the version you actually ran
 

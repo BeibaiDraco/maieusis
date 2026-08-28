@@ -9,6 +9,7 @@ import tomllib
 from pathlib import Path
 from urllib.parse import unquote
 
+import pytest
 import yaml
 
 from research_agenda_engine import __version__
@@ -221,6 +222,37 @@ def test_citation_metadata_names_only_the_two_software_authors() -> None:
     assert all("email" not in author for author in citation["authors"])
 
 
+@pytest.mark.live_web
+def test_every_published_version_doi_actually_resolves_to_its_release() -> None:
+    """The DOIs the citation guide prints must resolve, and to the version they claim.
+
+    A DOI in a document is a promise about a record on another service, and nothing in this
+    repository can tell a correct one from a plausible typo. Opt-in and never run in CI, because it
+    reaches the network; run it after a backfill.
+
+        pytest tests/test_release_metadata.py -m live_web -k version_doi
+
+    The check is not that the DOI resolves -- a wrong-but-real DOI resolves fine. It is that the
+    record it resolves to declares the version the guide attributes to it.
+    """
+
+    import json
+    import urllib.request
+
+    guide = (_public_roots()[0] / "CITATION.md").read_text(encoding="utf-8")
+    claimed = dict(re.findall(r"- (v[0-9.]+) — \[`(10\.5281/zenodo\.\d+)`\]", guide))
+    assert claimed, "the guide lists no version DOIs in the expected shape"
+    for version, doi in claimed.items():
+        record = doi.rsplit(".", 1)[-1]
+        with urllib.request.urlopen(f"https://zenodo.org/api/records/{record}", timeout=30) as fh:
+            payload = json.load(fh)
+        assert payload["doi"] == doi, (doi, payload["doi"])
+        assert payload["metadata"]["version"] == version, (
+            f"{doi} resolves to version {payload['metadata']['version']!r}, "
+            f"and the citation guide attributes it to {version!r}"
+        )
+
+
 def test_public_citation_surfaces_bind_the_released_version_and_concept_dois() -> None:
     docs_root = _public_roots()[0]
     readme_path = docs_root / "README.md"
@@ -238,12 +270,30 @@ def test_public_citation_surfaces_bind_the_released_version_and_concept_dois() -
     readme_prose = " ".join(readme.replace("\n> ", " ").split())
     guide_prose = " ".join(guide.replace("\n> ", " ").split())
 
-    # The current release's citation resolves through the CONCEPT DOI, because its own version DOI
-    # does not exist until Zenodo mints it from the published release. Both surfaces must still
-    # carry the earlier version DOI so a reader who ran v0.1.0 can cite exactly what they ran.
+    # The citation on the front page resolves through the CONCEPT DOI, which is stable across
+    # releases and correct at every point in the transaction -- including the window in which a
+    # frozen candidate names a version that is on no index yet.
+    #
+    # The GUIDE additionally has to carry a version DOI for every release that has one, and this
+    # assertion is derived rather than a list: v0.1.1's arrived by backfill AFTER publication,
+    # because Zenodo mints it from the release, and the sentence it replaced said it "appears on
+    # the release's Zenodo record" -- true, unhelpful, and silently permanent if nothing required
+    # the real number to land. Add a release here when it is published; the guide must name it.
+    published_version_dois = {
+        "v0.1.0": "10.5281/zenodo.21388806",
+        "v0.1.1": "10.5281/zenodo.22134742",
+    }
     for text in (readme, guide):
         assert concept_doi in text
         assert released_version_doi in text
+    for version, doi in published_version_dois.items():
+        assert doi in guide, f"the citation guide names no version DOI for {version}"
+        assert f"https://doi.org/{doi}" in guide, (
+            f"{version}'s DOI is not resolvable from the guide"
+        )
+    assert len(set(published_version_dois.values())) == len(published_version_dois), (
+        "two releases share a version DOI, which cannot happen and means one was copied"
+    )
     assert expected_citation in readme_prose
     assert expected_citation in guide_prose
     assert f"https://doi.org/{concept_doi}" in readme_prose
